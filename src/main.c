@@ -1,4 +1,5 @@
 #include "SDL2/SDL.h"
+#include "SDL2/SDL_mixer.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb/stb_image.h"
@@ -43,7 +44,7 @@ typedef union game_controller_state {
 		game_button_state thrust_right;
 		game_button_state fire;
 	};
-	game_button_state list[5];
+	game_button_state list[6];
 } game_controller_state;
 
 static inline double sin_deg(double degrees) { return SDL_sin(DEG_TO_RAD(degrees)); }
@@ -152,6 +153,20 @@ int main(int argc, char* argv[]) {
 
 	SDL_Texture* player_ship = load_texture(renderer, "assets/images/player.png");
 
+	Mix_Music* music;
+	Mix_Chunk* player_shot;
+	
+	if (Mix_OpenAudio(48000, AUDIO_S16SYS, 2, 2048) != -1) {
+		Mix_AllocateChannels(16);
+		music = Mix_LoadMUS("assets/audio/WrappingAction.mp3");
+		player_shot = Mix_LoadWAV("assets/audio/PlayerShot.mp3");
+	} else {
+		SDL_Log(SDL_GetError());
+		exit(1);
+	}
+
+	Mix_PlayMusic(music, -1);
+
 	struct {
 		float x, y, dx, dy;
 		double angle;
@@ -170,7 +185,6 @@ int main(int argc, char* argv[]) {
 		double dt = (double)(current_count - last_count)*1000 / (double)SDL_GetPerformanceFrequency();
 		dt /= TARGET_FRAME_TIME;
 		last_count = current_count;
-//		SDL_Log("Frame Time: %f", dt);
 
 		new_player_controller = (game_controller_state) {
 			.thrust.scan_code 		= 	player_controller.thrust.scan_code,
@@ -225,6 +239,8 @@ int main(int argc, char* argv[]) {
 			player.dx += cos_deg(player.angle - 90) * PLAYER_LATERAL_THRUST * dt;
 			player.dy += sin_deg(player.angle - 90) * PLAYER_LATERAL_THRUST * dt;
 		}
+		
+		if (player_controller.fire.pressed) Mix_PlayChannel(-1, player_shot, 0);
 
 		player.x += player.dx * dt;
 		player.y += player.dy * dt;
