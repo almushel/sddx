@@ -16,7 +16,8 @@ typedef struct rgb_color {uint8_t r, g, b;} rgb_color;
 
 #define array_length(array) ( sizeof(array) / sizeof(array[0]) )
 
-#define TARGET_FRAME_TIME 16.6667 // Target frame time in ms
+#define TARGET_FPS 60
+#define TICK_RATE 60
 
 #define PHYSICS_FRICTION 0.02f
 #define PLAYER_FORWARD_THRUST 0.15f
@@ -122,6 +123,21 @@ void process_key_event(SDL_KeyboardEvent* event, game_controller_state* input) {
 	}
 }
 
+static void precise_delay(double ms) {
+	if (ms > 0) {
+		Uint64 ms_count = (Uint64)(ms / 1000.0 * (double)SDL_GetPerformanceFrequency()); // Delay time in terms of Performance Counter
+		Uint64 start_count = SDL_GetPerformanceCounter(); // Performance count before delay
+		if (ms > 1.0) SDL_Delay((Uint32)ms - 1);
+		Uint64 end_count = SDL_GetPerformanceCounter(); // Performance count after delay
+		Uint64 count_elapsed = end_count - start_count;
+
+		// If delay reached or passed, no need to spin
+		if (count_elapsed < ms_count) {
+			while( (SDL_GetPerformanceCounter() - end_count) < (ms_count - count_elapsed)) {} // spin
+		}
+	}
+}
+
 int main(int argc, char* argv[]) {
 
 	SDL_Init(SDL_INIT_EVERYTHING);
@@ -176,15 +192,17 @@ int main(int argc, char* argv[]) {
 	player.y = SCREEN_HEIGHT / 2;
 	player.angle = 270;
 
+	double target_fps = TARGET_FPS;
+	double target_frame_time = 1000.0/target_fps;
 	Uint64 last_count = SDL_GetPerformanceCounter();
-	double delay_remainder = 0;
 
 	SDL_bool running = SDL_TRUE;
-	while(running) {
+	while (running) {
 		Uint64 current_count = SDL_GetPerformanceCounter();
-		double dt = (double)(current_count - last_count)*1000 / (double)SDL_GetPerformanceFrequency();
-		dt /= TARGET_FRAME_TIME;
-		last_count = current_count;
+		double dt = (double)(current_count - last_count) / (double)SDL_GetPerformanceFrequency();
+//		SDL_Log("Frametime: %f", dt*1000);
+//		SDL_Log("FPS: %f", 1/dt);
+		dt = dt/(1 / (double)TICK_RATE);
 
 		new_player_controller = (game_controller_state) {
 			.thrust.scan_code 		= 	player_controller.thrust.scan_code,
@@ -210,6 +228,7 @@ int main(int argc, char* argv[]) {
 				} break;
 			}
 		}
+		if (!running) break;
 
 		game_button_state* current_button,* new_button;
 		for (int i = 0; i < array_length(new_player_controller.list); i++) {
@@ -245,8 +264,8 @@ int main(int argc, char* argv[]) {
 		player.x += player.dx * dt;
 		player.y += player.dy * dt;
 
-		player.dx *= (1.0 - PHYSICS_FRICTION);
-		player.dy *= (1.0 - PHYSICS_FRICTION);
+		player.dx *= 1.0 - (PHYSICS_FRICTION*dt);
+		player.dy *= 1.0 - (PHYSICS_FRICTION*dt);
 
 		if (player.x < 0) player.x = SCREEN_WIDTH + player.x;
 		else if (player.x > SCREEN_WIDTH) player.x -= SCREEN_WIDTH;
@@ -261,20 +280,14 @@ int main(int argc, char* argv[]) {
 //		SDL_Rect center_rect = {player.x-5, player.y-5,10, 10};
 //		SDL_RenderFillRect(renderer, &center_rect);
 		SDL_RenderPresent(renderer);
-		
+
+		last_count = current_count;
 		// Calculate the time_elapsed (the time taken to update and render the current frame)
 		// Subtract from target frame time
 		// Add remainder from previous frames (because SDL_Delay only excepts integer MS values)
 		// Calculate new remainder from this sum
-
-		double time_elapsed = (double)(SDL_GetPerformanceCounter() - current_count) / (double)SDL_GetPerformanceFrequency() * 1000;
-		double delay = TARGET_FRAME_TIME - time_elapsed;
-		if (delay_remainder >= 1.0) {
-			delay += delay_remainder;
-		}
-		delay_remainder = (double)(delay - (Uint32)delay);
-		
-		SDL_Delay((Uint32)delay);
+		double time_elapsed = (double)(SDL_GetPerformanceCounter() - current_count) / (double)SDL_GetPerformanceFrequency() * 1000.0;
+		precise_delay(target_frame_time - time_elapsed);
 	}
 
 	SDL_Quit();	
