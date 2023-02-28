@@ -4,52 +4,8 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb/stb_image.h"
 
-#define MATH_PI 3.14159265
-#define RAD_TO_DEG(rads) rads * (180/MATH_PI)
-#define DEG_TO_RAD(degs) degs * (MATH_PI/180)
-
-typedef struct rgb_color {uint8_t r, g, b;} rgb_color;
-#define CLEAR_COLOR (rgb_color){0,10,48}
-
-#define SCREEN_WIDTH 1280
-#define SCREEN_HEIGHT 720
-
-#define array_length(array) ( sizeof(array) / sizeof(array[0]) )
-
-#define TARGET_FPS 60
-#define TICK_RATE 60
-
-#define PHYSICS_FRICTION 0.02f
-#define PLAYER_FORWARD_THRUST 0.15f
-#define PLAYER_LATERAL_THRUST 0.2f
-#define PLAYER_TURN_SPEED 3.14f
-
-enum stbi_masks {
-	STBI_MASK_R = 0x000000FF, 
-	STBI_MASK_G = 0x0000FF00,
-	STBI_MASK_B = 0x00FF0000,
-	STBI_MASK_A = 0xFF000000,
-} stbi_masks;
-
-typedef struct game_button_state {
-	SDL_Scancode scan_code;
-	SDL_bool pressed, held, released;
-} game_button_state;
-
-typedef union game_controller_state {
-	struct {
-		game_button_state thrust;
-		game_button_state turn_left;
-		game_button_state turn_right;
-		game_button_state thrust_left;
-		game_button_state thrust_right;
-		game_button_state fire;
-	};
-	game_button_state list[6];
-} game_controller_state;
-
-static inline double sin_deg(double degrees) { return SDL_sin(DEG_TO_RAD(degrees)); }
-static inline double cos_deg(double degrees) { return SDL_cos(DEG_TO_RAD(degrees)); }
+#include "defs.h"
+#include "particles.c"
 
 SDL_Texture* load_texture(SDL_Renderer* renderer, const char* file) {
 int image_width, image_height, image_components;
@@ -134,6 +90,8 @@ static void precise_delay(double ms) {
 		// If delay reached or passed, no need to spin
 		if (count_elapsed < ms_count) {
 			while( (SDL_GetPerformanceCounter() - end_count) < (ms_count - count_elapsed)) {} // spin
+		} else {
+			SDL_Log("SDL_Delay overshot %fms target. Slept for %fms", ms, (double)count_elapsed / (double)SDL_GetPerformanceFrequency() * 1000.0);
 		}
 	}
 }
@@ -149,12 +107,13 @@ int main(int argc, char* argv[]) {
 		exit(1);
 	}
 
-	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+	SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
+
+	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC); 
 	if (renderer == NULL) {
 		SDL_LogError(0, SDL_GetError());
 		exit(1);
 	}
-	SDL_RenderSetVSync(renderer, -1);
 
 	game_controller_state player_controller = {0};
 
@@ -184,7 +143,7 @@ int main(int argc, char* argv[]) {
 	Mix_PlayMusic(music, -1);
 
 	struct {
-		float x, y, dx, dy;
+		float x, y, vx, vy;
 		double angle;
 	} player = {0};
 
@@ -195,14 +154,13 @@ int main(int argc, char* argv[]) {
 	double target_fps = TARGET_FPS;
 	double target_frame_time = 1000.0/target_fps;
 	Uint64 last_count = SDL_GetPerformanceCounter();
+	Uint64 current_count = last_count + SDL_GetPerformanceFrequency()/target_fps;
+	Uint64 average_present_count = 0; //average time taken to present backbuffer
 
 	SDL_bool running = SDL_TRUE;
 	while (running) {
-		Uint64 current_count = SDL_GetPerformanceCounter();
 		double dt = (double)(current_count - last_count) / (double)SDL_GetPerformanceFrequency();
-//		SDL_Log("Frametime: %f", dt*1000);
-//		SDL_Log("FPS: %f", 1/dt);
-		dt = dt/(1 / (double)TICK_RATE);
+		dt = dt/(1.0 / (double)TICK_RATE);
 
 		new_player_controller = (game_controller_state) {
 			.thrust.scan_code 		= 	player_controller.thrust.scan_code,
@@ -246,26 +204,52 @@ int main(int argc, char* argv[]) {
 		if (player_controller.turn_right.held) player.angle += PLAYER_TURN_SPEED * dt;
 
 		if (player_controller.thrust.held) {
-			player.dx += cos_deg(player.angle) * PLAYER_FORWARD_THRUST * dt;
-			player.dy += sin_deg(player.angle) * PLAYER_FORWARD_THRUST * dt;
+			player.vx += cos_deg(player.angle) * PLAYER_FORWARD_THRUST * dt;
+			player.vy += sin_deg(player.angle) * PLAYER_FORWARD_THRUST * dt;
+
+			Particle* particle = instantiate_particle(0, 0);
+			init_particle(particle);
+			particle->x = player.x;
+			particle->y = player.y;
+			particle->vx = cos_deg(player.angle + 180) * PARTICLE_SPEED + player.vx;
+			particle->vy = sin_deg(player.angle + 180) * PARTICLE_SPEED + player.vy;
+			particle->color = SD_BLUE;
 		}
 
 		if (player_controller.thrust_left.held) {
-			player.dx += cos_deg(player.angle + 90) * PLAYER_LATERAL_THRUST * dt;
-			player.dy += sin_deg(player.angle + 90) * PLAYER_LATERAL_THRUST * dt;
+			player.vx += cos_deg(player.angle + 90) * PLAYER_LATERAL_THRUST * dt;
+			player.vy += sin_deg(player.angle + 90) * PLAYER_LATERAL_THRUST * dt;
+
+			Particle* particle = instantiate_particle(0, 0);
+			init_particle(particle);
+			particle->x = player.x;
+			particle->y = player.y;
+			particle->vx = cos_deg(player.angle - 90) * PARTICLE_SPEED + player.vx;
+			particle->vy = sin_deg(player.angle - 90) * PARTICLE_SPEED + player.vy;
+			particle->color = SD_BLUE;
 		}
 		if (player_controller.thrust_right.held) {
-			player.dx += cos_deg(player.angle - 90) * PLAYER_LATERAL_THRUST * dt;
-			player.dy += sin_deg(player.angle - 90) * PLAYER_LATERAL_THRUST * dt;
+			player.vx += cos_deg(player.angle - 90) * PLAYER_LATERAL_THRUST * dt;
+			player.vy += sin_deg(player.angle - 90) * PLAYER_LATERAL_THRUST * dt;
+		
+		Particle* particle = instantiate_particle(0, 0);
+			init_particle(particle);
+			particle->x = player.x;
+			particle->y = player.y;
+			particle->vx = cos_deg(player.angle + 90) * PARTICLE_SPEED + player.vx;
+			particle->vy = sin_deg(player.angle + 90) * PARTICLE_SPEED + player.vy;
+			particle->color = SD_BLUE;
 		}
 		
-		if (player_controller.fire.pressed) Mix_PlayChannel(-1, player_shot, 0);
+		if (player_controller.fire.pressed)  {
+			explode_at_point(player.x, player.y, 0, 0, 1, 0, 0);
+			Mix_PlayChannel(-1, player_shot, 0);
+		}
+		player.x += player.vx * dt;
+		player.y += player.vy * dt;
 
-		player.x += player.dx * dt;
-		player.y += player.dy * dt;
-
-		player.dx *= 1.0 - (PHYSICS_FRICTION*dt);
-		player.dy *= 1.0 - (PHYSICS_FRICTION*dt);
+		player.vx *= 1.0 - (PHYSICS_FRICTION*dt);
+		player.vy *= 1.0 - (PHYSICS_FRICTION*dt);
 
 		if (player.x < 0) player.x = SCREEN_WIDTH + player.x;
 		else if (player.x > SCREEN_WIDTH) player.x -= SCREEN_WIDTH;
@@ -273,21 +257,34 @@ int main(int argc, char* argv[]) {
 		if (player.y < 0) player.y = SCREEN_HEIGHT + player.y;
 		else if (player.y > SCREEN_HEIGHT) player.y -= SCREEN_HEIGHT;
 
+		update_particles(dt);
+
 		SDL_SetRenderDrawColor(renderer,CLEAR_COLOR.r,CLEAR_COLOR.g,CLEAR_COLOR.b,255);	
 		SDL_RenderClear(renderer);
+
+		draw_particles(renderer);
 		draw_texture(renderer, player_ship, (int)player.x, (int)player.y, player.angle, SDL_TRUE);
-//		SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
-//		SDL_Rect center_rect = {player.x-5, player.y-5,10, 10};
-//		SDL_RenderFillRect(renderer, &center_rect);
+
+		Uint64 frequency = SDL_GetPerformanceFrequency();
+
+		double time_elapsed = (double)(SDL_GetPerformanceCounter() - current_count + average_present_count) / (double)frequency * 1000.0;
+		precise_delay(target_frame_time - time_elapsed);
+
+		Uint64 before_present_count = SDL_GetPerformanceCounter();		
 		SDL_RenderPresent(renderer);
 
 		last_count = current_count;
-		// Calculate the time_elapsed (the time taken to update and render the current frame)
-		// Subtract from target frame time
-		// Add remainder from previous frames (because SDL_Delay only excepts integer MS values)
-		// Calculate new remainder from this sum
-		double time_elapsed = (double)(SDL_GetPerformanceCounter() - current_count) / (double)SDL_GetPerformanceFrequency() * 1000.0;
-		precise_delay(target_frame_time - time_elapsed);
+		current_count = SDL_GetPerformanceCounter();
+
+		average_present_count = 
+			(average_present_count + 
+			(current_count - before_present_count)) / 
+			(1 + (Uint64)(average_present_count > 0));
+
+//		SDL_Log("Average present time: %fms", (double)average_present_count / (double)frequency * 1000.0);
+//		double frame_time = (double)(current_count - last_count) / (double)frequency * 1000.0;
+//		SDL_Log("Frame time: %.4fms", frame_time);
+//		SDL_Log("FPS: %.0f", 1000.0 / frame_time);
 	}
 
 	SDL_Quit();	
