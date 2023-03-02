@@ -46,7 +46,89 @@ typedef union game_controller_state {
 	game_button_state list[6];
 } game_controller_state;
 
+typedef struct Vector2 {
+	float x, y;
+} Vector2;
+
+typedef struct Entity {
+	union {
+		Vector2 position;
+		struct {float x, y; };
+	};	
+	union {
+		Vector2 velocity;
+		struct {float vx, vy; };
+	};
+	float z;
+	float angle;
+	SDL_bool despawning;
+} Entity;
+
+typedef enum Particle_Shape {
+	PARTICLE_SHAPE_UNDEFINED,
+	PARTICLE_SHAPE_RECT,
+	PARTICLE_SHAPE_COUNT,
+} Particle_Shape;
+
+typedef struct Particle {
+	float x, y;
+	float vx, vy;
+	float mass;
+	float collision_radius;
+	float life_left;
+	Uint32 sprite;	
+
+	Particle_Shape shape;
+	rgb_color color;
+} Particle;
+
+typedef struct Particle_Emitter {
+	Entity* parent;
+	// If parent is defined, position is relative to parent position and angle.
+	union {
+		Vector2 position;
+		struct { float x, y; };
+	};
+	float angle;
+
+	float density;
+	Uint32 sprite;
+	Particle_Shape shape;
+	rgb_color colors[16];
+	Uint32 color_count;
+
+	float counter;
+	float scale;
+	SDL_bool active;
+} Particle_Emitter;
+
+#define MAX_PARTICLES 512
+#define MAX_PARTICLE_EMITTERS 128
+typedef struct Particle_System {
+	Particle particles[MAX_PARTICLES];
+	Uint32 particle_count;
+
+	Particle_Emitter emitters[MAX_PARTICLE_EMITTERS];
+	Uint32 emitter_count;
+} Particle_System;
+
+typedef struct Game_State {
+	SDL_Window* window;
+	SDL_Renderer* renderer;
+
+	Particle_System particle_system;
+
+	game_controller_state player_controller;
+	Entity player;
+
+	SDL_Texture* player_ship;
+	Mix_Music* music;
+	Mix_Chunk* player_shot;
+} Game_State;
+
 static inline double sin_deg(double degrees) { return SDL_sin(DEG_TO_RAD(degrees)); }
 static inline double cos_deg(double degrees) { return SDL_cos(DEG_TO_RAD(degrees)); }
+
+float random(void);
 
 #endif
