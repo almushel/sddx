@@ -5,37 +5,8 @@
 #include "stb/stb_image.h"
 
 #include "defs.h"
+#include "assets.c"
 #include "particles.c"
-
-SDL_Texture* load_texture(SDL_Renderer* renderer, const char* file) {
-int image_width, image_height, image_components;
-	SDL_Texture* result = 0;
-
-	unsigned char* image = stbi_load(file, &image_width, &image_height, &image_components, 0);
-
-	SDL_Surface* image_surface;
-	if (image) {
-		image_surface = SDL_CreateRGBSurfaceFrom(image, image_width, image_height, image_components * 8, image_components * image_width, 
-							STBI_MASK_R, STBI_MASK_G, STBI_MASK_B, STBI_MASK_A);
-	} else {
-		SDL_Log("stbi failed to load %s", file);
-	}
-
-	if (image_surface) {
-		result = SDL_CreateTextureFromSurface(renderer, image_surface);
-	} else {
-		SDL_Log("SDL failed to create surface from loaded image");
-	}
-	
-	if (!result) {
-		SDL_Log("SDL failed to create texture from surface");
-	}
-
-	if (image_surface) SDL_FreeSurface(image_surface);
-	if (image) stbi_image_free(image);
-
-	return result;
-}
 
 void draw_texture(SDL_Renderer* renderer, SDL_Texture* texture, float x, float y, double angle, SDL_bool centered) {
 	if (texture) {
@@ -127,19 +98,20 @@ int main(int argc, char* argv[]) {
 	game->player_controller.fire.scan_code = SDL_SCANCODE_SPACE;
 
 	game_controller_state new_player_controller = {0};
-
-	game->player_ship = load_texture(game->renderer, "assets/images/player.png");
 	
+	game_load_texture(game, "assets/images/player.png", "Player Ship");
+
 	if (Mix_OpenAudio(48000, AUDIO_S16SYS, 2, 2048) != -1) {
 		Mix_AllocateChannels(16);
-		game->music = Mix_LoadMUS("assets/audio/WrappingAction.mp3");
-		game->player_shot = Mix_LoadWAV("assets/audio/PlayerShot.mp3");
+		game_load_music(game, "assets/audio/WrappingAction.mp3", "Wrapping Action");
+		game_load_sfx(game, "assets/audio/PlayerShot.mp3", "Player Shot");
 	} else {
 		SDL_Log(SDL_GetError());
 		exit(1);
 	}
 
-	Mix_PlayMusic(game->music, -1);
+	Mix_PlayMusic(game_get_music(game, "Wrapping Action"), -1);
+
 
 	game->player = (Entity){0};
 	game->player.x = SCREEN_WIDTH / 2;
@@ -236,7 +208,7 @@ int main(int argc, char* argv[]) {
 		
 		if (game->player_controller.fire.pressed)  {
 			explode_at_point(&game->particle_system, player->x, player->y, 0, 0, 1, 0, 0);
-			Mix_PlayChannel(-1, game->player_shot, 0);
+			Mix_PlayChannel(-1, game_get_sfx(game, "Player Shot"), 0);
 		}
 		player->x += player->vx * dt;
 		player->y += player->vy * dt;
@@ -257,7 +229,7 @@ int main(int argc, char* argv[]) {
 		SDL_RenderClear(game->renderer);
 
 		draw_particles(&game->particle_system, game->renderer);
-		draw_texture(game->renderer, game->player_ship, (int)player->x, (int)player->y, player->angle, SDL_TRUE);
+		draw_texture(game->renderer, game_get_texture(game, "Player Ship"), (int)player->x, (int)player->y, player->angle, SDL_TRUE);
 
 		Uint64 frequency = SDL_GetPerformanceFrequency();
 

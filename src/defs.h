@@ -112,18 +112,26 @@ typedef struct Particle_System {
 	Uint32 emitter_count;
 } Particle_System;
 
+typedef struct Mix_Music_Node 	{ char* name; Mix_Music* data; struct Mix_Music_Node* next; } Mix_Music_Node;
+typedef struct Mix_Chunk_Node 	{ char* name; Mix_Chunk* data; struct Mix_Chunk_Node* next; } Mix_Chunk_Node;
+typedef struct SDL_Texture_Node { char* name; SDL_Texture* data; struct SDL_Texture_Node* next; } SDL_Texture_Node;
+
+typedef struct Game_Assets {
+	Mix_Music_Node music[8];
+	Mix_Chunk_Node sfx[16];
+	SDL_Texture_Node textures[16];
+} Game_Assets;
+
 typedef struct Game_State {
 	SDL_Window* window;
 	SDL_Renderer* renderer;
+
+	Game_Assets assets;
 
 	Particle_System particle_system;
 
 	game_controller_state player_controller;
 	Entity player;
-
-	SDL_Texture* player_ship;
-	Mix_Music* music;
-	Mix_Chunk* player_shot;
 } Game_State;
 
 static inline double sin_deg(double degrees) { return SDL_sin(DEG_TO_RAD(degrees)); }
