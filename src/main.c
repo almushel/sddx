@@ -8,7 +8,7 @@
 #include "assets.c"
 #include "particles.c"
 
-void draw_texture(SDL_Renderer* renderer, SDL_Texture* texture, float x, float y, double angle, SDL_bool centered) {
+void draw_texture(SDL_Renderer* renderer, SDL_Texture* texture, float x, float y, float angle, SDL_bool centered) {
 	if (texture) {
 		int dest_w, dest_h;
 
@@ -54,15 +54,15 @@ static void precise_delay(double ms) {
 	if (ms > 0) {
 		Uint64 ms_count = (Uint64)(ms / 1000.0 * (double)SDL_GetPerformanceFrequency()); // Delay time in terms of Performance Counter
 		Uint64 start_count = SDL_GetPerformanceCounter(); // Performance count before delay
-		if (ms > 1.0) SDL_Delay((Uint32)ms - 1);
+		Uint64 target = start_count + ms_count;
+		if (ms > 1.1) SDL_Delay((Uint32)(ms - 1.1));
 		Uint64 end_count = SDL_GetPerformanceCounter(); // Performance count after delay
-		Uint64 count_elapsed = end_count - start_count;
 
 		// If delay reached or passed, no need to spin
-		if (count_elapsed < ms_count) {
-			while( (SDL_GetPerformanceCounter() - end_count) < (ms_count - count_elapsed)) {} // spin
-		} else {
-			SDL_Log("SDL_Delay overshot %fms target. Slept for %fms", ms, (double)count_elapsed / (double)SDL_GetPerformanceFrequency() * 1000.0);
+		if (end_count < target) {
+			while(SDL_GetPerformanceCounter() < target) {} // spin
+		} else if (end_count > target) {
+			SDL_Log("SDL_Delay overshot %fms target. Slept for %fms", ms, (double)(end_count - start_count) / (double)SDL_GetPerformanceFrequency() * 1000.0);
 		}
 	}
 }
@@ -117,6 +117,7 @@ int main(int argc, char* argv[]) {
 	game->player.x = SCREEN_WIDTH / 2;
 	game->player.y = SCREEN_HEIGHT / 2;
 	game->player.angle = 270;
+	game->player.sprite.texture = game_get_texture(game, "Player Ship");
 
 	Particle_Emitter* main_thruster = get_particle_emitter(&game->particle_system);
 	*main_thruster = (Particle_Emitter){0};
@@ -207,7 +208,8 @@ int main(int argc, char* argv[]) {
 		left_thruster->active = game->player_controller.thrust_right.held;
 		
 		if (game->player_controller.fire.pressed)  {
-			explode_at_point(&game->particle_system, player->x, player->y, 0, 0, 1, 0, 0);
+			explode_sprite(&game->particle_system, &player->sprite, player->x, player->y, player->angle, 6);
+			//explode_at_point(&game->particle_system, player->x, player->y, 0, 0, 1, 0, 0);
 			Mix_PlayChannel(-1, game_get_sfx(game, "Player Shot"), 0);
 		}
 		player->x += player->vx * dt;
@@ -228,8 +230,8 @@ int main(int argc, char* argv[]) {
 		SDL_SetRenderDrawColor(game->renderer,CLEAR_COLOR.r,CLEAR_COLOR.g,CLEAR_COLOR.b,255);	
 		SDL_RenderClear(game->renderer);
 
-		draw_particles(&game->particle_system, game->renderer);
-		draw_texture(game->renderer, game_get_texture(game, "Player Ship"), (int)player->x, (int)player->y, player->angle, SDL_TRUE);
+		draw_particles(game, game->renderer);
+		draw_game_sprite(game, &player->sprite, (Transform2D){player->position, player->angle}, 1);
 
 		Uint64 frequency = SDL_GetPerformanceFrequency();
 

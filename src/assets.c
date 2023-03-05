@@ -148,3 +148,75 @@ SDL_bool game_load_sfx(Game_State* game, const char* file, const char* name) {
 game_get_asset(Mix_Music, music, music)
 game_get_asset(Mix_Chunk, sfx, sfx)
 game_get_asset(SDL_Texture, textures, texture)
+
+SDL_Rect get_sprite_rect(Game_Sprite* sprite) {
+	SDL_Rect result = {0};
+
+	if (sprite->rect.w && sprite->rect.h) {
+		result = sprite->rect;
+	} else {
+		if (sprite->texture) {
+			SDL_QueryTexture(sprite->texture, NULL, NULL, &result.w, &result.h);
+		} else {
+			SDL_Log("get_sprite_rect(): Invalid texture.");
+		}
+	}
+
+	return result;
+}
+
+// Currently allocates an array of Game_Sprites of length pieces.
+// Should probably be freed after use.
+Game_Sprite* divide_sprite(Game_Sprite* sprite, int pieces) {
+	Game_Sprite* result = 0;
+	
+	if (sprite && pieces > 0) {
+		int columns = 2;
+		int rows = pieces / columns;
+
+		result = SDL_malloc(sizeof(Game_Sprite) * (pieces));
+		
+		SDL_Rect sprite_rect = get_sprite_rect(sprite);
+		
+		int chunk_width =  (int)(sprite_rect.w / columns);
+		int chunk_height = (int)(sprite_rect.h / rows);
+
+		int next_sprite = 0;
+		for (int e = 0; e < rows; e++) {
+			for (int i = 0; i < columns; i++) {
+				Game_Sprite* chunk = result + next_sprite;
+
+				chunk->texture = sprite->texture;
+				chunk->rect.x  = chunk_width  * i;
+				chunk->rect.y  = chunk_height * e;
+				chunk->rect.w  = chunk_width;
+				chunk->rect.h  = chunk_height;
+			
+				next_sprite++;
+			}
+		}
+	}
+
+	return result;
+}
+
+void draw_game_sprite(Game_State* game, Game_Sprite* sprite, Transform2D transform, SDL_bool centered) {
+	SDL_Texture* texture = sprite->texture;
+
+	if (texture) {
+		SDL_Rect sprite_rect = get_sprite_rect(sprite);
+
+		SDL_FRect dest_rect;
+		dest_rect.x = transform.x;
+		dest_rect.y = transform.y;
+		dest_rect.w = (float)sprite_rect.w;
+		dest_rect.h = (float)sprite_rect.h;
+
+		if (centered == SDL_TRUE) {
+			dest_rect.x -= dest_rect.w/2.0f;
+			dest_rect.y -= dest_rect.h/2.0f;
+		}
+
+		SDL_RenderCopyExF(game->renderer, texture, &sprite_rect, &dest_rect, transform.angle, 0, SDL_FLIP_NONE);
+	}
+}
