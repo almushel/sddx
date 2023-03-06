@@ -50,17 +50,18 @@ void process_key_event(SDL_KeyboardEvent* event, game_controller_state* input) {
 	}
 }
 
+#define DELAY_TOLERANCE 1.2
 static void precise_delay(double ms) {
 	if (ms > 0) {
 		Uint64 ms_count = (Uint64)(ms / 1000.0 * (double)SDL_GetPerformanceFrequency()); // Delay time in terms of Performance Counter
 		Uint64 start_count = SDL_GetPerformanceCounter(); // Performance count before delay
 		Uint64 target = start_count + ms_count;
-		if (ms > 1.1) SDL_Delay((Uint32)(ms - 1.1));
+		if (ms > DELAY_TOLERANCE) SDL_Delay((Uint32)(ms - DELAY_TOLERANCE));
 		Uint64 end_count = SDL_GetPerformanceCounter(); // Performance count after delay
 
 		// If delay reached or passed, no need to spin
 		if (end_count < target) {
-			while(SDL_GetPerformanceCounter() < target) {} // spin
+			while(SDL_GetPerformanceCounter() < target) {_mm_pause(); } // spin
 		} else if (end_count > target) {
 			SDL_Log("SDL_Delay overshot %fms target. Slept for %fms", ms, (double)(end_count - start_count) / (double)SDL_GetPerformanceFrequency() * 1000.0);
 		}
@@ -135,11 +136,10 @@ int main(int argc, char* argv[]) {
 	right_thruster->angle = -90.0f;
 
 
-	double target_fps = TARGET_FPS;
+	double target_fps = (double)TARGET_FPS;
 	double target_frame_time = 1000.0/target_fps;
 	Uint64 last_count = SDL_GetPerformanceCounter();
 	Uint64 current_count = last_count;
-	Uint64 average_present_count = 0; //average time taken to present backbuffer
 
 	SDL_bool running = SDL_TRUE;
 	while (running) {
@@ -235,24 +235,16 @@ int main(int argc, char* argv[]) {
 
 		Uint64 frequency = SDL_GetPerformanceFrequency();
 
-		double time_elapsed = (double)(SDL_GetPerformanceCounter() - current_count + average_present_count) / (double)frequency * 1000.0;
+		double time_elapsed = (double)(SDL_GetPerformanceCounter() - current_count) / (double)frequency * 1000.0;
 		precise_delay(target_frame_time - time_elapsed);
-
-		Uint64 before_present_count = SDL_GetPerformanceCounter();		
-		SDL_RenderPresent(game->renderer);
 
 		last_count = current_count;
 		current_count = SDL_GetPerformanceCounter();
+		SDL_RenderPresent(game->renderer);
 
-		average_present_count = 
-			(average_present_count + 
-			(current_count - before_present_count)) / 
-			(1 + (Uint64)(average_present_count > 0));
-
-//		SDL_Log("Average present time: %fms", (double)average_present_count / (double)frequency * 1000.0);
 //		double frame_time = (double)(current_count - last_count) / (double)frequency * 1000.0;
 //		SDL_Log("Frame time: %.4fms", frame_time);
-//		SDL_Log("FPS: %.0f", 1000.0 / frame_time);
+//		SDL_Log("FPS: %f", 1000.0 / frame_time);
 	}
 
 	SDL_Quit();	
