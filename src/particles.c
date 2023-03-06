@@ -2,7 +2,8 @@
 #include "stdlib.h"
 #include "defs.h"
 
-#define PARTICLE_LIFETIME 15
+#define PARTICLE_LIFETIME 12
+#define PARTICLE_MIN_SCALE 0.01
 #define PARTICLE_MAX_START_RADIUS 7
 #define PARTICLE_MIN_START_RADIUS 3
 #define PARTICLE_SPEED 6
@@ -33,7 +34,7 @@ void update_particles(Particle_System* ps, float dt) {
 		
 		if (random() * 100 > 50){
 			particle->life_left -= PARTICLE_DECAY * dt;
-			particle->collision_radius -= PARTICLE_DECAY * dt;
+			particle->sx = particle->sy = SDL_clamp(particle->life_left / PARTICLE_LIFETIME, PARTICLE_MIN_SCALE, 1.0f);
 			if (particle->collision_radius < 0) particle->collision_radius = 0;
 		}
 		
@@ -61,18 +62,19 @@ void draw_particles(Game_State* game, SDL_Renderer* renderer) {
 	for (int p = 0; p < ps->particle_count; p++) {
 		Particle particle = ps->particles[p];
 		if (particle.sprite.texture) {
-			// TO-DO: Scale particles based on lifetime elaspsed (particle.life_left / PARTICLE_LIFETIME)
-			draw_game_sprite(game, &particle.sprite, (Transform2D){particle.x, particle.y, particle.angle}, 1);
+			draw_game_sprite(game, &particle.sprite, particle.transform, 1);
 		} else {
 			switch (particle.shape) {
 //				case PARTICLE_SHAPE_RECT:
 				default: {
 					SDL_SetRenderDrawColor(renderer, particle.color.r, particle.color.g, particle.color.b, 255);
 					
+					float scaled_radius = particle.collision_radius * (particle.sx + particle.sy) / 2;
+
 					SDL_FRect p_rect;
-					p_rect.x = particle.x - particle.collision_radius;
-					p_rect.y = particle.y - particle.collision_radius;
-					p_rect.w = particle.collision_radius*2.0f;
+					p_rect.x = particle.x - scaled_radius;
+					p_rect.y = particle.y - scaled_radius;
+					p_rect.w = scaled_radius*2.0f;
 					p_rect.h = p_rect.w;
 
 					SDL_RenderFillRectF(renderer, &p_rect);
@@ -83,11 +85,11 @@ void draw_particles(Game_State* game, SDL_Renderer* renderer) {
 }
 
 void init_particle(Particle* p) {
-	*p = (Particle) {
-		.collision_radius = PARTICLE_MAX_START_RADIUS,
-		.life_left = PARTICLE_LIFETIME,
-		.color = DEFAULT_PARTICLE_COLOR,
-	};
+	*p = (Particle) {0};
+	p->collision_radius = PARTICLE_MAX_START_RADIUS,
+	p->life_left = PARTICLE_LIFETIME,
+	p->color = DEFAULT_PARTICLE_COLOR,
+	p->sx = p->sy = 1.0f;
 }
 
 Particle* get_particle(Particle_System* ps) {

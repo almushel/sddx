@@ -212,6 +212,11 @@ void draw_game_sprite(Game_State* game, Game_Sprite* sprite, Transform2D transfo
 		dest_rect.w = (float)sprite_rect.w;
 		dest_rect.h = (float)sprite_rect.h;
 
+		if (transform.sx > 0.0f && transform.sy > 0.0f) {
+			dest_rect.w *= transform.sx;
+			dest_rect.h *= transform.sy;
+		}
+
 		if (centered == SDL_TRUE) {
 			dest_rect.x -= dest_rect.w/2.0f;
 			dest_rect.y -= dest_rect.h/2.0f;

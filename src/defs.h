@@ -33,13 +33,24 @@ typedef struct Vector2 {
 	float x, y;
 } Vector2;
 
+#define Vec2_Union(v2_name, fx, fy) \
+	union { 						\
+		Vector2 v2_name; 			\
+		struct {float fx, fy; }; 	\
+	}
+
 typedef struct Transform2D {
-	union {
-		Vector2 position;
-		struct {float x, y; };
-	};
+	Vec2_Union(position, x, y);
+	Vec2_Union(scale, sx, sy);
 	float angle;
 } Transform2D;
+
+#define Transform2D_Union								\
+	union {												\
+		Transform2D transform;							\
+		struct {Vector2 position, scale; float _a; };	\
+		struct {float x, y, sx, sy, angle; };			\
+	}
 
 typedef struct Game_Sprite {
 	SDL_Texture* texture;
@@ -47,18 +58,11 @@ typedef struct Game_Sprite {
 } Game_Sprite;
 
 typedef struct Entity {
-	SDL_bool despawning;
-	union {
-		Vector2 position;
-		struct {float x, y; };
-	};	
-	union {
-		Vector2 velocity;
-		struct {float vx, vy; };
-	};
+	Transform2D_Union;
 	float z;
-	float angle;
+	Vec2_Union(velocity, vx, vy);
 	Game_Sprite sprite;
+	SDL_bool despawning;
 } Entity;
 
 typedef struct Mix_Music_Node 	{ char* name; Mix_Music* data; struct Mix_Music_Node* next; } Mix_Music_Node;
@@ -95,14 +99,13 @@ typedef enum Particle_Shape {
 } Particle_Shape;
 
 typedef struct Particle {
-	float x, y;
-	float vx, vy;
-	float angle;
+	Transform2D_Union;
+	Vec2_Union(velocity, vx, vy);
 	float mass;
 	float collision_radius;
 	float life_left;
 
-	Game_Sprite sprite;	\
+	Game_Sprite sprite;
 	Particle_Shape shape;
 	rgb_color color;
 } Particle;

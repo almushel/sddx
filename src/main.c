@@ -231,7 +231,7 @@ int main(int argc, char* argv[]) {
 		SDL_RenderClear(game->renderer);
 
 		draw_particles(game, game->renderer);
-		draw_game_sprite(game, &player->sprite, (Transform2D){player->position, player->angle}, 1);
+		draw_game_sprite(game, &player->sprite, player->transform, 1);
 
 		Uint64 frequency = SDL_GetPerformanceFrequency();
 
