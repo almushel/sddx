@@ -6,6 +6,7 @@
 
 #include "defs.h"
 #include "assets.c"
+#include "entities.c"
 #include "particles.c"
 
 void draw_texture(SDL_Renderer* renderer, SDL_Texture* texture, float x, float y, float angle, SDL_bool centered) {
@@ -50,6 +51,20 @@ void process_key_event(SDL_KeyboardEvent* event, game_controller_state* input) {
 	}
 }
 
+void load_game_assets(Game_State* game) {
+	game_load_texture(game, "assets/images/player.png", "Player Ship");
+	game_load_texture(game, "assets/images/grappler_hook.png", "Grappler Hook");
+	game_load_texture(game, "assets/images/grappler.png", "Enemy Grappler");
+	game_load_texture(game, "assets/images/missile.png", "Projectile Missile");
+	game_load_texture(game, "assets/images/ufo.png", "Enemy UFO");
+	game_load_texture(game, "assets/images/tracker.png", "Enemy Tracker");
+	game_load_texture(game, "assets/images/turret_base.png", "Enemy Turret Base");
+	game_load_texture(game, "assets/images/turret_cannon.png", "Enemy Turret Cannon");
+//	game_load_texture(game, "assets/images/hud_laser.png", "HUD Laser");
+//	game_load_texture(game, "assets/images/hud_mg.png", "HUD MG");
+//	game_load_texture(game, "assets/images/hud_missile.png", "HUD Missile");
+}
+
 #define DELAY_TOLERANCE 1.2
 static void precise_delay(double ms) {
 	if (ms > 0) {
@@ -75,6 +90,10 @@ int main(int argc, char* argv[]) {
 	Game_State* game = SDL_malloc(sizeof(Game_State));
 	SDL_memset(game, 0, sizeof(Game_State));
 
+	game->entities = SDL_malloc(sizeof(Entity) * 512);
+	SDL_memset(game->entities, 0, sizeof(Entity) * 512);
+	game->entities_size = 512;
+
 	game->window = SDL_CreateWindow("Space Drifter DX", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, 0);
 	if (game->window == NULL) {
 		SDL_LogError(0, SDL_GetError());
@@ -89,6 +108,8 @@ int main(int argc, char* argv[]) {
 		exit(1);
 	}
 
+	load_game_assets(game);
+
 	game->player_controller = (game_controller_state){0};
 	
 	game->player_controller.thrust.scan_code = SDL_SCANCODE_W;
@@ -99,8 +120,6 @@ int main(int argc, char* argv[]) {
 	game->player_controller.fire.scan_code = SDL_SCANCODE_SPACE;
 
 	game_controller_state new_player_controller = {0};
-	
-	game_load_texture(game, "assets/images/player.png", "Player Ship");
 
 	if (Mix_OpenAudio(48000, AUDIO_S16SYS, 2, 2048) != -1) {
 		Mix_AllocateChannels(16);
@@ -113,25 +132,24 @@ int main(int argc, char* argv[]) {
 
 	Mix_PlayMusic(game_get_music(game, "Wrapping Action"), -1);
 
+	int player_id = get_new_entity(game);
 
-	game->player = (Entity){0};
-	game->player.x = SCREEN_WIDTH / 2;
-	game->player.y = SCREEN_HEIGHT / 2;
-	game->player.angle = 270;
-	game->player.sprite.texture = game_get_texture(game, "Player Ship");
-
-	Particle_Emitter* main_thruster = get_particle_emitter(&game->particle_system);
+	game->player = spawn_entity(game, ENTITY_TYPE_PLAYER, (Vector2){SCREEN_WIDTH/2, SCREEN_HEIGHT/2});
+	for (int i = ENTITY_TYPE_PLAYER+1; i < ENTITY_TYPE_COUNT; i++) {
+		spawn_entity(game, i, (Vector2){random() * SCREEN_WIDTH, random() * SCREEN_HEIGHT});
+	}
+	Particle_Emitter* main_thruster = get_new_particle_emitter(&game->particle_system);
 	*main_thruster = (Particle_Emitter){0};
-	main_thruster->parent = &game->player;
+	main_thruster->parent = game->player;
 	main_thruster->angle = 180;
 	main_thruster->density = 2.0f;
 	main_thruster->colors[0] = SD_BLUE;
 	main_thruster->color_count = 1;
 
-	Particle_Emitter* left_thruster = get_particle_emitter(&game->particle_system);
+	Particle_Emitter* left_thruster = get_new_particle_emitter(&game->particle_system);
 	*left_thruster = *main_thruster;
 	left_thruster->angle = 90.0f;
-	Particle_Emitter* right_thruster = get_particle_emitter(&game->particle_system);
+	Particle_Emitter* right_thruster = get_new_particle_emitter(&game->particle_system);
 	*right_thruster = *main_thruster;
 	right_thruster->angle = -90.0f;
 
@@ -184,46 +202,17 @@ int main(int argc, char* argv[]) {
 			else if (new_button->released) current_button->held = SDL_FALSE;
 		}
 
-		Entity* player = &game->player;
-
-		if (game->player_controller.turn_left.held) player->angle -= PLAYER_TURN_SPEED * dt;
-		if (game->player_controller.turn_right.held) player->angle += PLAYER_TURN_SPEED * dt;
-		
-		if (game->player_controller.thrust.held) {
-			player->vx += cos_deg(player->angle) * PLAYER_FORWARD_THRUST * dt;
-			player->vy += sin_deg(player->angle) * PLAYER_FORWARD_THRUST * dt;
-		}
+		right_thruster->active = game->player_controller.thrust_left.held;
+		left_thruster->active = game->player_controller.thrust_right.held;
 		main_thruster->active = game->player_controller.thrust.held;
 
-		if (game->player_controller.thrust_left.held) {
-			player->vx += cos_deg(player->angle + 90) * PLAYER_LATERAL_THRUST * dt;
-			player->vy += sin_deg(player->angle + 90) * PLAYER_LATERAL_THRUST * dt;
-		}
-		right_thruster->active = game->player_controller.thrust_left.held;
-		
-		if (game->player_controller.thrust_right.held) {
-			player->vx += cos_deg(player->angle - 90) * PLAYER_LATERAL_THRUST * dt;
-			player->vy += sin_deg(player->angle - 90) * PLAYER_LATERAL_THRUST * dt;
-		}
-		left_thruster->active = game->player_controller.thrust_right.held;
-		
 		if (game->player_controller.fire.pressed)  {
-			explode_sprite(&game->particle_system, &player->sprite, player->x, player->y, player->angle, 6);
-			//explode_at_point(&game->particle_system, player->x, player->y, 0, 0, 1, 0, 0);
+			explode_sprite(game, game->player->sprites, game->player->x, game->player->y, game->player->angle, 6);
+			explode_at_point(&game->particle_system, game->player->x, game->player->y, 0, 0, 1, 0, 0);
 			Mix_PlayChannel(-1, game_get_sfx(game, "Player Shot"), 0);
 		}
-		player->x += player->vx * dt;
-		player->y += player->vy * dt;
-
-		player->vx *= 1.0 - (PHYSICS_FRICTION*dt);
-		player->vy *= 1.0 - (PHYSICS_FRICTION*dt);
-
-		if (player->x < 0) player->x = SCREEN_WIDTH + player->x;
-		else if (player->x > SCREEN_WIDTH) player->x -= SCREEN_WIDTH;
-
-		if (player->y < 0) player->y = SCREEN_HEIGHT + player->y;
-		else if (player->y > SCREEN_HEIGHT) player->y -= SCREEN_HEIGHT;
-
+		
+		update_entities(game, dt);
 		update_particle_emitters(&game->particle_system, dt);
 		update_particles(&game->particle_system, dt);
 
@@ -231,7 +220,7 @@ int main(int argc, char* argv[]) {
 		SDL_RenderClear(game->renderer);
 
 		draw_particles(game, game->renderer);
-		draw_game_sprite(game, &player->sprite, player->transform, 1);
+		draw_entities(game);
 
 		Uint64 frequency = SDL_GetPerformanceFrequency();
 

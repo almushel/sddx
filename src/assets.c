@@ -65,7 +65,6 @@ SDL_bool game_load_texture(Game_State* game, const char* file, const char* name)
 				SDL_Texture_Node* new_node = SDL_malloc(sizeof(SDL_Texture_Node));
 				SDL_memset(new_node, 0, sizeof(SDL_Texture_Node));
 				node->next = new_node;
-				node = node->next;
 			}
 
 			node = node->next;
@@ -93,7 +92,6 @@ SDL_bool game_load_music(Game_State* game, const char* file, const char* name) {
 				Mix_Music_Node* new_node = SDL_malloc(sizeof(Mix_Music_Node));
 				SDL_memset(new_node, 0, sizeof(Mix_Music_Node));
 				node->next = new_node;
-				node = node->next;
 			}
 
 			node = node->next;
@@ -121,7 +119,6 @@ SDL_bool game_load_sfx(Game_State* game, const char* file, const char* name) {
 				Mix_Chunk_Node* new_node = SDL_malloc(sizeof(Mix_Chunk_Node));
 				SDL_memset(new_node, 0, sizeof(Mix_Chunk_Node));
 				node->next = new_node;
-				node = node->next;
 			}
 
 			node = node->next;
@@ -133,14 +130,16 @@ SDL_bool game_load_sfx(Game_State* game, const char* file, const char* name) {
 
 #define game_get_asset(type, table_name, func_suffix) type* game_get_##func_suffix##(Game_State* game, const char* name) { \
 	type* result = 0;\
-\
-	type##_Node* node = &game->assets.##table_name##[get_hash_index(name, game->assets.##table_name)];\
-	while (node) { \
-		if (SDL_strcmp(node->name, name) == 0) {\
-			result = node->data;\
-			break; \
+	Uint64 hash_index = get_hash_index(name, game->assets.##table_name);\
+	if (hash_index < array_length(game->assets.##table_name)) {\
+		type##_Node* node = &game->assets.##table_name##[hash_index];\
+		while (node) { \
+			if (node->name && SDL_strcmp(node->name, name) == 0) {\
+				result = node->data;\
+				break; \
+			}\
+			node = node->next;\
 		}\
-		node = node->next;\
 	}\
 	return result; \
 }
@@ -149,25 +148,27 @@ game_get_asset(Mix_Music, music, music)
 game_get_asset(Mix_Chunk, sfx, sfx)
 game_get_asset(SDL_Texture, textures, texture)
 
-SDL_Rect get_sprite_rect(Game_Sprite* sprite) {
+SDL_Rect get_sprite_rect(Game_State* game, Game_Sprite* sprite) {
 	SDL_Rect result = {0};
 
 	if (sprite->rect.w && sprite->rect.h) {
 		result = sprite->rect;
 	} else {
-		if (sprite->texture) {
-			SDL_QueryTexture(sprite->texture, NULL, NULL, &result.w, &result.h);
-		} else {
-			SDL_Log("get_sprite_rect(): Invalid texture.");
+		SDL_Texture* texture = 0;
+		if (sprite->texture_name) {
+			texture = game_get_texture(game, sprite->texture_name);
 		}
+			
+		if (texture) SDL_QueryTexture(texture, NULL, NULL, &result.w, &result.h);
+		else SDL_Log("get_sprite_rect(): Invalid texture.");
 	}
 
 	return result;
 }
 
 // Currently allocates an array of Game_Sprites of length pieces.
-// Should probably be freed after use.
-Game_Sprite* divide_sprite(Game_Sprite* sprite, int pieces) {
+// Should be freed after use.
+Game_Sprite* divide_sprite(Game_State* game, Game_Sprite* sprite, int pieces) {
 	Game_Sprite* result = 0;
 	
 	if (sprite && pieces > 0) {
@@ -176,7 +177,7 @@ Game_Sprite* divide_sprite(Game_Sprite* sprite, int pieces) {
 
 		result = SDL_malloc(sizeof(Game_Sprite) * (pieces));
 		
-		SDL_Rect sprite_rect = get_sprite_rect(sprite);
+		SDL_Rect sprite_rect = get_sprite_rect(game, sprite);
 		
 		int chunk_width =  (int)(sprite_rect.w / columns);
 		int chunk_height = (int)(sprite_rect.h / rows);
@@ -186,7 +187,7 @@ Game_Sprite* divide_sprite(Game_Sprite* sprite, int pieces) {
 			for (int i = 0; i < columns; i++) {
 				Game_Sprite* chunk = result + next_sprite;
 
-				chunk->texture = sprite->texture;
+				chunk->texture_name = sprite->texture_name;
 				chunk->rect.x  = chunk_width  * i;
 				chunk->rect.y  = chunk_height * e;
 				chunk->rect.w  = chunk_width;
@@ -201,10 +202,10 @@ Game_Sprite* divide_sprite(Game_Sprite* sprite, int pieces) {
 }
 
 void draw_game_sprite(Game_State* game, Game_Sprite* sprite, Transform2D transform, SDL_bool centered) {
-	SDL_Texture* texture = sprite->texture;
+	SDL_Texture* texture =  game_get_texture(game, sprite->texture_name);
 
 	if (texture) {
-		SDL_Rect sprite_rect = get_sprite_rect(sprite);
+		SDL_Rect sprite_rect = get_sprite_rect(game, sprite);
 
 		SDL_FRect dest_rect;
 		dest_rect.x = transform.x;

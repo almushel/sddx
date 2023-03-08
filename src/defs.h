@@ -53,16 +53,30 @@ typedef struct Transform2D {
 	}
 
 typedef struct Game_Sprite {
-	SDL_Texture* texture;
+	char* texture_name;
 	SDL_Rect rect;
 } Game_Sprite;
+
+typedef enum Entity_Types {
+	ENTITY_TYPE_UNDEFINED,
+	ENTITY_TYPE_PLAYER,
+	ENTITY_TYPE_ENEMY_UFO,
+	ENTITY_TYPE_ENEMY_TRACKER,
+	ENTITY_TYPE_ENEMY_TURRET,
+	ENTITY_TYPE_ENEMY_GRAPPLER,
+	ENTITY_TYPE_COUNT
+} Entity_Types;
 
 typedef struct Entity {
 	Transform2D_Union;
 	float z;
 	Vec2_Union(velocity, vx, vy);
-	Game_Sprite sprite;
+
+	Game_Sprite sprites[4];
+	Uint32 sprite_count;
+
 	SDL_bool despawning;
+	Entity_Types type;
 } Entity;
 
 typedef struct Mix_Music_Node 	{ char* name; Mix_Music* data; struct Mix_Music_Node* next; } Mix_Music_Node;
@@ -146,10 +160,14 @@ typedef struct Game_State {
 
 	Game_Assets assets;
 
+	Entity* entities;
+	Uint32 entity_count;
+	Uint32 entities_size;
+
 	Particle_System particle_system;
 
 	game_controller_state player_controller;
-	Entity player;
+	Entity* player;
 } Game_State;
 
 static inline double sin_deg(double degrees) { return SDL_sin(DEG_TO_RAD(degrees)); }

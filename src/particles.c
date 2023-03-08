@@ -61,7 +61,7 @@ void draw_particles(Game_State* game, SDL_Renderer* renderer) {
 	Particle_System* ps = &game->particle_system;
 	for (int p = 0; p < ps->particle_count; p++) {
 		Particle particle = ps->particles[p];
-		if (particle.sprite.texture) {
+		if (particle.sprite.texture_name) {
 			draw_game_sprite(game, &particle.sprite, particle.transform, 1);
 		} else {
 			switch (particle.shape) {
@@ -92,19 +92,19 @@ void init_particle(Particle* p) {
 	p->sx = p->sy = 1.0f;
 }
 
-Particle* get_particle(Particle_System* ps) {
+Particle* get_new_particle(Particle_System* ps) {
 	Particle* result = 0;
 	if (ps->particle_count < MAX_PARTICLES) {
 		result = ps->particles + ps->particle_count++;
 	} else {
-		SDL_Log("get_particle(): max Particle count reached");
+		SDL_Log("get_new_particle(): max Particle count reached");
 	}
 
 	return result;
 }
 
 Particle* instantiate_particle(Particle_System* ps, Game_Sprite* sprite, Particle_Shape shape) {
-	Particle* result = get_particle(ps);
+	Particle* result = get_new_particle(ps);
 	if (result) {
 		init_particle(result);
 		if (sprite) result->sprite = *sprite;
@@ -154,12 +154,12 @@ void explode_at_point(Particle_System* ps, float x, float y, float force, rgb_co
 	}
 }
 
-Particle_Emitter* get_particle_emitter(Particle_System* ps) {
+Particle_Emitter* get_new_particle_emitter(Particle_System* ps) {
 	Particle_Emitter* result = 0;
 	if (ps->emitter_count < array_length(ps->emitters)) {
 		result = ps->emitters + ps->emitter_count++;
 	} else {
-		SDL_Log("get_particle_emitter(): max Particle emitter maximum reached");
+		SDL_Log("get_new_particle_emitter(): max Particle emitter maximum reached");
 	}
 
 	return result;
@@ -203,18 +203,18 @@ void update_particle_emitters(Particle_System* ps, float dt) {
 	}
 }
 
-void explode_sprite(Particle_System* ps, Game_Sprite* sprite, float x, float y, float angle, int pieces) {
+void explode_sprite(Game_State* game, Game_Sprite* sprite, float x, float y, float angle, int pieces) {
 	float angle_division = 360.0f / (float)pieces;
 	float random_deviation = 0;//angle_division * 1.8;
 
-	Game_Sprite* chunks = divide_sprite(sprite, pieces);
+	Game_Sprite* chunks = divide_sprite(game, sprite, pieces);
 
 	float radius = (chunks[0].rect.w + chunks[0].rect.h) / 2;
 	int cHalf = pieces / 2;
 
 	// Create explosion using chunks as particle sprites
 	for (int chunk_index = 0; chunk_index < pieces; chunk_index++) {
-		Particle* particle = instantiate_particle(ps, chunks + chunk_index, 0);
+		Particle* particle = instantiate_particle(&game->particle_system, chunks + chunk_index, 0);
 		const float random_deviation = 30.0f;
 
 		float chunk_angle = angle + 180.0f + (chunk_index * angle_division);
