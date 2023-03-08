@@ -1,3 +1,5 @@
+#define DEBUG 1
+
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_mixer.h"
 
@@ -60,6 +62,7 @@ void load_game_assets(Game_State* game) {
 	game_load_texture(game, "assets/images/tracker.png", "Enemy Tracker");
 	game_load_texture(game, "assets/images/turret_base.png", "Enemy Turret Base");
 	game_load_texture(game, "assets/images/turret_cannon.png", "Enemy Turret Cannon");
+	generate_drifter_texture(game);
 //	game_load_texture(game, "assets/images/hud_laser.png", "HUD Laser");
 //	game_load_texture(game, "assets/images/hud_mg.png", "HUD MG");
 //	game_load_texture(game, "assets/images/hud_missile.png", "HUD Missile");

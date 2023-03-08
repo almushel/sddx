@@ -46,29 +46,34 @@ static SDL_Texture* load_texture(SDL_Renderer* renderer, const char* file) {
 	return result;
 }
 
+#define game_store_asset(type, table_name, func_suffix) void game_store_##func_suffix(Game_State* game, type* asset, const char* label) {\
+	type##_Node* node = &game->assets.##table_name##[get_hash_index(label, game->assets.##table_name)];\
+	while (node) {\
+		if (!node->data) {\
+			node->data = asset;\
+			node->name = (char*)label;\
+		} else if (SDL_strcmp(node->name, label) == 0) {\
+			SDL_Log("Asset name %s already in use", label);\
+		} else if (!node->next) {\
+			type##_Node* new_node = SDL_malloc(sizeof(type##_Node));\
+			SDL_memset(new_node, 0, sizeof(type##_Node));\
+			node->next = new_node;\
+		}\
+		node = node->next;\
+	}\
+}
+
+game_store_asset(SDL_Texture, textures, texture)
+game_store_asset(Mix_Music, music, music)
+game_store_asset(Mix_Chunk, sfx, sfx)
+
 SDL_bool game_load_texture(Game_State* game, const char* file, const char* name) {
 	SDL_bool result = 0;
 	
 	SDL_Texture* texture = load_texture(game->renderer, file);
 	if (texture) {
 		const char* label = (name && SDL_strlen(name)) ? name : file;
-
-		SDL_Texture_Node* node = &game->assets.textures[get_hash_index(label, game->assets.textures)];
-		while (node) {
-			if (!node->data) {
-				node->data = texture;
-				node->name = (char*)label;
-				result = 1;
-			} else if (SDL_strcmp(node->name, label) == 0) {
-				SDL_Log("game_load_texture(): Texture name %s already in use", label);
-			} else if (!node->next) {
-				SDL_Texture_Node* new_node = SDL_malloc(sizeof(SDL_Texture_Node));
-				SDL_memset(new_node, 0, sizeof(SDL_Texture_Node));
-				node->next = new_node;
-			}
-
-			node = node->next;
-		}
+		game_store_texture(game, texture, label);
 	}
 
 	return result;
@@ -80,22 +85,7 @@ SDL_bool game_load_music(Game_State* game, const char* file, const char* name) {
 	Mix_Music* music = Mix_LoadMUS(file);
 	if (music) {
 		const char* label = (name && SDL_strlen(name)) ? name : file;
-		Mix_Music_Node* node = &game->assets.music[get_hash_index(label, game->assets.music)];
-		while (node) {
-			if (!node->data) {
-				node->data = music;
-				node->name = (char*)label;
-				result = 1;
-			} else if (SDL_strcmp(node->name, label) == 0) {
-				SDL_Log("game_load_music(): Music track name %s already in use", label);
-			} else if (!node->next) {
-				Mix_Music_Node* new_node = SDL_malloc(sizeof(Mix_Music_Node));
-				SDL_memset(new_node, 0, sizeof(Mix_Music_Node));
-				node->next = new_node;
-			}
-
-			node = node->next;
-		}
+		game_store_music(game, music, label);
 	}
 
 	return result;
@@ -107,22 +97,7 @@ SDL_bool game_load_sfx(Game_State* game, const char* file, const char* name) {
 	Mix_Chunk* chunk = Mix_LoadWAV(file);
 	if (chunk) {
 		const char* label = (name && SDL_strlen(name)) ? name : file;
-		Mix_Chunk_Node* node = &game->assets.sfx[get_hash_index(label, game->assets.sfx)];
-		while (node) {
-			if (!node->data) {
-				node->data = chunk;
-				node->name = (char*)label;
-				result = 1;
-			} else if (SDL_strcmp(node->name, label) == 0) {
-				SDL_Log("game_load_sfx(): SFX track name %s already in use", label);
-			} else if (!node->next) {
-				Mix_Chunk_Node* new_node = SDL_malloc(sizeof(Mix_Chunk_Node));
-				SDL_memset(new_node, 0, sizeof(Mix_Chunk_Node));
-				node->next = new_node;
-			}
-
-			node = node->next;
-		}
+		game_store_sfx(game, chunk, label);
 	}
 
 	return result;
@@ -130,16 +105,13 @@ SDL_bool game_load_sfx(Game_State* game, const char* file, const char* name) {
 
 #define game_get_asset(type, table_name, func_suffix) type* game_get_##func_suffix##(Game_State* game, const char* name) { \
 	type* result = 0;\
-	Uint64 hash_index = get_hash_index(name, game->assets.##table_name);\
-	if (hash_index < array_length(game->assets.##table_name)) {\
-		type##_Node* node = &game->assets.##table_name##[hash_index];\
-		while (node) { \
-			if (node->name && SDL_strcmp(node->name, name) == 0) {\
-				result = node->data;\
-				break; \
-			}\
-			node = node->next;\
+	type##_Node* node = &game->assets.##table_name##[get_hash_index(name, game->assets.##table_name)];\
+	while (node) { \
+		if (node->name && SDL_strcmp(node->name, name) == 0) {\
+			result = node->data;\
+			break; \
 		}\
+		node = node->next;\
 	}\
 	return result; \
 }
