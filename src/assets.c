@@ -195,6 +195,6 @@ void draw_game_sprite(Game_State* game, Game_Sprite* sprite, Transform2D transfo
 			dest_rect.y -= dest_rect.h/2.0f;
 		}
 
-		SDL_RenderCopyExF(game->renderer, texture, &sprite_rect, &dest_rect, transform.angle, 0, SDL_FLIP_NONE);
+		SDL_RenderCopyExF(game->renderer, texture, &sprite_rect, &dest_rect, transform.angle * (float)(int)sprite->rotation, 0, SDL_FLIP_NONE);
 	}
 }

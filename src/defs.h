@@ -55,6 +55,7 @@ typedef struct Transform2D {
 typedef struct Game_Sprite {
 	char* texture_name;
 	SDL_Rect rect;
+	SDL_bool rotation;
 } Game_Sprite;
 
 typedef enum Entity_Types {
@@ -71,7 +72,9 @@ typedef enum Entity_Types {
 typedef struct Entity {
 	Transform2D_Union;
 	float z;
+	float target_angle;
 	Vec2_Union(velocity, vx, vy);
+	float timer;
 
 	Game_Sprite sprites[4];
 	Uint32 sprite_count;
@@ -171,8 +174,9 @@ typedef struct Game_State {
 	Entity* player;
 } Game_State;
 
-static inline double sin_deg(double degrees) { return SDL_sin(DEG_TO_RAD(degrees)); }
-static inline double cos_deg(double degrees) { return SDL_cos(DEG_TO_RAD(degrees)); }
+static inline double sin_deg  (double degrees) 		{ return SDL_sin(DEG_TO_RAD(degrees)); }
+static inline double cos_deg  (double degrees) 		{ return SDL_cos(DEG_TO_RAD(degrees)); }
+static inline double atan2_deg(double y, double x) 	{ return RAD_TO_DEG(SDL_atan2(y, x )); }
 
 float random(void);
 
