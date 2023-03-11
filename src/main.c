@@ -3,9 +3,6 @@
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_mixer.h"
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb/stb_image.h"
-
 #include "defs.h"
 #include "assets.c"
 #include "entities.c"
@@ -124,7 +121,7 @@ int main(int argc, char* argv[]) {
 
 	game_controller_state new_player_controller = {0};
 
-	if (Mix_OpenAudio(48000, AUDIO_S16SYS, 2, 2048) != -1) {
+	if (Mix_OpenAudio(48000, AUDIO_S16SYS, 2, 4096) != -1) {
 		Mix_AllocateChannels(16);
 		game_load_music(game, "assets/audio/WrappingAction.mp3", "Wrapping Action");
 		game_load_sfx(game, "assets/audio/PlayerShot.mp3", "Player Shot");
@@ -134,12 +131,10 @@ int main(int argc, char* argv[]) {
 	}
 
 	Mix_PlayMusic(game_get_music(game, "Wrapping Action"), -1);
-
-	int player_id = get_new_entity(game);
-
 	game->player = spawn_entity(game, ENTITY_TYPE_PLAYER, (Vector2){SCREEN_WIDTH/2, SCREEN_HEIGHT/2});
-	for (int i = ENTITY_TYPE_PLAYER+1; i < ENTITY_TYPE_COUNT; i++) {
-		spawn_entity(game, i, (Vector2){random() * SCREEN_WIDTH, random() * SCREEN_HEIGHT});
+	for (int i = 1; i < ENTITY_TYPE_COUNT; i++) {
+		Entity* entity = spawn_entity(game, ENTITY_TYPE_SPAWN_WARP, (Vector2){random() * SCREEN_WIDTH, random() * SCREEN_HEIGHT});
+		entity->data.spawn_warp.spawn_type = i;
 	}
 	Particle_Emitter* main_thruster = get_new_particle_emitter(&game->particle_system);
 	*main_thruster = (Particle_Emitter){0};

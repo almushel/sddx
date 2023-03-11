@@ -26,7 +26,6 @@ float random(void) {
 
 void update_particles(Particle_System* ps, float dt) {
 	Uint32* dead_particles = SDL_malloc(sizeof(Uint32) * ps->particle_count);
-	SDL_memset(dead_particles, 0, sizeof(Uint32) * ps->particle_count);
 	Uint32 dead_particle_count = 0;
 
 	for (int p = 0; p < ps->particle_count; p++) {
@@ -57,6 +56,7 @@ void update_particles(Particle_System* ps, float dt) {
 	SDL_free(dead_particles);
 }
 
+// NOTE: What if we garbage collected in draw_particles? Check if state==dying, remove, decrement p.
 void draw_particles(Game_State* game, SDL_Renderer* renderer) {
 	Particle_System* ps = &game->particle_system;
 	for (int p = 0; p < ps->particle_count; p++) {

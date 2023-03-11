@@ -1,13 +1,15 @@
 #include "SDL2/SDL.h"
 #include "defs.h"
 
-#define ENEMY_WARP_SPEED 26
+#define ENTITY_MIN_SCALE 0.01f
+// TO-DO: Standardize entity timers. Use static range (e.g. 0-100) and define custom decay rates.
+#define ENEMY_WARP_SPEED 2.6f // // timer decrement rate
 
 #define DRIFT_RATE 1
 #define DRIFT_RADIUS 40
 
 #define UFO_SPEED 1.9
-#define UFO_DIR_CHANGE_INTERVAL 120
+#define UFO_DIR_CHANGE_DECAY 1.2f // timer decrement rate
 #define UFO_COLLISION_RADIUS 20
 #define UFO_TURN_PRECISION 0.05
 
@@ -98,6 +100,8 @@ Entity* spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 		*result = (Entity){0};
 		result->type = type;
 		result->position = position;
+		result->timer = 100.0f;
+		result->state = ENTITY_STATE_SPAWNING;
 
 		switch(type) {
 			case ENTITY_TYPE_PLAYER: {
@@ -114,31 +118,36 @@ Entity* spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 				result->sprite_count = 1;
 			} break;
 
-			case ENTITY_TYPE_ENEMY_UFO : {
+			case ENTITY_TYPE_ENEMY_UFO: {
 				result->angle = result->target_angle = random() * 360.0f;
 				result->sprites[0].texture_name = "Enemy UFO";
 				result->sprite_count = 1;
 			} break;
 			
-			case ENTITY_TYPE_ENEMY_TRACKER : {
+			case ENTITY_TYPE_ENEMY_TRACKER: {
 				result->sprites[0].texture_name = "Enemy Tracker";
 				result->sprites[0].rotation = 1;
 				result->sprite_count = 1;
 			} break;
 
-			case ENTITY_TYPE_ENEMY_TURRET : {
+			case ENTITY_TYPE_ENEMY_TURRET: {
 				result->sprites[0].texture_name = "Enemy Turret Base";
 				result->sprites[1].texture_name = "Enemy Turret Cannon";
 				result->sprites[1].rotation = 1;
 				result->sprite_count = 2;
 			} break;
 			
-			case ENTITY_TYPE_ENEMY_GRAPPLER : {
+			case ENTITY_TYPE_ENEMY_GRAPPLER: {
 				result->sprites[0].texture_name = "Enemy Grappler";
 				result->sprites[0].rotation = 1;
 				result->sprites[1].texture_name = "Grappler Hook";
 				result->sprites[1].rotation = 1;
 				result->sprite_count = 2;
+			} break;
+
+			case ENTITY_TYPE_SPAWN_WARP: {
+				result->sprites[0].texture_name = "Enemy Turret Base";
+				result->sprite_count = 1;
 			} break;
 		}
 	}
@@ -152,9 +161,26 @@ void update_entities(Game_State* game, float dt) {
 	for (int i = 0; i < game->entity_count; i++) {
 		entity = game->entities + i;
 		
-		if (entity->despawning) {
-			
-		} else {
+		if (entity->state == ENTITY_STATE_SPAWNING) {
+			if (entity->timer > 0) entity->timer -= ENEMY_WARP_SPEED * dt;
+
+			entity->transform.scale.x = 
+				entity->transform.scale.y = 
+					SDL_clamp(1.0f - (entity->timer / (float)100.0f), ENTITY_MIN_SCALE, 1.0f);
+					
+			if (entity->timer <= 0) {
+				//spawn enemy
+				entity->timer = 100.0f;
+				entity->state = ENTITY_STATE_ACTIVE;
+			}
+		} else if (entity->state == ENTITY_STATE_DESPAWNING) {
+			if (entity->timer > 0) entity->timer -= ENEMY_WARP_SPEED * dt;
+			entity->transform.scale.x = 
+				entity->transform.scale.y = 
+					SDL_clamp(entity->timer / (float)100.0f, ENTITY_MIN_SCALE, 1.0f);
+
+			if (entity->timer <= 0) entity->state = ENTITY_STATE_DYING;
+		} else if (entity->state == ENTITY_STATE_ACTIVE) {
 			switch(entity->type) {
 				case ENTITY_TYPE_PLAYER: {
 					if (game->player_controller.turn_left.held) entity->angle -= PLAYER_TURN_SPEED * dt;
@@ -185,7 +211,7 @@ void update_entities(Game_State* game, float dt) {
 					float angle_delta = cos_deg(entity->target_angle) * sin_deg(entity->angle) - sin_deg(entity->target_angle) * cos_deg(entity->angle);
 
 					if (angle_delta > -UFO_TURN_PRECISION && angle_delta < UFO_TURN_PRECISION) {
-						entity->timer -= dt;
+						entity->timer -= UFO_DIR_CHANGE_DECAY * dt;
 					} else {
 						if (angle_delta < 0) {
 							entity->angle += dt;
@@ -199,7 +225,7 @@ void update_entities(Game_State* game, float dt) {
 
 					if (entity->timer <= 0) {
 						entity->target_angle = random() * 360.0f;
-						entity->timer = UFO_DIR_CHANGE_INTERVAL;
+						entity->timer = 100;
 					}
 
 					float magnitude = SDL_sqrt( (entity->vx * entity->vx) + (entity->vy * entity->vy) );
@@ -257,6 +283,7 @@ void update_entities(Game_State* game, float dt) {
 
 					// update fire animation
 				} break;
+				
 				case ENTITY_TYPE_ENEMY_GRAPPLER:{
 					Entity* target = game->player;
 					float delta_x, delta_y;
@@ -282,6 +309,11 @@ void update_entities(Game_State* game, float dt) {
 					} else {
 						// Extend grappling hook
 					}
+				} break;
+
+				case ENTITY_TYPE_SPAWN_WARP: {
+					spawn_entity(game, entity->data.spawn_warp.spawn_type, entity->position);
+					entity->state = ENTITY_STATE_DESPAWNING;
 				} break;
 			}
 		}

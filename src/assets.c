@@ -1,5 +1,9 @@
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_mixer.h"
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb/stb_image.h"
+
 #include "defs.h"
 
 // djb2 hash function

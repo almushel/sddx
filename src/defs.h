@@ -66,8 +66,26 @@ typedef enum Entity_Types {
 	ENTITY_TYPE_ENEMY_TRACKER,
 	ENTITY_TYPE_ENEMY_TURRET,
 	ENTITY_TYPE_ENEMY_GRAPPLER,
+	ENTITY_TYPE_SPAWN_WARP,
 	ENTITY_TYPE_COUNT
 } Entity_Types;
+
+typedef enum Entity_States {
+	ENTITY_STATE_UNDEFINED,
+	ENTITY_STATE_SPAWNING,
+	ENTITY_STATE_ACTIVE,
+	ENTITY_STATE_DESPAWNING,
+	ENTITY_STATE_DYING,
+	ENTITY_STATE_COUNT,
+} Entity_States;
+
+typedef struct Spawn_Warp_Data {
+	Uint32 spawn_type;
+} Spawn_Warp_Data;
+
+typedef union {
+	Spawn_Warp_Data spawn_warp;
+} Entity_Data;
 
 typedef struct Entity {
 	Transform2D_Union;
@@ -79,8 +97,9 @@ typedef struct Entity {
 	Game_Sprite sprites[4];
 	Uint32 sprite_count;
 
-	SDL_bool despawning;
 	Entity_Types type;
+	Entity_States state;
+	Entity_Data data;
 } Entity;
 
 typedef struct Mix_Music_Node 	{ char* name; Mix_Music* data; struct Mix_Music_Node* next; } Mix_Music_Node;
