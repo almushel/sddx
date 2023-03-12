@@ -9,7 +9,7 @@
 #define PARTICLE_SPEED 6
 #define PARTICLE_DECAY 0.75f
 #define EXPLOSION_STARTING_PARTICLES 12
-#define DEFAULT_PARTICLE_COLOR (rgb_color){255, 255, 255}
+#define DEFAULT_PARTICLE_COLOR (RGB_Color){255, 255, 255}
 
 // Returns a pseudo-random value between 0 and 1
 float random(void) {
@@ -65,7 +65,7 @@ void draw_particles(Game_State* game, SDL_Renderer* renderer) {
 			draw_game_sprite(game, &particle.sprite, particle.transform, 1);
 		} else {
 			switch (particle.shape) {
-//				case PARTICLE_SHAPE_RECT:
+//				case PRIMITIVE_SHAPE_RECT:
 				default: {
 					SDL_SetRenderDrawColor(renderer, particle.color.r, particle.color.g, particle.color.b, 255);
 					
@@ -103,7 +103,7 @@ Particle* get_new_particle(Particle_System* ps) {
 	return result;
 }
 
-Particle* instantiate_particle(Particle_System* ps, Game_Sprite* sprite, Particle_Shape shape) {
+Particle* instantiate_particle(Particle_System* ps, Game_Sprite* sprite, Primitive_Shapes shape) {
 	Particle* result = get_new_particle(ps);
 	if (result) {
 		init_particle(result);
@@ -120,10 +120,10 @@ static float random_particle_radius() {
 	return result;
 }
 
-static rgb_color random_color(rgb_color* colors, Uint32 color_count) {
-	rgb_color result = {0};
+static RGB_Color random_color(RGB_Color* colors, Uint32 color_count) {
+	RGB_Color result = {0};
 	if (colors == 0 || color_count == 0) {
-		rgb_color default_color = {
+		RGB_Color default_color = {
 			.r = 255,
 			.g = 255,
 			.b = 255,
@@ -136,7 +136,7 @@ static rgb_color random_color(rgb_color* colors, Uint32 color_count) {
 	return result;
 }
 
-void randomize_particle(Particle* p, rgb_color* colors, Uint32 color_count) {
+void randomize_particle(Particle* p, RGB_Color* colors, Uint32 color_count) {
 	float angle = random() * 360.0f;
 	p->collision_radius = random_particle_radius();
 	p->color = random_color(colors, color_count); 
@@ -144,7 +144,7 @@ void randomize_particle(Particle* p, rgb_color* colors, Uint32 color_count) {
 	p->vy = sin_deg(angle) * (float)PARTICLE_SPEED;
 }
 
-void explode_at_point(Particle_System* ps, float x, float y, float force, rgb_color* colors, Uint32 num_colors, Game_Sprite* sprite, Particle_Shape shape) {
+void explode_at_point(Particle_System* ps, float x, float y, float force, RGB_Color* colors, Uint32 num_colors, Game_Sprite* sprite, Primitive_Shapes shape) {
 //	if (force != 0) {force_circle(x, x, 120, force); }
 	for (int p = 0; p < EXPLOSION_STARTING_PARTICLES; p++) {
 		Particle* p = instantiate_particle(ps, sprite, shape);
@@ -154,13 +154,21 @@ void explode_at_point(Particle_System* ps, float x, float y, float force, rgb_co
 	}
 }
 
-Particle_Emitter* get_new_particle_emitter(Particle_System* ps) {
-	Particle_Emitter* result = 0;
+Uint32 new_particle_emitter(Particle_System* ps) {
+	Uint32 result = 0;
 	if (ps->emitter_count < array_length(ps->emitters)) {
-		result = ps->emitters + ps->emitter_count++;
+		result = ps->emitter_count++;
 	} else {
 		SDL_Log("get_new_particle_emitter(): max Particle emitter maximum reached");
 	}
+
+	return result;
+}
+
+Particle_Emitter* get_particle_emitter(Particle_System* ps, Uint32 index) {
+	Particle_Emitter* result = 0;
+
+	if (index < ps->emitter_count) result = ps->emitters + index;
 
 	return result;
 }

@@ -5,8 +5,8 @@
 
 #include "defs.h"
 #include "assets.c"
-#include "entities.c"
 #include "particles.c"
+#include "entities.c"
 
 void draw_texture(SDL_Renderer* renderer, SDL_Texture* texture, float x, float y, float angle, SDL_bool centered) {
 	if (texture) {
@@ -125,32 +125,19 @@ int main(int argc, char* argv[]) {
 		Mix_AllocateChannels(16);
 		game_load_music(game, "assets/audio/WrappingAction.mp3", "Wrapping Action");
 		game_load_sfx(game, "assets/audio/PlayerShot.mp3", "Player Shot");
+
+		Mix_PlayMusic(game_get_music(game, "Wrapping Action"), -1);
 	} else {
 		SDL_Log(SDL_GetError());
 		exit(1);
 	}
 
-	Mix_PlayMusic(game_get_music(game, "Wrapping Action"), -1);
+	
 	game->player = spawn_entity(game, ENTITY_TYPE_PLAYER, (Vector2){SCREEN_WIDTH/2, SCREEN_HEIGHT/2});
-	for (int i = 1; i < ENTITY_TYPE_COUNT; i++) {
+	for (int i = ENTITY_TYPE_PLAYER+1; i < ENTITY_TYPE_SPAWN_WARP; i++) {
 		Entity* entity = spawn_entity(game, ENTITY_TYPE_SPAWN_WARP, (Vector2){random() * SCREEN_WIDTH, random() * SCREEN_HEIGHT});
 		entity->data.spawn_warp.spawn_type = i;
 	}
-	Particle_Emitter* main_thruster = get_new_particle_emitter(&game->particle_system);
-	*main_thruster = (Particle_Emitter){0};
-	main_thruster->parent = game->player;
-	main_thruster->angle = 180;
-	main_thruster->density = 2.0f;
-	main_thruster->colors[0] = SD_BLUE;
-	main_thruster->color_count = 1;
-
-	Particle_Emitter* left_thruster = get_new_particle_emitter(&game->particle_system);
-	*left_thruster = *main_thruster;
-	left_thruster->angle = 90.0f;
-	Particle_Emitter* right_thruster = get_new_particle_emitter(&game->particle_system);
-	*right_thruster = *main_thruster;
-	right_thruster->angle = -90.0f;
-
 
 	double target_fps = (double)TARGET_FPS;
 	double target_frame_time = 1000.0/target_fps;
@@ -199,10 +186,6 @@ int main(int argc, char* argv[]) {
 			if (new_button->pressed) current_button->held = SDL_TRUE;
 			else if (new_button->released) current_button->held = SDL_FALSE;
 		}
-
-		right_thruster->active = game->player_controller.thrust_left.held;
-		left_thruster->active = game->player_controller.thrust_right.held;
-		main_thruster->active = game->player_controller.thrust.held;
 
 		if (game->player_controller.fire.pressed)  {
 			explode_sprite(game, game->player->sprites, game->player->x, game->player->y, game->player->angle, 6);

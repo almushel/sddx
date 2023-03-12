@@ -5,6 +5,20 @@
 // TO-DO: Standardize entity timers. Use static range (e.g. 0-100) and define custom decay rates.
 #define ENEMY_WARP_SPEED 2.6f // // timer decrement rate
 
+#define SPACE_FRICTION 0.02f
+#define THRUST_POWER 0.15f
+#define LATERAL_THRUST 0.2f
+#define TURN_RATE 0.025f
+#define PLAYER_SHOT_MAX 8
+#define PLAYER_SHOT_RADIUS 2.5f
+#define PLAYER_SHOT_SPEED 7.0f
+#define PLAYER_SHOT_LIFE 80
+#define HEAT_MAX 100
+#define THRUST_MAX 100
+#define THRUST_CONSUMPTION 0.3f
+#define SHIP_RADIUS 13
+#define PLAYER_STARTING_LIVES 3
+
 #define DRIFT_RATE 1
 #define DRIFT_RADIUS 40
 
@@ -13,14 +27,14 @@
 #define UFO_COLLISION_RADIUS 20
 #define UFO_TURN_PRECISION 0.05
 
-#define TRACKER_ACCEL 0.13
-#define TRACKER_FRICTION 0.02
-#define TRACKER_TURN_RATE 1.5
-#define TRACKER_PRECISION 0.1
+#define TRACKER_ACCEL 0.13f
+#define TRACKER_FRICTION 0.02f
+#define TRACKER_TURN_RATE 1.5f
+#define TRACKER_PRECISION 0.1f
 #define TRACKER_COLLISION_RADIUS 14
 
 #define TURRET_RADIUS 15
-#define TURRET_ACCEL 0.06
+#define TURRET_ACCEL 0.06f
 #define TURRET_SHOT_MAX 1
 #define TURRET_SHOT_RADIUS 4
 #define TURRET_SHOT_SPEED 3
@@ -100,6 +114,7 @@ Entity* spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 		*result = (Entity){0};
 		result->type = type;
 		result->position = position;
+		result->collision_radius = 25.0f;
 		result->timer = 100.0f;
 		result->state = ENTITY_STATE_SPAWNING;
 
@@ -109,6 +124,26 @@ Entity* spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 				result->sprites[0].texture_name = "Player Ship";
 				result->sprites[0].rotation = 1;
 				result->sprite_count = 1;
+
+				result->data.player.main_thruster  = 	new_particle_emitter(&game->particle_system);
+				result->data.player.left_thruster  = 	new_particle_emitter(&game->particle_system);
+				result->data.player.right_thruster = 	new_particle_emitter(&game->particle_system);
+				
+				Particle_Emitter* main_thruster = get_particle_emitter(&game->particle_system, result->data.player.main_thruster);
+				*main_thruster = (Particle_Emitter){0};
+				main_thruster->parent = result;
+				main_thruster->angle = 180;
+				main_thruster->density = 2.0f;
+				main_thruster->colors[0] = SD_BLUE;
+				main_thruster->color_count = 1;
+
+				Particle_Emitter* left_thruster = get_particle_emitter(&game->particle_system, result->data.player.left_thruster);
+				*left_thruster = *main_thruster;
+				left_thruster->angle = 90.0f;
+
+				Particle_Emitter* right_thruster = get_particle_emitter(&game->particle_system, result->data.player.right_thruster);
+				*right_thruster = *main_thruster;
+				right_thruster->angle = -90.0f;
 			} break;
 
 			case ENTITY_TYPE_ENEMY_DRIFTER: {
@@ -128,6 +163,14 @@ Entity* spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 				result->sprites[0].texture_name = "Enemy Tracker";
 				result->sprites[0].rotation = 1;
 				result->sprite_count = 1;
+
+				result->data.tracker.thruster = new_particle_emitter(&game->particle_system);
+				Particle_Emitter* thruster = get_particle_emitter(&game->particle_system, result->data.tracker.thruster);
+				thruster->parent = result;
+				thruster->angle = 180;
+				thruster->density = 1.5f;
+				thruster->colors[0] = (RGB_Color){255, 0, 0};
+				thruster->color_count = 1;
 			} break;
 
 			case ENTITY_TYPE_ENEMY_TURRET: {
@@ -146,8 +189,8 @@ Entity* spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 			} break;
 
 			case ENTITY_TYPE_SPAWN_WARP: {
-				result->sprites[0].texture_name = "Enemy Turret Base";
-				result->sprite_count = 1;
+				result->shape = PRIMITIVE_SHAPE_RECT;
+				result->color = SD_BLUE;
 			} break;
 		}
 	}
@@ -200,6 +243,10 @@ void update_entities(Game_State* game, float dt) {
 						entity->vx += cos_deg(entity->angle - 90) * PLAYER_LATERAL_THRUST * dt;
 						entity->vy += sin_deg(entity->angle - 90) * PLAYER_LATERAL_THRUST * dt;
 					}
+
+					get_particle_emitter(&game->particle_system, entity->data.player.right_thruster)->active = game->player_controller.thrust_left.held;
+					get_particle_emitter(&game->particle_system, entity->data.player.left_thruster)->active  = game->player_controller.thrust_right.held;
+					get_particle_emitter(&game->particle_system, entity->data.player.main_thruster)->active  = game->player_controller.thrust.held;
 				} break;
 
 				case ENTITY_TYPE_ENEMY_DRIFTER:{ 
@@ -242,27 +289,24 @@ void update_entities(Game_State* game, float dt) {
 				case ENTITY_TYPE_ENEMY_TRACKER:{
 					Entity* target = game->player;
 					entity->target_angle = atan2_deg(target->y - entity->y, target->x - entity->x); //Angle to player
-					
-					if (entity->target_angle < 0) {
-						entity->target_angle += 360.0f;
-					} else if (entity->target_angle > 360.0f) {
-						entity->target_angle -= 360.0f;
-					}
+					Particle_Emitter* thruster = get_particle_emitter(&game->particle_system, entity->data.tracker.thruster);
+					if (thruster) thruster->active = 0;
+
+					entity->target_angle = normalize_degrees(entity->target_angle);
 
 					float angle_delta = cos_deg(entity->target_angle)*sin_deg(entity->angle) - sin_deg(entity->target_angle)*cos_deg(entity->angle);
-					if (angle_delta > -TRACKER_PRECISION && angle_delta < TRACKER_PRECISION) {
-						entity->vx += cos_deg(entity->angle) * TRACKER_ACCEL * dt;
-						entity->vy += sin_deg(entity->angle) * TRACKER_ACCEL * dt;
-						//entity->rearThrustEmitter.emitDirection(cos_deg(entity->angle + Math.PI) * 2, sin_deg(entity->angle + Math.PI) * 2);
+					float acceleration_speed = TRACKER_ACCEL/2.0f;
+					if (angle_delta < -TRACKER_PRECISION) {
+						entity->angle += TRACKER_TURN_RATE * dt;
+					} else if (angle_delta > TRACKER_PRECISION) {
+						entity->angle -= TRACKER_TURN_RATE * dt;
 					} else {
-						if (angle_delta < 0) {
-							entity->angle += TRACKER_TURN_RATE * dt;
-						} else if (angle_delta > 0) {
-							entity->angle -= TRACKER_TURN_RATE * dt;
-						}
-						entity->vx += cos_deg(entity->angle) * (TRACKER_ACCEL/2) * dt;
-						entity->vy += sin_deg(entity->angle) * (TRACKER_ACCEL/2) * dt;
+						acceleration_speed *=2;
+						if (thruster) thruster->active = 1;
 					}
+
+					entity->vx += cos_deg(entity->angle) * acceleration_speed * dt;
+					entity->vy += sin_deg(entity->angle) * acceleration_speed * dt;
 				} break;
 				
 				case ENTITY_TYPE_ENEMY_TURRET:{
@@ -339,24 +383,42 @@ void draw_entities(Game_State* game) {
 
 		Game_Sprite entity_sprite = {0};
 
-		for (int sprite_index = 0; sprite_index < entity->sprite_count; sprite_index++) {
+		if (entity->sprite_count > 0) {
+			for (int sprite_index = 0; sprite_index < entity->sprite_count; sprite_index++) {
 #ifdef DEBUG			
-			if (sprite_index == 0) {
-				SDL_Rect debug_rect = get_sprite_rect(game, &entity->sprites[0]);
-				SDL_FRect debug_frect = {
-					.x = entity->x + (float)debug_rect.x,
-					.y = entity->y + (float)debug_rect.y,
-					.h = (float)debug_rect.h,
-					.w = (float)debug_rect.w,
-				};
-				debug_frect.x -= debug_frect.w/2.0f;
-				debug_frect.y -= debug_frect.h/2.0f;
-				
-				SDL_SetRenderDrawColor(game->renderer, 255, 0, 0, 255);
-				SDL_RenderDrawRectF(game->renderer, &debug_frect);
-			}
+				if (sprite_index == 0) {
+					SDL_Rect debug_rect = get_sprite_rect(game, &entity->sprites[0]);
+					SDL_FRect debug_frect = {
+						.x = entity->x + (float)debug_rect.x,
+						.y = entity->y + (float)debug_rect.y,
+						.h = (float)debug_rect.h,
+						.w = (float)debug_rect.w,
+					};
+					debug_frect.x -= debug_frect.w/2.0f;
+					debug_frect.y -= debug_frect.h/2.0f;
+					
+					SDL_SetRenderDrawColor(game->renderer, 255, 0, 0, 255);
+					SDL_RenderDrawRectF(game->renderer, &debug_frect);
+				}
 #endif
-			draw_game_sprite(game, &entity->sprites[sprite_index], entity->transform, 1);	
+				draw_game_sprite(game, &entity->sprites[sprite_index], entity->transform, 1);	
+			}
+		} else {
+			switch (entity->shape) {
+//					case PRIMITIVE_SHAPE_RECT:
+				default: {
+					SDL_SetRenderDrawColor(game->renderer, entity->color.r, entity->color.g, entity->color.b, 255);
+
+					float scaled_radius = entity->collision_radius * (entity->transform.scale.x + entity->transform.scale.y) / 2.0f;
+					SDL_FRect p_rect;
+					p_rect.x = entity->x - scaled_radius;
+					p_rect.y = entity->y - scaled_radius;
+					p_rect.w = scaled_radius*2.0f;
+					p_rect.h = p_rect.w;
+
+					SDL_RenderFillRectF(game->renderer, &p_rect);
+				} break;
+			}
 		}
 	}
 }

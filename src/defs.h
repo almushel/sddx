@@ -5,9 +5,9 @@
 #define RAD_TO_DEG(rads) rads * (180/MATH_PI)
 #define DEG_TO_RAD(degs) degs * (MATH_PI/180)
 
-typedef struct rgb_color {uint8_t r, g, b;} rgb_color;
-#define CLEAR_COLOR (rgb_color){0,10,48}
-#define SD_BLUE (rgb_color){109, 194, 255}
+typedef struct RGB_Color {uint8_t r, g, b;} RGB_Color;
+#define CLEAR_COLOR (RGB_Color){0,10,48}
+#define SD_BLUE (RGB_Color){109, 194, 255}
 
 #define SCREEN_WIDTH 1280
 #define SCREEN_HEIGHT 720
@@ -48,8 +48,8 @@ typedef struct Transform2D {
 #define Transform2D_Union								\
 	union {												\
 		Transform2D transform;							\
-		struct {Vector2 position, scale; float _a; };	\
 		struct {float x, y, sx, sy, angle; };			\
+		struct {Vector2 position, scale; };				\
 	}
 
 typedef struct Game_Sprite {
@@ -57,6 +57,12 @@ typedef struct Game_Sprite {
 	SDL_Rect rect;
 	SDL_bool rotation;
 } Game_Sprite;
+
+typedef enum Primitive_Shapes {
+	PRIMITIVE_SHAPE_UNDEFINED,
+	PRIMITIVE_SHAPE_RECT,
+	PRIMITIVE_SHAPE_COUNT,
+} Primitive_Shapes;
 
 typedef enum Entity_Types {
 	ENTITY_TYPE_UNDEFINED,
@@ -79,12 +85,24 @@ typedef enum Entity_States {
 	ENTITY_STATE_COUNT,
 } Entity_States;
 
-typedef struct Spawn_Warp_Data {
+typedef struct Player_Entity_Data {
+	Uint32 main_thruster;
+	Uint32 left_thruster;
+	Uint32 right_thruster;
+} Player_Entity_Data;
+
+typedef struct Tracker_Entity_Data {
+	Uint32 thruster;
+} Tracker_Entity_Data;
+
+typedef struct Spawn_Warp_Entity_Data {
 	Uint32 spawn_type;
-} Spawn_Warp_Data;
+} Spawn_Warp_Entity_Data;
 
 typedef union {
-	Spawn_Warp_Data spawn_warp;
+	Player_Entity_Data player;
+	Tracker_Entity_Data tracker;
+	Spawn_Warp_Entity_Data spawn_warp;
 } Entity_Data;
 
 typedef struct Entity {
@@ -92,14 +110,17 @@ typedef struct Entity {
 	float z;
 	float target_angle;
 	Vec2_Union(velocity, vx, vy);
+	float collision_radius;
 	float timer;
 
 	Game_Sprite sprites[4];
 	Uint32 sprite_count;
 
+	Entity_Data data;
+	RGB_Color color;
+	Primitive_Shapes shape;
 	Entity_Types type;
 	Entity_States state;
-	Entity_Data data;
 } Entity;
 
 typedef struct Mix_Music_Node 	{ char* name; Mix_Music* data; struct Mix_Music_Node* next; } Mix_Music_Node;
@@ -129,12 +150,6 @@ typedef union game_controller_state {
 	game_button_state list[6];
 } game_controller_state;
 
-typedef enum Particle_Shape {
-	PARTICLE_SHAPE_UNDEFINED,
-	PARTICLE_SHAPE_RECT,
-	PARTICLE_SHAPE_COUNT,
-} Particle_Shape;
-
 typedef struct Particle {
 	Transform2D_Union;
 	Vec2_Union(velocity, vx, vy);
@@ -143,8 +158,8 @@ typedef struct Particle {
 	float life_left;
 
 	Game_Sprite sprite;
-	Particle_Shape shape;
-	rgb_color color;
+	Primitive_Shapes shape;
+	RGB_Color color;
 } Particle;
 
 typedef struct Particle_Emitter {
@@ -158,8 +173,8 @@ typedef struct Particle_Emitter {
 
 	float density;
 	Uint32 sprite;
-	Particle_Shape shape;
-	rgb_color colors[16];
+	Primitive_Shapes shape;
+	RGB_Color colors[16];
 	Uint32 color_count;
 
 	float counter;
@@ -196,6 +211,12 @@ typedef struct Game_State {
 static inline double sin_deg  (double degrees) 		{ return SDL_sin(DEG_TO_RAD(degrees)); }
 static inline double cos_deg  (double degrees) 		{ return SDL_cos(DEG_TO_RAD(degrees)); }
 static inline double atan2_deg(double y, double x) 	{ return RAD_TO_DEG(SDL_atan2(y, x )); }
+static inline double normalize_degrees(double degrees) {
+	double result = degrees;
+	while (result < 0) result += 360.0f; 
+	while (result > 360.0f) result -= 360.0f;
+	return result;
+}
 
 float random(void);
 
