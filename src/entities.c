@@ -1,9 +1,8 @@
 #include "SDL2/SDL.h"
 #include "defs.h"
 
-#define ENTITY_MIN_SCALE 0.01f
-// TO-DO: Standardize entity timers. Use static range (e.g. 0-100) and define custom decay rates.
-#define ENEMY_WARP_SPEED 2.6f // // timer decrement rate
+#define ENTITY_WARP_SPEED 26.0f
+#define DEAD_ENTITY_MAX 16 // Maximum number of dead entities garbage collected per frame
 
 #define SPACE_FRICTION 0.02f
 #define THRUST_POWER 0.15f
@@ -12,18 +11,22 @@
 #define PLAYER_SHOT_MAX 8
 #define PLAYER_SHOT_RADIUS 2.5f
 #define PLAYER_SHOT_SPEED 7.0f
-#define PLAYER_SHOT_LIFE 80
+#define PLAYER_SHOT_LIFE 80.0f
 #define HEAT_MAX 100
 #define THRUST_MAX 100
 #define THRUST_CONSUMPTION 0.3f
 #define SHIP_RADIUS 13
 #define PLAYER_STARTING_LIVES 3
 
+#define PLAYER_MG_COOLDOWN 200.0f/16.666f
+#define PLAYER_LASER_COOLDOWN 250.0f/16.666f
+#define PLAYER_MISSILE_COOLDOWN 800.0f/16.666f
+
 #define DRIFT_RATE 1
 #define DRIFT_RADIUS 40
 
 #define UFO_SPEED 1.9
-#define UFO_DIR_CHANGE_DECAY 1.2f // timer decrement rate
+#define UFO_DIR_CHANGE_DELAY 120.0f
 #define UFO_COLLISION_RADIUS 20
 #define UFO_TURN_PRECISION 0.05
 
@@ -114,8 +117,9 @@ Entity* spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 		*result = (Entity){0};
 		result->type = type;
 		result->position = position;
+		result->scale.x = result->scale.y = 1.0f;
 		result->collision_radius = 25.0f;
-		result->timer = 100.0f;
+		result->timer = ENTITY_WARP_SPEED;
 		result->state = ENTITY_STATE_SPAWNING;
 
 		switch(type) {
@@ -131,7 +135,6 @@ Entity* spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 				
 				Particle_Emitter* main_thruster = get_particle_emitter(&game->particle_system, result->data.player.main_thruster);
 				*main_thruster = (Particle_Emitter){0};
-				main_thruster->parent = result;
 				main_thruster->angle = 180;
 				main_thruster->density = 2.0f;
 				main_thruster->colors[0] = SD_BLUE;
@@ -144,6 +147,13 @@ Entity* spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 				Particle_Emitter* right_thruster = get_particle_emitter(&game->particle_system, result->data.player.right_thruster);
 				*right_thruster = *main_thruster;
 				right_thruster->angle = -90.0f;
+			} break;
+
+			case ENTITY_TYPE_BULLET: {
+				result->collision_radius = PLAYER_SHOT_RADIUS;
+				result->state = ENTITY_STATE_ACTIVE;
+				result->shape = PRIMITIVE_SHAPE_RECT;
+				result->color = (RGB_Color){255, 150, 50};
 			} break;
 
 			case ENTITY_TYPE_ENEMY_DRIFTER: {
@@ -166,7 +176,6 @@ Entity* spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 
 				result->data.tracker.thruster = new_particle_emitter(&game->particle_system);
 				Particle_Emitter* thruster = get_particle_emitter(&game->particle_system, result->data.tracker.thruster);
-				thruster->parent = result;
 				thruster->angle = 180;
 				thruster->density = 1.5f;
 				thruster->colors[0] = (RGB_Color){255, 0, 0};
@@ -200,16 +209,19 @@ Entity* spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 
 
 void update_entities(Game_State* game, float dt) {
+	Uint32 dead_entities[DEAD_ENTITY_MAX];
+	Uint32 dead_entity_count = 0;
+	
 	Entity* entity = 0;
-	for (int i = 0; i < game->entity_count; i++) {
-		entity = game->entities + i;
+	for (int entity_index = 0; entity_index < game->entity_count; entity_index++) {
+		entity = game->entities + entity_index;
 		
 		if (entity->state == ENTITY_STATE_SPAWNING) {
-			if (entity->timer > 0) entity->timer -= ENEMY_WARP_SPEED * dt;
+			if (entity->timer > 0) entity->timer -= dt;
 
 			entity->transform.scale.x = 
 				entity->transform.scale.y = 
-					SDL_clamp(1.0f - (entity->timer / (float)100.0f), ENTITY_MIN_SCALE, 1.0f);
+					SDL_clamp(1.0f - (entity->timer/ENTITY_WARP_SPEED), 0.0f, 1.0f);
 					
 			if (entity->timer <= 0) {
 				//spawn enemy
@@ -217,13 +229,19 @@ void update_entities(Game_State* game, float dt) {
 				entity->state = ENTITY_STATE_ACTIVE;
 			}
 		} else if (entity->state == ENTITY_STATE_DESPAWNING) {
-			if (entity->timer > 0) entity->timer -= ENEMY_WARP_SPEED * dt;
+			if (entity->timer > 0) entity->timer -= dt;
 			entity->transform.scale.x = 
 				entity->transform.scale.y = 
-					SDL_clamp(entity->timer / (float)100.0f, ENTITY_MIN_SCALE, 1.0f);
+					SDL_clamp(entity->timer/ENTITY_WARP_SPEED, 0.0f, 1.0f);
 
 			if (entity->timer <= 0) entity->state = ENTITY_STATE_DYING;
+		} else if (entity->state == ENTITY_STATE_DYING) {
+			if (dead_entity_count < DEAD_ENTITY_MAX) {
+				dead_entities[dead_entity_count] = entity_index;
+				dead_entity_count++;
+			}
 		} else if (entity->state == ENTITY_STATE_ACTIVE) {
+			if (entity->timer > 0) entity->timer -= dt;
 			switch(entity->type) {
 				case ENTITY_TYPE_PLAYER: {
 					if (game->player_controller.turn_left.held) entity->angle -= PLAYER_TURN_SPEED * dt;
@@ -244,9 +262,57 @@ void update_entities(Game_State* game, float dt) {
 						entity->vy += sin_deg(entity->angle - 90) * PLAYER_LATERAL_THRUST * dt;
 					}
 
-					get_particle_emitter(&game->particle_system, entity->data.player.right_thruster)->active = game->player_controller.thrust_left.held;
-					get_particle_emitter(&game->particle_system, entity->data.player.left_thruster)->active  = game->player_controller.thrust_right.held;
-					get_particle_emitter(&game->particle_system, entity->data.player.main_thruster)->active  = game->player_controller.thrust.held;
+					if (game->player_controller.fire.held && entity->timer <= 0)  {
+						// TO-DO: Figure out weird galloping timing problem for multiple SFX calls in a row
+						Mix_PlayChannel(-1, game_get_sfx(game, "Player Shot"), 0);
+						Entity* bullet = spawn_entity(game, ENTITY_TYPE_BULLET, entity->position);
+						if (bullet) {
+							bullet->timer = PLAYER_SHOT_LIFE;
+							Vector2 angle = {
+								cos_deg(entity->angle),
+								sin_deg(entity->angle)
+							};
+							
+							bullet->x += angle.x * SHIP_RADIUS;
+							bullet->y += angle.y * SHIP_RADIUS;
+							
+							bullet->vx = entity->vx + (angle.x * PLAYER_SHOT_SPEED);
+							bullet->vy = entity->vy + (angle.y * PLAYER_SHOT_SPEED);
+							bullet->data.projectile.player_shot = 1;
+							bullet->color = SD_BLUE;
+						}
+						
+						entity->timer = PLAYER_MG_COOLDOWN;
+					}
+
+					Particle_Emitter* main_thruster = get_particle_emitter(&game->particle_system, entity->data.player.main_thruster);
+					Particle_Emitter* left_thruster = get_particle_emitter(&game->particle_system, entity->data.player.left_thruster);
+					Particle_Emitter* right_thruster = get_particle_emitter(&game->particle_system, entity->data.player.right_thruster);
+					
+					if (main_thruster) {
+						main_thruster->active = game->player_controller.thrust.held;
+						main_thruster->angle = entity->angle + 180;
+						main_thruster->x = entity->x + cos_deg(main_thruster->angle) * SHIP_RADIUS;
+						main_thruster->y = entity->y + sin_deg(main_thruster->angle) * SHIP_RADIUS;
+					}
+					if (left_thruster) {
+						left_thruster->active = game->player_controller.thrust_right.held;
+						left_thruster->angle = entity->angle + 90;
+						left_thruster->x = entity->x;
+						left_thruster->y = entity->y;
+					}
+					if (right_thruster) {
+						right_thruster->active  = game->player_controller.thrust_left.held;
+						right_thruster->angle = entity->angle - 90;
+						right_thruster->x = entity->x;
+						right_thruster->y = entity->y;
+					}
+				} break;
+
+				case ENTITY_TYPE_BULLET: {
+					if (entity->timer <= 0) entity->state = ENTITY_STATE_DESPAWNING;
+					entity->vx *= 1.0f + PHYSICS_FRICTION;
+					entity->vy *= 1.0f + PHYSICS_FRICTION;
 				} break;
 
 				case ENTITY_TYPE_ENEMY_DRIFTER:{ 
@@ -254,25 +320,20 @@ void update_entities(Game_State* game, float dt) {
 					entity->vy = sin_deg(entity->angle) * DRIFT_RATE;
 				} break;
 				
-				case ENTITY_TYPE_ENEMY_UFO:{ 
+				case ENTITY_TYPE_ENEMY_UFO: { 
 					float angle_delta = cos_deg(entity->target_angle) * sin_deg(entity->angle) - sin_deg(entity->target_angle) * cos_deg(entity->angle);
 
-					if (angle_delta > -UFO_TURN_PRECISION && angle_delta < UFO_TURN_PRECISION) {
-						entity->timer -= UFO_DIR_CHANGE_DECAY * dt;
-					} else {
-						if (angle_delta < 0) {
-							entity->angle += dt;
-						} else if (angle_delta > 0) {
-							entity->angle -= dt;
-						}
-
+					if (SDL_fabs(angle_delta) > UFO_TURN_PRECISION) {
+						entity->timer += dt;
+						entity->angle += dt * (float)(1 - ((int)(angle_delta < 0) * 2));
+		
 						entity->vx += cos_deg(entity->angle) * UFO_SPEED * 0.025;
 						entity->vx += sin_deg(entity->angle) * UFO_SPEED * 0.025;
 					}
 
 					if (entity->timer <= 0) {
 						entity->target_angle = random() * 360.0f;
-						entity->timer = 100;
+						entity->timer = UFO_DIR_CHANGE_DELAY;
 					}
 
 					float magnitude = SDL_sqrt( (entity->vx * entity->vx) + (entity->vy * entity->vy) );
@@ -289,17 +350,22 @@ void update_entities(Game_State* game, float dt) {
 				case ENTITY_TYPE_ENEMY_TRACKER:{
 					Entity* target = game->player;
 					entity->target_angle = atan2_deg(target->y - entity->y, target->x - entity->x); //Angle to player
+					
 					Particle_Emitter* thruster = get_particle_emitter(&game->particle_system, entity->data.tracker.thruster);
-					if (thruster) thruster->active = 0;
+					if (thruster) {
+						thruster->angle = entity->angle + 180;
+						thruster->x = entity->x;
+						thruster->y = entity->y;
+					}
 
 					entity->target_angle = normalize_degrees(entity->target_angle);
-
 					float angle_delta = cos_deg(entity->target_angle)*sin_deg(entity->angle) - sin_deg(entity->target_angle)*cos_deg(entity->angle);
 					float acceleration_speed = TRACKER_ACCEL/2.0f;
-					if (angle_delta < -TRACKER_PRECISION) {
-						entity->angle += TRACKER_TURN_RATE * dt;
-					} else if (angle_delta > TRACKER_PRECISION) {
-						entity->angle -= TRACKER_TURN_RATE * dt;
+
+					if (fabs(angle_delta) > TRACKER_PRECISION) {
+						float sign = (float)(1 - ((int)(angle_delta < 0) * 2));
+						entity->angle -= TRACKER_TURN_RATE * sign * dt;
+						if (thruster) thruster->active = 0;
 					} else {
 						acceleration_speed *=2;
 						if (thruster) thruster->active = 1;
@@ -320,9 +386,32 @@ void update_entities(Game_State* game, float dt) {
 						entity->angle += TURRET_TURN_SPEED * dt;
 					} else if (angle_delta > TURRET_AIM_TOLERANCE) {
 						entity->angle -= TURRET_TURN_SPEED * dt;
-					} else {
-						// prepare to fire
-						// fire
+					} else if (entity->timer <= 0) {
+						Vector2 position = {
+							entity->position.x + cos_deg(entity->angle) * TURRET_RADIUS,
+							entity->position.y + sin_deg(entity->angle) * TURRET_RADIUS
+						};
+						
+						Vector2 velocity = {
+							cos_deg(entity->angle) * TURRET_SHOT_SPEED,
+							sin_deg(entity->angle) * TURRET_SHOT_SPEED
+						};
+
+						Entity* new_shot = spawn_entity(game, ENTITY_TYPE_BULLET, position);
+						new_shot->x += cos_deg(entity->angle + 90.0f) * TURRET_RADIUS;
+						new_shot->y += sin_deg(entity->angle + 90.0f) * TURRET_RADIUS;
+						new_shot->velocity = velocity;
+						new_shot->collision_radius = TURRET_SHOT_RADIUS;
+						new_shot->timer = TURRET_SHOT_LIFE;
+
+						new_shot = spawn_entity(game, ENTITY_TYPE_BULLET, position);
+						new_shot->x += cos_deg(entity->angle - 90.0f) * TURRET_RADIUS;
+						new_shot->y += sin_deg(entity->angle - 90.0f) * TURRET_RADIUS;
+						new_shot->velocity = velocity;
+						new_shot->collision_radius = TURRET_SHOT_RADIUS;
+						new_shot->timer = TURRET_SHOT_LIFE;
+					
+						entity->timer = TURRET_FIRE_ANIM_SPEED + TURRET_RECOVERY_ANIM_SPEED;
 					}
 
 					// update fire animation
@@ -360,28 +449,41 @@ void update_entities(Game_State* game, float dt) {
 					entity->state = ENTITY_STATE_DESPAWNING;
 				} break;
 			}
+		
+			entity->x += entity->vx * dt;
+			entity->y += entity->vy * dt;
+
+			entity->vx *= 1.0 - (PHYSICS_FRICTION*dt);
+			entity->vy *= 1.0 - (PHYSICS_FRICTION*dt);
+
+			if (entity->x < 0) entity->x = SCREEN_WIDTH + entity->x;
+			else if (entity->x > SCREEN_WIDTH) entity->x -= SCREEN_WIDTH;
+
+			if (entity->y < 0) entity->y = SCREEN_HEIGHT + entity->y;
+			else if (entity->y > SCREEN_HEIGHT) entity->y -= SCREEN_HEIGHT;
 		}
+	}
 
-		entity->x += entity->vx * dt;
-		entity->y += entity->vy * dt;
+	if (dead_entity_count > 0) {
+		Entity* entity;
+		for (int dead_entity_index = 0; dead_entity_index < dead_entity_count; dead_entity_index++) {
+			entity = game->entities + dead_entities[dead_entity_index];
+			for (int sprite_index = 0; sprite_index < entity->sprite_count; sprite_index++) {
+				explode_sprite(game, entity->sprites+sprite_index, entity->x, entity->y, entity->angle, 6);
+			}
 
-		entity->vx *= 1.0 - (PHYSICS_FRICTION*dt);
-		entity->vy *= 1.0 - (PHYSICS_FRICTION*dt);
-
-		if (entity->x < 0) entity->x = SCREEN_WIDTH + entity->x;
-		else if (entity->x > SCREEN_WIDTH) entity->x -= SCREEN_WIDTH;
-
-		if (entity->y < 0) entity->y = SCREEN_HEIGHT + entity->y;
-		else if (entity->y > SCREEN_HEIGHT) entity->y -= SCREEN_HEIGHT;
+			if (dead_entity_index != (game->entity_count-1)) {
+				*(Entity*)(entity) = *(Entity*)(game->entities + (game->entity_count-1) );
+			}
+			game->entity_count--;
+		}
 	}
 }
 
 void draw_entities(Game_State* game) {
 	Entity* entity = 0;
-	for (int i = 0; i < game->entity_count; i++) {
-		entity = game->entities + i;
-
-		Game_Sprite entity_sprite = {0};
+	for (int entity_index = 0; entity_index < game->entity_count; entity_index++) {
+		entity = game->entities + entity_index;
 
 		if (entity->sprite_count > 0) {
 			for (int sprite_index = 0; sprite_index < entity->sprite_count; sprite_index++) {

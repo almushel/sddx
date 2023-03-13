@@ -192,13 +192,13 @@ void draw_game_sprite(Game_State* game, Game_Sprite* sprite, Transform2D transfo
 		if (transform.sx > 0.0f && transform.sy > 0.0f) {
 			dest_rect.w *= transform.sx;
 			dest_rect.h *= transform.sy;
-		}
 
-		if (centered == SDL_TRUE) {
-			dest_rect.x -= dest_rect.w/2.0f;
-			dest_rect.y -= dest_rect.h/2.0f;
-		}
+			if (centered == SDL_TRUE) {
+				dest_rect.x -= dest_rect.w/2.0f;
+				dest_rect.y -= dest_rect.h/2.0f;
+			}
 
-		SDL_RenderCopyExF(game->renderer, texture, &sprite_rect, &dest_rect, transform.angle * (float)(int)sprite->rotation, 0, SDL_FLIP_NONE);
+			SDL_RenderCopyExF(game->renderer, texture, &sprite_rect, &dest_rect, transform.angle * (float)(int)sprite->rotation, 0, SDL_FLIP_NONE);
+		}
 	}
 }

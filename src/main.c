@@ -122,7 +122,7 @@ int main(int argc, char* argv[]) {
 	game_controller_state new_player_controller = {0};
 
 	if (Mix_OpenAudio(48000, AUDIO_S16SYS, 2, 4096) != -1) {
-		Mix_AllocateChannels(16);
+		Mix_AllocateChannels(32);
 		game_load_music(game, "assets/audio/WrappingAction.mp3", "Wrapping Action");
 		game_load_sfx(game, "assets/audio/PlayerShot.mp3", "Player Shot");
 
@@ -187,12 +187,6 @@ int main(int argc, char* argv[]) {
 			else if (new_button->released) current_button->held = SDL_FALSE;
 		}
 
-		if (game->player_controller.fire.pressed)  {
-			explode_sprite(game, game->player->sprites, game->player->x, game->player->y, game->player->angle, 6);
-			explode_at_point(&game->particle_system, game->player->x, game->player->y, 0, 0, 1, 0, 0);
-			Mix_PlayChannel(-1, game_get_sfx(game, "Player Shot"), 0);
-		}
-		
 		update_entities(game, dt);
 		update_particle_emitters(&game->particle_system, dt);
 		update_particles(&game->particle_system, dt);

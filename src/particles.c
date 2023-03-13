@@ -181,15 +181,6 @@ void update_particle_emitters(Particle_System* ps, float dt) {
 		emitter->counter += emitter->density * dt;
 
 		if (emitter->counter >= 1.0f) {
-			float rel_x = emitter->x;
-			float rel_y = emitter->y;
-			float rel_angle = emitter->angle;
-			if (emitter->parent) {
-				rel_x += emitter->parent->x;
-				rel_y += emitter->parent->y;
-				rel_angle += emitter->parent->angle;
-			}
-
 			int particles_to_emit = (int)emitter->counter;
 			while (particles_to_emit) {
 				Particle* p = instantiate_particle(ps, 0, 0);
@@ -197,11 +188,11 @@ void update_particle_emitters(Particle_System* ps, float dt) {
 					randomize_particle(p, emitter->colors, emitter->color_count);
 					//p->collision_radius *= emitter->scale;
 
-					p->x = rel_x;
-					p->y = rel_y;
+					p->x = emitter->x;
+					p->y = emitter->y;
 
-					p->vx = cos_deg(rel_angle) * PARTICLE_SPEED;
-					p->vy = sin_deg(rel_angle) * PARTICLE_SPEED;
+					p->vx = cos_deg(emitter->angle) * PARTICLE_SPEED;
+					p->vy = sin_deg(emitter->angle) * PARTICLE_SPEED;
 				}
 				particles_to_emit--;
 			}

@@ -67,6 +67,7 @@ typedef enum Primitive_Shapes {
 typedef enum Entity_Types {
 	ENTITY_TYPE_UNDEFINED,
 	ENTITY_TYPE_PLAYER,
+	ENTITY_TYPE_BULLET,
 	ENTITY_TYPE_ENEMY_DRIFTER,
 	ENTITY_TYPE_ENEMY_UFO,
 	ENTITY_TYPE_ENEMY_TRACKER,
@@ -99,10 +100,15 @@ typedef struct Spawn_Warp_Entity_Data {
 	Uint32 spawn_type;
 } Spawn_Warp_Entity_Data;
 
+typedef struct Projectile_Entity_Data {
+	Uint32 player_shot; // If (value == 1) damages Enemies and not the player
+} Projectile_Entity_Data;
+
 typedef union {
 	Player_Entity_Data player;
 	Tracker_Entity_Data tracker;
 	Spawn_Warp_Entity_Data spawn_warp;
+	Projectile_Entity_Data projectile;
 } Entity_Data;
 
 typedef struct Entity {
@@ -163,8 +169,6 @@ typedef struct Particle {
 } Particle;
 
 typedef struct Particle_Emitter {
-	Entity* parent;
-	// If parent is defined, position is relative to parent position and angle.
 	union {
 		Vector2 position;
 		struct { float x, y; };
