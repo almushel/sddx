@@ -22,6 +22,8 @@ typedef struct RGB_Color {uint8_t r, g, b;} RGB_Color;
 #define PLAYER_LATERAL_THRUST 0.2f
 #define PLAYER_TURN_SPEED 3.14f
 
+#define STAR_TWINKLE_INTERVAL 180.0f
+
 enum stbi_masks {
 	STBI_MASK_R = 0x000000FF, 
 	STBI_MASK_G = 0x0000FF00,
@@ -196,6 +198,14 @@ typedef struct Particle_System {
 	Uint32 emitter_count;
 } Particle_System;
 
+#define STARFIELD_STAR_COUNT 500
+typedef struct Game_Starfield {
+	Vector2 positions[STARFIELD_STAR_COUNT];
+	float timers[STARFIELD_STAR_COUNT];
+	RGB_Color colors[STARFIELD_STAR_COUNT];
+	SDL_bool twinkle_direction[STARFIELD_STAR_COUNT];
+} Game_Starfield;
+
 typedef struct Game_State {
 	SDL_Window* window;
 	SDL_Renderer* renderer;
@@ -206,6 +216,7 @@ typedef struct Game_State {
 	Uint32 entity_count;
 	Uint32 entities_size;
 
+	Game_Starfield starfield;
 	Particle_System particle_system;
 
 	game_controller_state player_controller;

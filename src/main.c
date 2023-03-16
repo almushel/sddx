@@ -56,6 +56,7 @@ void load_game_assets(Game_State* game) {
 	game_load_texture(game, "assets/images/grappler.png", "Enemy Grappler");
 	game_load_texture(game, "assets/images/missile.png", "Projectile Missile");
 	game_load_texture(game, "assets/images/ufo.png", "Enemy UFO");
+	SDL_SetTextureAlphaMod(game_get_texture(game, "Enemy UFO"), (Uint8)(255.0f * 0.7f));
 	game_load_texture(game, "assets/images/tracker.png", "Enemy Tracker");
 	game_load_texture(game, "assets/images/turret_base.png", "Enemy Turret Base");
 	game_load_texture(game, "assets/images/turret_cannon.png", "Enemy Turret Cannon");
@@ -63,6 +64,15 @@ void load_game_assets(Game_State* game) {
 //	game_load_texture(game, "assets/images/hud_laser.png", "HUD Laser");
 //	game_load_texture(game, "assets/images/hud_mg.png", "HUD MG");
 //	game_load_texture(game, "assets/images/hud_missile.png", "HUD Missile");
+
+	if (Mix_OpenAudio(48000, AUDIO_S16SYS, 2, 4096) != -1) {
+		Mix_AllocateChannels(32);
+		game_load_music(game, "assets/audio/WrappingAction.mp3", "Wrapping Action");
+		game_load_sfx(game, "assets/audio/PlayerShot.mp3", "Player Shot");
+	} else {
+		SDL_Log(SDL_GetError());
+		exit(1);
+	}
 }
 
 #define DELAY_TOLERANCE 1.2
@@ -109,29 +119,45 @@ int main(int argc, char* argv[]) {
 	}
 
 	load_game_assets(game);
+	Mix_PlayMusic(game_get_music(game, "Wrapping Action"), -1);
 
-	game->player_controller = (game_controller_state){0};
-	
-	game->player_controller.thrust.scan_code = SDL_SCANCODE_W;
-	game->player_controller.thrust_left.scan_code = SDL_SCANCODE_E;
-	game->player_controller.thrust_right.scan_code = SDL_SCANCODE_Q;
-	game->player_controller.turn_left.scan_code = SDL_SCANCODE_A;
-	game->player_controller.turn_right.scan_code = SDL_SCANCODE_D;
-	game->player_controller.fire.scan_code = SDL_SCANCODE_SPACE;
+	{ // Generate star field
+		int stars_per_row = 20;
+		int stars_per_column = STARFIELD_STAR_COUNT / stars_per_row;
+		Vector2 star_offset = {SCREEN_WIDTH / stars_per_row, SCREEN_HEIGHT / stars_per_column};
+		Vector2 deviation = {star_offset.x / 1.5f, star_offset.y / 1.5f};
+		Vector2 next_position = {0};
+		for (int star_y = 0; star_y < stars_per_column; star_y++) {
+			for (int star_x = 0; star_x < stars_per_row; star_x++) {
+				int star_index = star_y * stars_per_row + star_x;
+				
+				game->starfield.positions[star_index].x = next_position.x + (deviation.x/2.0f) + (random() * deviation.x);
+				game->starfield.positions[star_index].y = next_position.y + (deviation.y/2.0f) + (random() * deviation.y);
+				
+				game->starfield.colors[star_index].r = 100 + (uint8_t)(random() * 155.0f);
+				game->starfield.colors[star_index].g = 100 + (uint8_t)(random() * 155.0f);
+				game->starfield.colors[star_index].b = 100 + (uint8_t)(random() * 155.0f);
+
+				game->starfield.timers[star_index] = random() * STAR_TWINKLE_INTERVAL;
+				game->starfield.twinkle_direction[star_index] = (random() > 0.5f);
+			
+				next_position.x += star_offset.x;
+			}
+			next_position.x = 0.0f;
+			next_position.y += star_offset.y;
+		}
+
+	}
+	game->player_controller = (game_controller_state){
+		.thrust.scan_code = SDL_SCANCODE_W,
+		.thrust_left.scan_code = SDL_SCANCODE_E,
+		.thrust_right.scan_code = SDL_SCANCODE_Q,
+		.turn_left.scan_code = SDL_SCANCODE_A,
+		.turn_right.scan_code = SDL_SCANCODE_D,
+		.fire.scan_code = SDL_SCANCODE_SPACE,
+	};
 
 	game_controller_state new_player_controller = {0};
-
-	if (Mix_OpenAudio(48000, AUDIO_S16SYS, 2, 4096) != -1) {
-		Mix_AllocateChannels(32);
-		game_load_music(game, "assets/audio/WrappingAction.mp3", "Wrapping Action");
-		game_load_sfx(game, "assets/audio/PlayerShot.mp3", "Player Shot");
-
-		Mix_PlayMusic(game_get_music(game, "Wrapping Action"), -1);
-	} else {
-		SDL_Log(SDL_GetError());
-		exit(1);
-	}
-
 	
 	game->player = spawn_entity(game, ENTITY_TYPE_PLAYER, (Vector2){SCREEN_WIDTH/2, SCREEN_HEIGHT/2});
 	for (int i = ENTITY_TYPE_PLAYER+1; i < ENTITY_TYPE_SPAWN_WARP; i++) {
@@ -193,6 +219,25 @@ int main(int argc, char* argv[]) {
 
 		SDL_SetRenderDrawColor(game->renderer,CLEAR_COLOR.r,CLEAR_COLOR.g,CLEAR_COLOR.b,255);	
 		SDL_RenderClear(game->renderer);
+
+		SDL_SetRenderDrawBlendMode(game->renderer, SDL_BLENDMODE_BLEND);
+		for (int star_index = 0; star_index < STARFIELD_STAR_COUNT; star_index++) {
+			game->starfield.timers[star_index] += dt * (float)(1 - (2 * (int)game->starfield.twinkle_direction[star_index]));
+			
+			if (game->starfield.timers[star_index] >= STAR_TWINKLE_INTERVAL) game->starfield.twinkle_direction[star_index] = 1;
+			else if (game->starfield.timers[star_index] <= 0) game->starfield.twinkle_direction[star_index] = 0;
+
+			float alpha = SDL_clamp(255.0f * (game->starfield.timers[star_index] / STAR_TWINKLE_INTERVAL), 0.0f, 255.0f);
+
+			SDL_SetRenderDrawColor(game->renderer, 
+				game->starfield.colors[star_index].r,
+				game->starfield.colors[star_index].g, 
+				game->starfield.colors[star_index].b, 
+				(Uint8)alpha
+			);
+			SDL_RenderDrawPointF(game->renderer, game->starfield.positions[star_index].x, game->starfield.positions[star_index].y);
+		}
+		SDL_SetRenderDrawBlendMode(game->renderer, SDL_BLENDMODE_NONE);
 
 		draw_particles(game, game->renderer);
 		draw_entities(game);

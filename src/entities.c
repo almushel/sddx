@@ -1,7 +1,7 @@
 #include "SDL2/SDL.h"
 #include "defs.h"
 
-#define ENTITY_WARP_SPEED 26.0f
+#define ENTITY_WARP_DELAY 26.0f
 #define DEAD_ENTITY_MAX 16 // Maximum number of dead entities garbage collected per frame
 
 #define SPACE_FRICTION 0.02f
@@ -119,7 +119,7 @@ Entity* spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 		result->position = position;
 		result->scale.x = result->scale.y = 1.0f;
 		result->collision_radius = 25.0f;
-		result->timer = ENTITY_WARP_SPEED;
+		result->timer = ENTITY_WARP_DELAY;
 		result->state = ENTITY_STATE_SPAWNING;
 
 		switch(type) {
@@ -221,7 +221,7 @@ void update_entities(Game_State* game, float dt) {
 
 			entity->transform.scale.x = 
 				entity->transform.scale.y = 
-					SDL_clamp(1.0f - (entity->timer/ENTITY_WARP_SPEED), 0.0f, 1.0f);
+					SDL_clamp(1.0f - (entity->timer/ENTITY_WARP_DELAY), 0.0f, 1.0f);
 					
 			if (entity->timer <= 0) {
 				//spawn enemy
@@ -232,7 +232,7 @@ void update_entities(Game_State* game, float dt) {
 			if (entity->timer > 0) entity->timer -= dt;
 			entity->transform.scale.x = 
 				entity->transform.scale.y = 
-					SDL_clamp(entity->timer/ENTITY_WARP_SPEED, 0.0f, 1.0f);
+					SDL_clamp(entity->timer/ENTITY_WARP_DELAY, 0.0f, 1.0f);
 
 			if (entity->timer <= 0) entity->state = ENTITY_STATE_DYING;
 		} else if (entity->state == ENTITY_STATE_DYING) {
@@ -310,7 +310,10 @@ void update_entities(Game_State* game, float dt) {
 				} break;
 
 				case ENTITY_TYPE_BULLET: {
-					if (entity->timer <= 0) entity->state = ENTITY_STATE_DESPAWNING;
+					if (entity->timer <= 0) {
+						entity->state = ENTITY_STATE_DESPAWNING;
+						entity->timer = ENTITY_WARP_DELAY;
+					}
 					entity->vx *= 1.0f + PHYSICS_FRICTION;
 					entity->vy *= 1.0f + PHYSICS_FRICTION;
 				} break;
