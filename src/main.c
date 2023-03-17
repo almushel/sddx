@@ -4,6 +4,7 @@
 #include "SDL2/SDL_mixer.h"
 
 #include "defs.h"
+#include "graphics.c"
 #include "assets.c"
 #include "particles.c"
 #include "entities.c"

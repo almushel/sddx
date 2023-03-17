@@ -56,7 +56,7 @@ static SDL_Texture* load_texture(SDL_Renderer* renderer, const char* file) {
 		if (!node->data) {\
 			node->data = asset;\
 			node->name = (char*)label;\
-		} else if (SDL_strcmp(node->name, label) == 0) {\
+		} else if (*node->name == *label && SDL_strcmp(node->name, label) == 0) {\
 			SDL_Log("Asset name %s already in use", label);\
 		} else if (!node->next) {\
 			type##_Node* new_node = SDL_malloc(sizeof(type##_Node));\
@@ -111,7 +111,7 @@ SDL_bool game_load_sfx(Game_State* game, const char* file, const char* name) {
 	type* result = 0;\
 	type##_Node* node = &game->assets.##table_name##[get_hash_index(name, game->assets.##table_name)];\
 	while (node) { \
-		if (node->name && SDL_strcmp(node->name, name) == 0) {\
+		if (node->name && (*node->name == *name) && SDL_strcmp(node->name, name) == 0) {\
 			result = node->data;\
 			break; \
 		}\

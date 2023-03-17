@@ -1,5 +1,6 @@
 #include "SDL2/SDL.h"
 #include "defs.h"
+#include "graphics.h"
 
 #define ENTITY_WARP_DELAY 26.0f
 #define DEAD_ENTITY_MAX 16 // Maximum number of dead entities garbage collected per frame
@@ -152,7 +153,7 @@ Entity* spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 			case ENTITY_TYPE_BULLET: {
 				result->collision_radius = PLAYER_SHOT_RADIUS;
 				result->state = ENTITY_STATE_ACTIVE;
-				result->shape = PRIMITIVE_SHAPE_RECT;
+				result->shape = PRIMITIVE_SHAPE_CIRCLE;
 				result->color = (RGB_Color){255, 150, 50};
 			} break;
 
@@ -198,7 +199,7 @@ Entity* spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 			} break;
 
 			case ENTITY_TYPE_SPAWN_WARP: {
-				result->shape = PRIMITIVE_SHAPE_RECT;
+				result->shape = PRIMITIVE_SHAPE_CIRCLE;
 				result->color = SD_BLUE;
 			} break;
 		}
@@ -503,13 +504,20 @@ void draw_entities(Game_State* game) {
 					debug_frect.y -= debug_frect.h/2.0f;
 					
 					SDL_SetRenderDrawColor(game->renderer, 255, 0, 0, 255);
-					SDL_RenderDrawRectF(game->renderer, &debug_frect);
+					//SDL_RenderDrawRectF(game->renderer, &debug_frect);
+					render_circle(game->renderer, entity->x, entity->y, entity->collision_radius);
 				}
 #endif
 				draw_game_sprite(game, &entity->sprites[sprite_index], entity->transform, 1);	
 			}
 		} else {
 			switch (entity->shape) {
+
+				case PRIMITIVE_SHAPE_CIRCLE: {
+					SDL_SetRenderDrawColor(game->renderer, entity->color.r, entity->color.g, entity->color.b, 255);
+					float scaled_radius = entity->collision_radius * (entity->transform.scale.x + entity->transform.scale.y) / 2.0f;
+					render_fill_circlef(game->renderer, entity->x, entity->y, scaled_radius);				
+				} break;
 //					case PRIMITIVE_SHAPE_RECT:
 				default: {
 					SDL_SetRenderDrawColor(game->renderer, entity->color.r, entity->color.g, entity->color.b, 255);

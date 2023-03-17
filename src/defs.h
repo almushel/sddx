@@ -62,6 +62,7 @@ typedef struct Game_Sprite {
 
 typedef enum Primitive_Shapes {
 	PRIMITIVE_SHAPE_UNDEFINED,
+	PRIMITIVE_SHAPE_CIRCLE,
 	PRIMITIVE_SHAPE_RECT,
 	PRIMITIVE_SHAPE_COUNT,
 } Primitive_Shapes;
