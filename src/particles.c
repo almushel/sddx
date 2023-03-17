@@ -1,6 +1,7 @@
 #include "SDL2/SDL.h"
 #include "stdlib.h"
 #include "defs.h"
+#include "graphics.h"
 
 #define PARTICLE_LIFETIME 12
 #define PARTICLE_MIN_SCALE 0.01
@@ -62,7 +63,7 @@ void draw_particles(Game_State* game, SDL_Renderer* renderer) {
 	for (int p = 0; p < ps->particle_count; p++) {
 		Particle particle = ps->particles[p];
 		if (particle.sprite.texture_name) {
-			draw_game_sprite(game, &particle.sprite, particle.transform, 1);
+			render_draw_game_sprite(game, &particle.sprite, particle.transform, 1);
 		} else {
 			switch (particle.shape) {
 //				case PRIMITIVE_SHAPE_RECT:

@@ -9,27 +9,6 @@
 #include "particles.c"
 #include "entities.c"
 
-void draw_texture(SDL_Renderer* renderer, SDL_Texture* texture, float x, float y, float angle, SDL_bool centered) {
-	if (texture) {
-		int dest_w, dest_h;
-
-		SDL_QueryTexture(texture, NULL, NULL, &dest_w, &dest_h);
-
-		SDL_FRect dest_rect;
-		dest_rect.x = x;
-		dest_rect.y = y;
-		dest_rect.w = (float)dest_w;
-		dest_rect.h = (float)dest_h;
-
-		if (centered == SDL_TRUE) {
-			dest_rect.x -= dest_rect.w/2.0f;
-			dest_rect.y -= dest_rect.h/2.0f;
-		}
-
-		SDL_RenderCopyExF(renderer, texture, NULL, &dest_rect, angle, 0, SDL_FLIP_NONE);
-	}
-}
-
 void process_key_event(SDL_KeyboardEvent* event, game_controller_state* input) {
 	if (event->repeat == 0) {
 		switch (event->keysym.scancode) {

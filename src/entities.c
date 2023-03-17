@@ -10,7 +10,7 @@
 #define LATERAL_THRUST 0.2f
 #define TURN_RATE 0.025f
 #define PLAYER_SHOT_MAX 8
-#define PLAYER_SHOT_RADIUS 2.5f
+#define PLAYER_SHOT_RADIUS 3.0f
 #define PLAYER_SHOT_SPEED 7.0f
 #define PLAYER_SHOT_LIFE 80.0f
 #define HEAT_MAX 100
@@ -489,6 +489,31 @@ void draw_entities(Game_State* game) {
 	for (int entity_index = 0; entity_index < game->entity_count; entity_index++) {
 		entity = game->entities + entity_index;
 
+		if (entity->shape > PRIMITIVE_SHAPE_UNDEFINED && entity->shape < PRIMITIVE_SHAPE_COUNT) {
+			switch (entity->shape) {
+
+				case PRIMITIVE_SHAPE_CIRCLE: {
+					float scaled_radius = entity->collision_radius * (entity->transform.scale.x + entity->transform.scale.y) / 2.0f;
+					//SDL_SetRenderDrawColor(game->renderer, entity->color.r, entity->color.g, entity->color.b, 255);
+					//render_fill_circlef(game->renderer, entity->x, entity->y, scaled_radius);
+					render_fill_circlef_linear_gradient(game->renderer, entity->x, entity->y, scaled_radius, entity->color, CLEAR_COLOR);	
+				} break;
+//				case PRIMITIVE_SHAPE_RECT: {
+				default: {
+					SDL_SetRenderDrawColor(game->renderer, entity->color.r, entity->color.g, entity->color.b, 255);
+
+					float scaled_radius = entity->collision_radius * (entity->transform.scale.x + entity->transform.scale.y) / 2.0f;
+					SDL_FRect p_rect;
+					p_rect.x = entity->x - scaled_radius;
+					p_rect.y = entity->y - scaled_radius;
+					p_rect.w = scaled_radius*2.0f;
+					p_rect.h = p_rect.w;
+
+					SDL_RenderFillRectF(game->renderer, &p_rect);
+				} break;
+			}
+		}
+		
 		if (entity->sprite_count > 0) {
 			for (int sprite_index = 0; sprite_index < entity->sprite_count; sprite_index++) {
 #ifdef DEBUG			
@@ -505,32 +530,10 @@ void draw_entities(Game_State* game) {
 					
 					SDL_SetRenderDrawColor(game->renderer, 255, 0, 0, 255);
 					//SDL_RenderDrawRectF(game->renderer, &debug_frect);
-					render_circle(game->renderer, entity->x, entity->y, entity->collision_radius);
+					render_draw_circlef(game->renderer, entity->x, entity->y, entity->collision_radius);
 				}
 #endif
-				draw_game_sprite(game, &entity->sprites[sprite_index], entity->transform, 1);	
-			}
-		} else {
-			switch (entity->shape) {
-
-				case PRIMITIVE_SHAPE_CIRCLE: {
-					SDL_SetRenderDrawColor(game->renderer, entity->color.r, entity->color.g, entity->color.b, 255);
-					float scaled_radius = entity->collision_radius * (entity->transform.scale.x + entity->transform.scale.y) / 2.0f;
-					render_fill_circlef(game->renderer, entity->x, entity->y, scaled_radius);				
-				} break;
-//					case PRIMITIVE_SHAPE_RECT:
-				default: {
-					SDL_SetRenderDrawColor(game->renderer, entity->color.r, entity->color.g, entity->color.b, 255);
-
-					float scaled_radius = entity->collision_radius * (entity->transform.scale.x + entity->transform.scale.y) / 2.0f;
-					SDL_FRect p_rect;
-					p_rect.x = entity->x - scaled_radius;
-					p_rect.y = entity->y - scaled_radius;
-					p_rect.w = scaled_radius*2.0f;
-					p_rect.h = p_rect.w;
-
-					SDL_RenderFillRectF(game->renderer, &p_rect);
-				} break;
+				render_draw_game_sprite(game, &entity->sprites[sprite_index], entity->transform, 1);	
 			}
 		}
 	}
