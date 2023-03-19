@@ -40,10 +40,14 @@ void load_game_assets(Game_State* game) {
 	game_load_texture(game, "assets/images/tracker.png", "Enemy Tracker");
 	game_load_texture(game, "assets/images/turret_base.png", "Enemy Turret Base");
 	game_load_texture(game, "assets/images/turret_cannon.png", "Enemy Turret Cannon");
-	generate_drifter_texture(game);
+//	game_load_texture(game, "assets/images/hud_missile.png", "HUD Missile");
 //	game_load_texture(game, "assets/images/hud_laser.png", "HUD Laser");
 //	game_load_texture(game, "assets/images/hud_mg.png", "HUD MG");
-//	game_load_texture(game, "assets/images/hud_missile.png", "HUD Missile");
+
+	//Generative textures
+	game_store_texture(game, generate_drifter_texture(game), "Enemy Drifter");
+	game_store_texture(game, generate_item_texture(game, game_get_texture(game, "Projectile Missile")), "Item Missile");
+	game_store_texture(game, generate_item_texture(game, game_get_texture(game, "Player Ship")), "Item LifeUp");
 
 	if (Mix_OpenAudio(48000, AUDIO_S16SYS, 2, 4096) != -1) {
 		Mix_AllocateChannels(32);

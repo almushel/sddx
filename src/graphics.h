@@ -10,5 +10,6 @@ void render_draw_circle(SDL_Renderer* renderer, int cx, int cy, int r);
 void render_draw_circlef(SDL_Renderer* renderer, float cx, float cy, float r);
 void render_fill_circle(SDL_Renderer* renderer, int cx, int cy, int r);
 void render_fill_circlef(SDL_Renderer* renderer, float cx, float cy, float r);
+void render_fill_circlef_linear_gradient(SDL_Renderer* renderer, float cx, float cy, float r, RGB_Color start_color, RGB_Color end_color);
 
 #endif

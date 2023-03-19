@@ -53,6 +53,8 @@
 #define GRAPPLER_SPACE_FRICTION 0.06
 #define GRAPPLER_ACCEL 0.06
 
+#define ITEM_RADIUS 15
+
 Uint32 get_new_entity(Game_State* game) {
 	Uint32 result = 0;
 
@@ -71,41 +73,73 @@ Uint32 get_new_entity(Game_State* game) {
 	return result;
 }
 
-void generate_drifter_texture(Game_State* game) {
-	SDL_Surface* surface = SDL_CreateRGBSurface(0, DRIFT_RADIUS*2, DRIFT_RADIUS*2, 32, STBI_MASK_R, STBI_MASK_G, STBI_MASK_B, STBI_MASK_A);
-	SDL_Renderer* software_renderer = SDL_CreateSoftwareRenderer(surface);
+SDL_Texture* generate_drifter_texture(Game_State* game) {
+	SDL_Texture* result = 0;
 
-	int vert_count = 5 + SDL_floor(random() * 4);
-	Vector2* vertices = SDL_malloc(sizeof(Vector2) * vert_count);
-	for (int i = 0; i < vert_count; i++) {
-		float point_dist = DRIFT_RADIUS / 2.0f + random() * DRIFT_RADIUS / 2.0f;
-		float new_angle = 360.0f / (float)vert_count * (float)i;
+	result = SDL_CreateTexture(game->renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, DRIFT_RADIUS*2, DRIFT_RADIUS*2);
+	if (result) {
+		SDL_SetTextureBlendMode(result, SDL_BLENDMODE_BLEND);
+
+		int vert_count = 5 + SDL_floor(random() * 4);
+		SDL_FPoint* vertices = SDL_malloc(sizeof(SDL_FPoint) * vert_count);
+		for (int i = 0; i < vert_count; i++) {
+			float point_dist = DRIFT_RADIUS / 2.0f + random() * DRIFT_RADIUS / 2.0f;
+			float new_angle = 360.0f / (float)vert_count * (float)i;
+			
+			vertices[i].x = DRIFT_RADIUS + cos_deg(new_angle) * point_dist;
+			vertices[i].y = DRIFT_RADIUS + sin_deg(new_angle) * point_dist;
+		}
+
+		SDL_Texture* original_render_target = SDL_GetRenderTarget(game->renderer);
+		SDL_SetRenderTarget(game->renderer, result);
 		
-		vertices[i].x = cos_deg(new_angle) * point_dist;
-		vertices[i].y = sin_deg(new_angle) * point_dist;
+		SDL_SetRenderDrawColor(game->renderer, 0, 0, 0, 0);
+		SDL_RenderClear(game->renderer);
+		
+		SDL_SetRenderDrawColor(game->renderer, 255, 255, 255, 255);
+		SDL_RenderDrawLinesF(game->renderer, vertices, vert_count);
+		SDL_RenderDrawLineF(game->renderer, vertices[vert_count-1].x, vertices[vert_count-1].y, vertices[0].x, vertices[0].y);
+		
+		SDL_SetRenderTarget(game->renderer, original_render_target);
+		SDL_free(vertices);
 	}
 
-	SDL_SetRenderDrawColor(software_renderer, 0, 0, 0, 0);
-	SDL_RenderClear(software_renderer);
-	SDL_SetRenderDrawColor(software_renderer, 255, 255, 255, 255);
+	return result;
+}
+
+SDL_Texture* generate_item_texture(Game_State* game, SDL_Texture* icon) {
+	SDL_Texture* result = 0;
 	
-	for (int vert_index = 0; vert_index < vert_count; vert_index++) {
-		SDL_RenderDrawLineF(software_renderer,
-			(float)DRIFT_RADIUS + vertices[ vert_index ].x, 				(float)DRIFT_RADIUS + vertices[ vert_index].y,
-			(float)DRIFT_RADIUS + vertices[(vert_index+1) % vert_count].x, 	(float)DRIFT_RADIUS + vertices[(vert_index+1) % vert_count].y
-		);
+	int result_size = ITEM_RADIUS*2 + 2;
+
+	result = SDL_CreateTexture(game->renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, result_size, result_size);
+	if (result) {
+		SDL_SetTextureBlendMode(result, SDL_BLENDMODE_BLEND);
+		
+		SDL_Texture* original_render_target = SDL_GetRenderTarget(game->renderer);
+		SDL_SetRenderTarget(game->renderer, result);
+
+		SDL_SetRenderDrawColor(game->renderer, 0, 0, 0, 0);
+		SDL_RenderClear(game->renderer);
+		render_fill_circlef_linear_gradient(game->renderer, ITEM_RADIUS, ITEM_RADIUS, ITEM_RADIUS, CLEAR_COLOR, SD_BLUE);
+		
+		int w, h;
+		SDL_QueryTexture(icon, NULL, NULL, &w, &h);
+		float dim = w > h ? w : h;
+		float ratio = ((float)ITEM_RADIUS * 1.5f)/dim;
+		
+		SDL_FRect dest = {0};
+		dest.w = w * ratio;
+		dest.h = h * ratio;
+		dest.x = ((float)result_size-dest.w) / 2.0f;
+		dest.y = ((float)result_size-dest.h) / 2.0f;
+		
+		SDL_RenderCopyExF(game->renderer, icon, NULL, &dest, 0, 0, SDL_FLIP_NONE);
+	
+		SDL_SetRenderTarget(game->renderer, original_render_target);
 	}
 
-	SDL_Texture* texture = SDL_CreateTextureFromSurface(game->renderer, surface);
-	if (texture) {
-		game_store_texture(game, texture, "Enemy Drifter");
-	} else {
-		SDL_Log(SDL_GetError());
-	}
-
-	SDL_free(vertices);
-	SDL_FreeSurface(surface);
-	SDL_DestroyRenderer(software_renderer);
+	return result;
 }
 
 Entity* spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
@@ -198,6 +232,18 @@ Entity* spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 				result->sprite_count = 2;
 			} break;
 
+			case ENTITY_TYPE_ITEM_MISSILE: {
+				result->sprites[0].texture_name = "Item Missile";
+				result->sprites[0].rotation = 1;
+				result->sprite_count = 1;
+			} break;
+
+			case ENTITY_TYPE_ITEM_LIFEUP: {
+				result->sprites[0].texture_name = "Item LifeUp";
+				result->sprites[0].rotation = 1;
+				result->sprite_count = 1;
+			} break;
+
 			case ENTITY_TYPE_SPAWN_WARP: {
 				result->shape = PRIMITIVE_SHAPE_CIRCLE;
 				result->color = SD_BLUE;
@@ -226,7 +272,15 @@ void update_entities(Game_State* game, float dt) {
 					
 			if (entity->timer <= 0) {
 				//spawn enemy
-				entity->timer = 100.0f;
+				switch(entity->type) {
+					case ENTITY_TYPE_PLAYER: {
+						entity->timer = 0;
+					} break;
+
+					default: {
+						entity->timer = 100.0f;
+					} break;
+				}
 				entity->state = ENTITY_STATE_ACTIVE;
 			}
 		} else if (entity->state == ENTITY_STATE_DESPAWNING) {
@@ -448,11 +502,21 @@ void update_entities(Game_State* game, float dt) {
 					}
 				} break;
 
+				case ENTITY_TYPE_ITEM_LIFEUP: {
+					entity->angle += dt;
+				} break;
+
+				case ENTITY_TYPE_ITEM_MISSILE: {
+					entity->angle += dt;
+				} break;
+
 				case ENTITY_TYPE_SPAWN_WARP: {
 					spawn_entity(game, entity->data.spawn_warp.spawn_type, entity->position);
 					entity->state = ENTITY_STATE_DESPAWNING;
 				} break;
 			}
+
+			normalize_degrees(entity->angle);
 		
 			entity->x += entity->vx * dt;
 			entity->y += entity->vy * dt;
@@ -494,9 +558,9 @@ void draw_entities(Game_State* game) {
 
 				case PRIMITIVE_SHAPE_CIRCLE: {
 					float scaled_radius = entity->collision_radius * (entity->transform.scale.x + entity->transform.scale.y) / 2.0f;
-					//SDL_SetRenderDrawColor(game->renderer, entity->color.r, entity->color.g, entity->color.b, 255);
-					//render_fill_circlef(game->renderer, entity->x, entity->y, scaled_radius);
-					render_fill_circlef_linear_gradient(game->renderer, entity->x, entity->y, scaled_radius, entity->color, CLEAR_COLOR);	
+					SDL_SetRenderDrawColor(game->renderer, entity->color.r, entity->color.g, entity->color.b, 255);
+					render_fill_circlef(game->renderer, entity->x, entity->y, scaled_radius);
+					//render_fill_circlef_linear_gradient(game->renderer, entity->x, entity->y, scaled_radius, entity->color, CLEAR_COLOR);	
 				} break;
 //				case PRIMITIVE_SHAPE_RECT: {
 				default: {
@@ -516,25 +580,14 @@ void draw_entities(Game_State* game) {
 		
 		if (entity->sprite_count > 0) {
 			for (int sprite_index = 0; sprite_index < entity->sprite_count; sprite_index++) {
-#ifdef DEBUG			
-				if (sprite_index == 0) {
-					SDL_Rect debug_rect = get_sprite_rect(game, &entity->sprites[0]);
-					SDL_FRect debug_frect = {
-						.x = entity->x + (float)debug_rect.x,
-						.y = entity->y + (float)debug_rect.y,
-						.h = (float)debug_rect.h,
-						.w = (float)debug_rect.w,
-					};
-					debug_frect.x -= debug_frect.w/2.0f;
-					debug_frect.y -= debug_frect.h/2.0f;
-					
-					SDL_SetRenderDrawColor(game->renderer, 255, 0, 0, 255);
-					//SDL_RenderDrawRectF(game->renderer, &debug_frect);
-					render_draw_circlef(game->renderer, entity->x, entity->y, entity->collision_radius);
-				}
-#endif
 				render_draw_game_sprite(game, &entity->sprites[sprite_index], entity->transform, 1);	
 			}
 		}
+
+#ifdef DEBUG			
+		SDL_SetRenderDrawColor(game->renderer, 255, 0, 0, 255);
+		render_draw_circlef(game->renderer, entity->x, entity->y, entity->collision_radius);
+#endif
+
 	}
 }

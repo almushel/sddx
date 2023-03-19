@@ -164,7 +164,9 @@ void render_draw_texture(SDL_Renderer* renderer, SDL_Texture* texture, float x, 
 	if (texture) {
 		int dest_w, dest_h;
 
-		SDL_QueryTexture(texture, NULL, NULL, &dest_w, &dest_h);
+		if (SDL_QueryTexture(texture, NULL, NULL, &dest_w, &dest_h) != 0) {
+			SDL_Log("render_draw_texture: QueryTexture failed.");
+		}
 
 		SDL_FRect dest_rect;
 		dest_rect.x = x;
@@ -177,7 +179,9 @@ void render_draw_texture(SDL_Renderer* renderer, SDL_Texture* texture, float x, 
 			dest_rect.y -= dest_rect.h/2.0f;
 		}
 
-		SDL_RenderCopyExF(renderer, texture, NULL, &dest_rect, angle, 0, SDL_FLIP_NONE);
+		if (SDL_RenderCopyExF(renderer, texture, NULL, &dest_rect, angle, 0, SDL_FLIP_NONE) == -1) {
+			SDL_Log("render_draw_texture: RenderCopy failed. %s", SDL_GetError());
+		};
 	}
 }
 
