@@ -1,8 +1,4 @@
 #define DEBUG 1
-
-#include "SDL2/SDL.h"
-#include "SDL2/SDL_mixer.h"
-
 #include "defs.h"
 #include "graphics.c"
 #include "assets.c"
@@ -195,6 +191,10 @@ int main(int argc, char* argv[]) {
 
 			if (new_button->pressed) current_button->held = SDL_TRUE;
 			else if (new_button->released) current_button->held = SDL_FALSE;
+		}
+
+		if (!game->player && game->player_controller.fire.held) {
+			game->player = spawn_entity(game, ENTITY_TYPE_PLAYER, (Vector2){(float)SCREEN_WIDTH/2.0f, (float)SCREEN_HEIGHT/2.0f});
 		}
 
 		update_entities(game, dt);

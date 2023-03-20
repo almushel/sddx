@@ -2,13 +2,14 @@
 #include "assets.h"
 
 void render_draw_circle(SDL_Renderer* renderer, int cx, int cy, int r) {
+	if (r <= 0) return;
 	SDL_Point points[4];
 	float r_squared = (float)r * (float)r;
 
-	uint8_t* y_used = SDL_malloc(sizeof(uint8_t) * (int)r);
-	uint8_t* x_used = SDL_malloc(sizeof(uint8_t) * (int)r);
-	SDL_memset(y_used, 0, sizeof(uint8_t) * (int)r);
-	SDL_memset(x_used, 0, sizeof(uint8_t) * (int)r);
+	uint8_t* y_used = SDL_malloc(sizeof(uint8_t) * r);
+	uint8_t* x_used = SDL_malloc(sizeof(uint8_t) * r);
+	SDL_memset(y_used, 0, sizeof(uint8_t) * r);
+	SDL_memset(x_used, 0, sizeof(uint8_t) * r);
 
 	for (int x = 0; x <= r; x++) {
 		int y = (int)SDL_roundf(SDL_sqrtf(r_squared - (float)x*(float)x));
@@ -40,16 +41,19 @@ void render_draw_circle(SDL_Renderer* renderer, int cx, int cy, int r) {
 	SDL_free(y_used);
 }
 
+// TO-DO: Identify crash related to this.
 void render_draw_circlef(SDL_Renderer* renderer, float cx, float cy, float r) {
+	if (r <= 0) return;
 	SDL_FPoint points[4];
 	float r_squared = r * r;
+	int ri = (int)SDL_ceilf(r);
 	
-	uint8_t* y_used = SDL_malloc(sizeof(uint8_t) * (int)r);
-	uint8_t* x_used = SDL_malloc(sizeof(uint8_t) * (int)r);
-	SDL_memset(y_used, 0, sizeof(uint8_t) * (int)r);
-	SDL_memset(x_used, 0, sizeof(uint8_t) * (int)r);
+	SDL_bool* y_used = SDL_malloc(sizeof(SDL_bool) * ri);
+	SDL_bool* x_used = SDL_malloc(sizeof(SDL_bool) * ri);
+	SDL_memset(y_used, 0, sizeof(SDL_bool) * ri);
+	SDL_memset(x_used, 0, sizeof(SDL_bool) * ri);
 
-	for (int x = 0; x <= r; x++) {
+	for (int x = 0; x <= ri; x++) {
 		float fx = (float)x;
 		float fy = SDL_sqrtf(r_squared - fx*fx);
 
@@ -64,7 +68,7 @@ void render_draw_circlef(SDL_Renderer* renderer, float cx, float cy, float r) {
 		y_used[(int)fy] = 1;
 	}
 
-	for (int y = 0; y <= r; y++) {
+	for (int y = 0; y <= ri; y++) {
 		if (y_used[y]) continue;
 		float fy = (float)y;
 		float fx = SDL_sqrtf(r_squared - fy*fy);
@@ -82,6 +86,7 @@ void render_draw_circlef(SDL_Renderer* renderer, float cx, float cy, float r) {
 }
 
 void render_fill_circle(SDL_Renderer* renderer, int cx, int cy, int r) {
+	if (r <= 0) return;
 	SDL_Point points[4];
 	int radius = (int)r;
 	int r_squared = radius*radius;
@@ -102,6 +107,7 @@ void render_fill_circle(SDL_Renderer* renderer, int cx, int cy, int r) {
 
 // TO-DO: Figure out why sub-pixel rendering doesn't seem to be working here. Very clear pixel jitter on moving objects.
 void render_fill_circlef(SDL_Renderer* renderer, float cx, float cy, float r) {
+	if (r <= 0) return;
 	SDL_FPoint points[4];
 	int radius = (int)SDL_roundf(r);
 	float r_squared = r*r;
@@ -130,6 +136,7 @@ static inline float lerp(float start, float end, float t) {
 }
 
 void render_fill_circlef_linear_gradient(SDL_Renderer* renderer, float cx, float cy, float r, RGB_Color start_color, RGB_Color end_color) {
+	if (r <= 0) return;
 	SDL_FPoint points[4];
 	int radius = (int)SDL_roundf(r);
 	float r_squared = r*r;

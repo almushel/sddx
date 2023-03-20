@@ -4,7 +4,7 @@ set(EXTERNAL_DIR "${CMAKE_SOURCE_DIR}/../../external")
 message(${EXTERNAL_DIR})
 
 project(sddx C)
-add_executable(sddx main.c)
+add_executable(sddx main.c game_math.c)
 
 target_link_directories(sddx 
 	PRIVATE "${EXTERNAL_DIR}/bin/SDL_mixer/"

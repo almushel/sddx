@@ -1,6 +1,9 @@
 #ifndef DEFS_H
 #define DEFS_H
 
+#include "SDL2/SDL.h"
+#include "SDL2/SDL_mixer.h"
+
 #define MATH_PI 3.14159265
 #define RAD_TO_DEG(rads) rads * (180/MATH_PI)
 #define DEG_TO_RAD(degs) degs * (MATH_PI/180)
@@ -34,6 +37,9 @@ enum stbi_masks {
 typedef struct Vector2 {
 	float x, y;
 } Vector2;
+
+typedef Vector2 sc2d_v2;
+#define SIMPLE_COLLISION_2D_TYPES
 
 #define Vec2_Union(v2_name, fx, fy) \
 	union { 						\
@@ -91,6 +97,12 @@ typedef enum Entity_States {
 	ENTITY_STATE_COUNT,
 } Entity_States;
 
+typedef enum Entity_Teams {
+	ENTITY_TEAM_UNDEFINED = 0,
+	ENTITY_TEAM_PLAYER,
+	ENTITY_TEAM_ENEMY,
+} Entity_Teams;
+
 typedef struct Player_Entity_Data {
 	Uint32 main_thruster;
 	Uint32 left_thruster;
@@ -105,15 +117,10 @@ typedef struct Spawn_Warp_Entity_Data {
 	Uint32 spawn_type;
 } Spawn_Warp_Entity_Data;
 
-typedef struct Projectile_Entity_Data {
-	Uint32 player_shot; // If (value == 1) damages Enemies and not the player
-} Projectile_Entity_Data;
-
 typedef union {
 	Player_Entity_Data player;
 	Tracker_Entity_Data tracker;
 	Spawn_Warp_Entity_Data spawn_warp;
-	Projectile_Entity_Data projectile;
 } Entity_Data;
 
 typedef struct Entity {
@@ -132,6 +139,7 @@ typedef struct Entity {
 	Primitive_Shapes shape;
 	Entity_Types type;
 	Entity_States state;
+	Entity_Teams team;
 } Entity;
 
 typedef struct Mix_Music_Node 	{ char* name; Mix_Music* data; struct Mix_Music_Node* next; } Mix_Music_Node;

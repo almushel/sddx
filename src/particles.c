@@ -174,6 +174,15 @@ Particle_Emitter* get_particle_emitter(Particle_System* ps, Uint32 index) {
 	return result;
 }
 
+void remove_particle_emitter(Particle_System* ps, Uint32 index) {
+	if (index > ps->emitter_count) return;
+
+	if (index < ps->emitter_count-1) {
+		*(ps->emitters + index) = *(ps->emitters + (ps->emitter_count-1));
+	}
+	ps->emitter_count--;
+}
+
 void update_particle_emitters(Particle_System* ps, float dt) {
 	for (int emitter_index = 0; emitter_index < ps->emitter_count; emitter_index++) {
 		Particle_Emitter* emitter = ps->emitters + emitter_index;
