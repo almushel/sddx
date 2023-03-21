@@ -80,9 +80,13 @@ int main(int argc, char* argv[]) {
 	Game_State* game = SDL_malloc(sizeof(Game_State));
 	SDL_memset(game, 0, sizeof(Game_State));
 
-	game->entities = SDL_malloc(sizeof(Entity) * 512);
-	SDL_memset(game->entities, 0, sizeof(Entity) * 512);
 	game->entities_size = 512;
+	game->entities = SDL_malloc(sizeof(Entity) * game->entities_size);
+	SDL_memset(game->entities, 0, sizeof(Entity) * game->entities_size);
+	
+	game->dead_entities_size = 32;
+	game->dead_entities = SDL_malloc(sizeof(Uint32) * game->dead_entities_size);
+	SDL_memset(game->dead_entities, 0, sizeof(Uint32) * game->dead_entities_size);
 
 	game->window = SDL_CreateWindow("Space Drifter DX", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, 0);
 	if (game->window == NULL) {
@@ -139,6 +143,7 @@ int main(int argc, char* argv[]) {
 
 	game_controller_state new_player_controller = {0};
 	
+	get_new_entity(game); // reserve 0
 	game->player = spawn_entity(game, ENTITY_TYPE_PLAYER, (Vector2){SCREEN_WIDTH/2, SCREEN_HEIGHT/2});
 	for (int i = ENTITY_TYPE_PLAYER+1; i < ENTITY_TYPE_SPAWN_WARP; i++) {
 		Entity* entity = spawn_entity(game, ENTITY_TYPE_SPAWN_WARP, (Vector2){random() * SCREEN_WIDTH, random() * SCREEN_HEIGHT});

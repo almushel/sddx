@@ -94,6 +94,7 @@ typedef enum Entity_States {
 	ENTITY_STATE_ACTIVE,
 	ENTITY_STATE_DESPAWNING,
 	ENTITY_STATE_DYING,
+	ENTITY_STATE_DEAD,
 	ENTITY_STATE_COUNT,
 } Entity_States;
 
@@ -174,11 +175,12 @@ typedef struct Particle {
 	Vec2_Union(velocity, vx, vy);
 	float mass;
 	float collision_radius;
-	float life_left;
+	float timer;
 
 	Game_Sprite sprite;
 	Primitive_Shapes shape;
 	RGB_Color color;
+	Uint32 parent;
 } Particle;
 
 typedef struct Particle_Emitter {
@@ -188,15 +190,21 @@ typedef struct Particle_Emitter {
 	};
 	float angle;
 
+	Uint32 parent;
+
 	float density;
-	Uint32 sprite;
+//	Game_Sprite sprite;
 	Primitive_Shapes shape;
 	RGB_Color colors[16];
 	Uint32 color_count;
 
 	float counter;
 	float scale;
-	SDL_bool active;
+	enum Emitter_State {
+		EMITTER_STATE_INACTIVE,
+		EMITTER_STATE_ACTIVE,
+		EMITTER_STATE_DEAD,
+	} state;
 } Particle_Emitter;
 
 #define MAX_PARTICLES 512
@@ -206,7 +214,9 @@ typedef struct Particle_System {
 	Uint32 particle_count;
 
 	Particle_Emitter emitters[MAX_PARTICLE_EMITTERS];
+	Uint32 dead_emitters[MAX_PARTICLE_EMITTERS];
 	Uint32 emitter_count;
+	Uint32 dead_emitter_count;
 } Particle_System;
 
 #define STARFIELD_STAR_COUNT 500
@@ -226,6 +236,10 @@ typedef struct Game_State {
 	Entity* entities;
 	Uint32 entity_count;
 	Uint32 entities_size;
+	
+	Uint32* dead_entities;
+	Uint32 dead_entities_count;
+	Uint32 dead_entities_size;
 
 	Game_Starfield starfield;
 	Particle_System particle_system;

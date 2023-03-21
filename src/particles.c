@@ -33,12 +33,12 @@ void update_particles(Particle_System* ps, float dt) {
 		Particle* particle = ps->particles + p;
 		
 		if (random() * 100 > 50){
-			particle->life_left -= PARTICLE_DECAY * dt;
-			particle->sx = particle->sy = SDL_clamp(particle->life_left / PARTICLE_LIFETIME, PARTICLE_MIN_SCALE, 1.0f);
+			particle->timer -= PARTICLE_DECAY * dt;
+			particle->sx = particle->sy = SDL_clamp(particle->timer / PARTICLE_LIFETIME, PARTICLE_MIN_SCALE, 1.0f);
 			if (particle->collision_radius < 0) particle->collision_radius = 0;
 		}
 		
-		if (particle->life_left <= 0) {
+		if (particle->timer <= 0) {
 			dead_particles[dead_particle_count] = p;
 			dead_particle_count++;
 		}
@@ -57,7 +57,6 @@ void update_particles(Particle_System* ps, float dt) {
 	SDL_free(dead_particles);
 }
 
-// NOTE: What if we garbage collected in draw_particles? Check if state==dying, remove, decrement p.
 void draw_particles(Game_State* game, SDL_Renderer* renderer) {
 	Particle_System* ps = &game->particle_system;
 	for (int p = 0; p < ps->particle_count; p++) {
@@ -88,7 +87,7 @@ void draw_particles(Game_State* game, SDL_Renderer* renderer) {
 void init_particle(Particle* p) {
 	*p = (Particle) {0};
 	p->collision_radius = PARTICLE_MAX_START_RADIUS,
-	p->life_left = PARTICLE_LIFETIME,
+	p->timer = PARTICLE_LIFETIME,
 	p->color = DEFAULT_PARTICLE_COLOR,
 	p->sx = p->sy = 1.0f;
 }
@@ -157,15 +156,23 @@ void explode_at_point(Particle_System* ps, float x, float y, float force, RGB_Co
 
 Uint32 new_particle_emitter(Particle_System* ps) {
 	Uint32 result = 0;
-	if (ps->emitter_count < array_length(ps->emitters)) {
+	if (ps->dead_emitter_count > 0) {
+		result = ps->dead_emitters[0];
+		ps->dead_emitters[0] = ps->dead_emitters[ps->dead_emitter_count-1];
+		ps->dead_emitter_count--;
+#if DEBUG
+		SDL_Log("New Entity from Dead List: %i", result);
+#endif
+	} else if (ps->emitter_count < array_length(ps->emitters)) {
 		result = ps->emitter_count++;
 	} else {
-		SDL_Log("get_new_particle_emitter(): max Particle emitter maximum reached");
+		SDL_Log("get_new_particle_emitter(): Particle emitter maximum reached");
 	}
 
 	return result;
 }
 
+// TO-DO: Handle "Dead" emitter indexes
 Particle_Emitter* get_particle_emitter(Particle_System* ps, Uint32 index) {
 	Particle_Emitter* result = 0;
 
@@ -177,16 +184,18 @@ Particle_Emitter* get_particle_emitter(Particle_System* ps, Uint32 index) {
 void remove_particle_emitter(Particle_System* ps, Uint32 index) {
 	if (index > ps->emitter_count) return;
 
-	if (index < ps->emitter_count-1) {
-		*(ps->emitters + index) = *(ps->emitters + (ps->emitter_count-1));
-	}
-	ps->emitter_count--;
+	ps->emitters[index].state = EMITTER_STATE_DEAD;
+	ps->dead_emitters[ps->dead_emitter_count] = index;
+	ps->dead_emitter_count++;
+#if DEBUG
+	SDL_Log("Dead Emitter Count: %i", ps->dead_emitter_count);
+#endif
 }
 
 void update_particle_emitters(Particle_System* ps, float dt) {
 	for (int emitter_index = 0; emitter_index < ps->emitter_count; emitter_index++) {
 		Particle_Emitter* emitter = ps->emitters + emitter_index;
-		if (!emitter->active) continue;
+		if (emitter->state != EMITTER_STATE_ACTIVE) continue;
 		
 		emitter->counter += emitter->density * dt;
 
@@ -196,6 +205,7 @@ void update_particle_emitters(Particle_System* ps, float dt) {
 				Particle* p = instantiate_particle(ps, 0, 0);
 				if (p) {
 					randomize_particle(p, emitter->colors, emitter->color_count);
+					p->parent = emitter->parent;
 					//p->collision_radius *= emitter->scale;
 
 					p->x = emitter->x;
@@ -233,7 +243,7 @@ void explode_sprite(Game_State* game, Game_Sprite* sprite, float x, float y, flo
 
 		randomize_particle(particle, 0, 0);
 		particle->collision_radius = radius;
-		particle->life_left = PARTICLE_LIFETIME;
+		particle->timer = PARTICLE_LIFETIME;
 		particle->angle = angle;
 		particle->x = x;
 		particle->y = y;

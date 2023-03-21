@@ -60,7 +60,14 @@
 Uint32 get_new_entity(Game_State* game) {
 	Uint32 result = 0;
 
-	if (game->entity_count < game->entities_size) {
+	if (game->dead_entities_count > 0) {
+		result = game->dead_entities[0];
+		if (game->dead_entities_count > 1) {
+			game->dead_entities[0] = game->dead_entities[game->dead_entities_count-1];
+		}
+		game->dead_entities_count--;
+		SDL_Log("New Entity from Dead List: %i", result);
+	} else if (game->entity_count < game->entities_size) {
 		result = game->entity_count++;
 	} else {
 		void* new_entities = SDL_realloc(game->entities, sizeof(Entity) * game->entities_size * 2);
@@ -148,9 +155,11 @@ SDL_Texture* generate_item_texture(Game_State* game, SDL_Texture* icon) {
 }
 
 Entity* spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
+	Uint32 entity_index = 0;
 	Entity* result = 0;
 	if (type > ENTITY_TYPE_UNDEFINED && type < ENTITY_TYPE_COUNT) {
-		result = game->entities + get_new_entity(game);
+		entity_index = get_new_entity(game);
+		result = game->entities + entity_index;
 	}
 
 	if (result) {
@@ -181,6 +190,7 @@ Entity* spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 				main_thruster->density = 2.0f;
 				main_thruster->colors[0] = SD_BLUE;
 				main_thruster->color_count = 1;
+				main_thruster->parent = entity_index;
 
 				Particle_Emitter* left_thruster = get_particle_emitter(&game->particle_system, result->data.player.left_thruster);
 				*left_thruster = *main_thruster;
@@ -225,6 +235,7 @@ Entity* spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 				thruster->density = 1.5f;
 				thruster->colors[0] = (RGB_Color){255, 0, 0};
 				thruster->color_count = 1;
+				thruster->parent = entity_index;
 			} break;
 
 			case ENTITY_TYPE_ENEMY_TURRET: {
@@ -278,7 +289,7 @@ void update_entities(Game_State* game, float dt) {
 	Uint32 dead_entity_count = 0;
 	
 	Entity* entity = 0;
-	for (int entity_index = 0; entity_index < game->entity_count; entity_index++) {
+	for (int entity_index = 1; entity_index < game->entity_count; entity_index++) {
 		entity = game->entities + entity_index;
 		
 		if (entity->state == ENTITY_STATE_SPAWNING) {
@@ -318,7 +329,7 @@ void update_entities(Game_State* game, float dt) {
 			if (entity->timer > 0) entity->timer -= dt;
 			switch(entity->type) {
 				case ENTITY_TYPE_PLAYER: {
-					if (game->player_controller.turn_left.held) entity->angle -= PLAYER_TURN_SPEED * dt;
+					if (game->player_controller.turn_left.held)  entity->angle -= PLAYER_TURN_SPEED * dt;
 					if (game->player_controller.turn_right.held) entity->angle += PLAYER_TURN_SPEED * dt;
 					
 					if (game->player_controller.thrust.held) {
@@ -359,27 +370,27 @@ void update_entities(Game_State* game, float dt) {
 						entity->timer = PLAYER_MG_COOLDOWN;
 					}
 
-					Particle_Emitter* main_thruster = get_particle_emitter(&game->particle_system, entity->data.player.main_thruster);
-					Particle_Emitter* left_thruster = get_particle_emitter(&game->particle_system, entity->data.player.left_thruster);
+					Particle_Emitter* main_thruster  = get_particle_emitter(&game->particle_system, entity->data.player.main_thruster);
+					Particle_Emitter* left_thruster  = get_particle_emitter(&game->particle_system, entity->data.player.left_thruster);
 					Particle_Emitter* right_thruster = get_particle_emitter(&game->particle_system, entity->data.player.right_thruster);
 					
 					if (main_thruster) {
-						main_thruster->active = game->player_controller.thrust.held;
+						main_thruster->state = game->player_controller.thrust.held;
 						main_thruster->angle = entity->angle + 180;
-						main_thruster->x = entity->x + cos_deg(main_thruster->angle) * SHIP_RADIUS;
-						main_thruster->y = entity->y + sin_deg(main_thruster->angle) * SHIP_RADIUS;
+						main_thruster->x = entity->x + cos_deg(main_thruster->angle);// * (SHIP_RADIUS + PARTICLE_MAX_START_RADIUS);
+						main_thruster->y = entity->y + sin_deg(main_thruster->angle);// * (SHIP_RADIUS + PARTICLE_MAX_START_RADIUS);
 					}
 					if (left_thruster) {
-						left_thruster->active = game->player_controller.thrust_right.held;
+						left_thruster->state = game->player_controller.thrust_right.held;
 						left_thruster->angle = entity->angle + 90;
-						left_thruster->x = entity->x;
-						left_thruster->y = entity->y;
+						left_thruster->x = entity->x + cos_deg(left_thruster->angle);// * (SHIP_RADIUS + PARTICLE_MAX_START_RADIUS);
+						left_thruster->y = entity->y + sin_deg(left_thruster->angle);// * (SHIP_RADIUS + PARTICLE_MAX_START_RADIUS);
 					}
 					if (right_thruster) {
-						right_thruster->active  = game->player_controller.thrust_left.held;
+						right_thruster->state = game->player_controller.thrust_left.held;
 						right_thruster->angle = entity->angle - 90;
-						right_thruster->x = entity->x;
-						right_thruster->y = entity->y;
+						right_thruster->x = entity->x + cos_deg(right_thruster->angle);// * (SHIP_RADIUS + PARTICLE_MAX_START_RADIUS);
+						right_thruster->y = entity->y + sin_deg(right_thruster->angle);// * (SHIP_RADIUS + PARTICLE_MAX_START_RADIUS);
 					}
 				} break;
 
@@ -432,8 +443,8 @@ void update_entities(Game_State* game, float dt) {
 						Particle_Emitter* thruster = get_particle_emitter(&game->particle_system, entity->data.tracker.thruster);
 						if (thruster) {
 							thruster->angle = entity->angle + 180;
-							thruster->x = entity->x;
-							thruster->y = entity->y;
+							thruster->x = entity->x + cos_deg(thruster->angle);// * (entity->collision_radius + PARTICLE_MAX_START_RADIUS) / 2.0f;
+							thruster->y = entity->y + sin_deg(thruster->angle);// * (entity->collision_radius + PARTICLE_MAX_START_RADIUS) / 2.0f;
 						}
 
 						entity->target_angle = normalize_degrees(entity->target_angle);
@@ -443,10 +454,10 @@ void update_entities(Game_State* game, float dt) {
 						if (fabs(angle_delta) > TRACKER_PRECISION) {
 							float sign = (float)(1 - ((int)(angle_delta < 0) * 2));
 							entity->angle -= TRACKER_TURN_RATE * sign * dt;
-							if (thruster) thruster->active = 0;
+							if (thruster) thruster->state = 0;
 						} else {
 							acceleration_speed *=2;
-							if (thruster) thruster->active = 1;
+							if (thruster) thruster->state = 1;
 						}
 
 						entity->vx += cos_deg(entity->angle) * acceleration_speed * dt;
@@ -556,50 +567,47 @@ void update_entities(Game_State* game, float dt) {
 
 			if (entity->y < 0) entity->y = SCREEN_HEIGHT + entity->y;
 			else if (entity->y > SCREEN_HEIGHT) entity->y -= SCREEN_HEIGHT;
-		}
-	}
-
-	for (int first_entity_index = 0; first_entity_index < game->entity_count; first_entity_index++) {
-		Entity* first_entity  = game->entities + first_entity_index;
-		if (first_entity->state != ENTITY_STATE_ACTIVE) continue;
-		if (first_entity->type == ENTITY_TYPE_SPAWN_WARP) continue;
 		
-		for (int second_entity_index = first_entity_index+1; second_entity_index < game->entity_count; second_entity_index++) {
-			Entity* second_entity = game->entities + second_entity_index;
-			if (second_entity->state != ENTITY_STATE_ACTIVE) continue;
-			if (second_entity->type == ENTITY_TYPE_SPAWN_WARP) continue;
-			Vector2 overlap = {0};
+			if (entity->type  != ENTITY_TYPE_SPAWN_WARP) {
+				for (int collision_entity_index = entity_index+1; collision_entity_index < game->entity_count; collision_entity_index++) {
+					Entity* collision_entity 	 = game->entities + collision_entity_index;
+					if (collision_entity->state != ENTITY_STATE_ACTIVE || collision_entity->type  == ENTITY_TYPE_SPAWN_WARP) continue;
+					Vector2 overlap = {0};
 
-			if (sc2d_check_circles(first_entity->position, first_entity->collision_radius, second_entity->position, second_entity->collision_radius, &overlap)) {				
-				if (first_entity->team && second_entity->team && first_entity->team != second_entity->team) {
-					first_entity->state = ENTITY_STATE_DYING;
-					second_entity->state = ENTITY_STATE_DYING;
+					if (sc2d_check_circles(entity->position, entity->collision_radius, collision_entity->position, collision_entity->collision_radius, &overlap)) {				
+						if (entity->team && collision_entity->team && entity->team != collision_entity->team) {
+							entity->state  = ENTITY_STATE_DYING;
+							collision_entity->state = ENTITY_STATE_DYING;
+						}
+
+						// NOTE: Do we need any kind of physics response here?
+						// entity ->vx -= overlap.x/2.0f;
+						// entity ->vy -= overlap.y/2.0f;
+						// collision_entity->vx += overlap.x/2.0f;
+						// collision_entity->vy += overlap.y/2.0f;
+					}
 				}
-
-				first_entity ->vx -= overlap.x/2.0f;
-				first_entity ->vy -= overlap.y/2.0f;
-				second_entity->vx += overlap.x/2.0f;
-				second_entity->vy += overlap.y/2.0f;
 			}
-		}
 
-		for (int particle_index = 0; particle_index < game->particle_system.particle_count; particle_index++) {
-			Particle* particle = game->particle_system.particles + particle_index;
-			Vector2 overlap = {0};
+			for (int particle_index = 0; particle_index < game->particle_system.particle_count; particle_index++) {
+				Particle* particle = game->particle_system.particles + particle_index;
+				Vector2 overlap = {0};
 
-			if (sc2d_check_circles(first_entity->position, first_entity->collision_radius, particle->position, particle->collision_radius, &overlap)) {
-				particle->x += overlap.x;
-				particle->y += overlap.y;
-				particle->vx = overlap.x + particle->vx / 2.0f;
-				particle->vy = overlap.y + particle->vy / 2.0f;
+				if ((particle->parent != entity_index) && sc2d_check_circles(entity->position, entity->collision_radius, particle->position, particle->collision_radius, &overlap)) {
+					particle->x += overlap.x;
+					particle->y += overlap.y;
+					particle->vx = overlap.x + particle->vx / 2.0f;
+					particle->vy = overlap.y + particle->vy / 2.0f;
+				}
 			}
-		}
+		} // end of if (entity->state == ENTITY_STATE_ACTIVE)
 	}
 
 	if (dead_entity_count > 0) {
 		Entity* entity;
-		for (int dead_entity_index = 0; dead_entity_index < dead_entity_count; dead_entity_index++) {
-			entity = game->entities + dead_entities[dead_entity_index];
+		for (int i = 0; i < dead_entity_count; i++) {
+			Uint32 dead_entity_index = dead_entities[i]; 
+			entity = game->entities + dead_entity_index;
 			switch(entity->type) {
 				// TO-DO: Handle stale references for particle emitters
 				case ENTITY_TYPE_PLAYER: {
@@ -618,10 +626,21 @@ void update_entities(Game_State* game, float dt) {
 				explode_sprite(game, entity->sprites+sprite_index, entity->x, entity->y, entity->angle, 6);
 			}
 
-			if (dead_entity_index != (game->entity_count-1)) {
-				*(Entity*)(entity) = *(Entity*)(game->entities + (game->entity_count-1) );
+			
+			if (game->dead_entities_count >= game->dead_entities_size) {
+				Uint32* new_dead_entities = SDL_realloc(game->dead_entities, game->dead_entities_size * 2);
+				if (new_dead_entities) {
+					game->dead_entities = new_dead_entities;
+					game->dead_entities_size *= 2;
+				}
 			}
-			game->entity_count--;
+			
+			game->dead_entities[game->dead_entities_count] = dead_entity_index;
+			game->dead_entities_count++;
+			entity->state = ENTITY_STATE_DEAD;
+#if DEBUG	
+			SDL_Log("Dead Entity Count: %i", game->dead_entities_count);
+#endif
 		}
 	}
 }
@@ -630,6 +649,7 @@ void draw_entities(Game_State* game) {
 	Entity* entity = 0;
 	for (int entity_index = 0; entity_index < game->entity_count; entity_index++) {
 		entity = game->entities + entity_index;
+		if (entity->state <= 0 || entity->state >= ENTITY_STATE_DEAD) continue;
 
 		if (entity->shape > PRIMITIVE_SHAPE_UNDEFINED && entity->shape < PRIMITIVE_SHAPE_COUNT) {
 			switch (entity->shape) {
