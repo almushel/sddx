@@ -217,3 +217,79 @@ void render_draw_game_sprite(Game_State* game, Game_Sprite* sprite, Transform2D 
 		}
 	}
 }
+
+SDL_Vertex* pack_sdl_vertices(Vector2* positions, Vector2* tex_coords, RGB_Color color, int vert_count) {
+	SDL_Vertex* result = SDL_malloc(sizeof(SDL_Vertex) * vert_count);
+
+	for (int i = 0; i < vert_count; i++) {
+		if (positions)
+			result[i].position = (SDL_FPoint){positions[i].x, positions[i].y};
+
+		if (tex_coords)
+			result[i].tex_coord = (SDL_FPoint){tex_coords[i].x, tex_coords[i].y};
+		
+		result[i].color = (SDL_Color){color.r, color.g, color.b, 255};
+	}
+
+	return result;
+}
+
+void render_draw_polygon(SDL_Renderer* renderer, SDL_FPoint* points, int num_points) {
+	SDL_RenderDrawLinesF(renderer, points, num_points);
+	SDL_RenderDrawLineF(renderer, points[num_points-1].x, points[num_points-1].y, points[0].x, points[0].y);
+}
+
+void render_fill_polygon(SDL_Renderer* renderer, SDL_FPoint* points, int num_points, RGB_Color color) {
+	int num_verts = num_points;
+	SDL_Vertex* vertices = SDL_malloc(sizeof(SDL_Vertex) * num_points);
+	
+	for (int i = 0; i < num_verts; i++) {
+		vertices[i].position  	= points[i];
+		vertices[i].tex_coord 	= (SDL_FPoint) {1.0f,1.0f};
+		vertices[i].color 		= (SDL_Color){color.r, color.g, color.b, 255};
+	}
+
+	// Number of triangles in a polygon = number of verticles - 2;
+	int num_triangles = (num_verts-2);
+	int num_indices = num_triangles * 3;
+	int * indices = SDL_malloc(sizeof(int) * num_indices);
+	
+	int next_index = 1;
+	for (int triangle = 0; triangle < num_triangles; triangle++) {
+		int i = triangle*3;
+		indices[i	 ] 	= 0;
+		indices[i + 1] 	= next_index++;
+		indices[i + 2] 	= next_index;
+	}
+
+	SDL_RenderGeometry(renderer, NULL, vertices, num_verts, indices, num_indices);
+
+	SDL_free(indices);
+	SDL_free(vertices);
+}
+
+void render_draw_triangle(SDL_Renderer* renderer, Vector2 v1, Vector2 v2, Vector2 v3) {
+	SDL_FPoint points[4];
+	points[0] = (SDL_FPoint){v1.x, v1.y};
+	points[1] = (SDL_FPoint){v2.x, v2.y};
+	points[2] = (SDL_FPoint){v3.x, v3.y};
+	points[3] = (SDL_FPoint){v1.x, v1.y};
+
+	SDL_RenderDrawLinesF(renderer, points, 4);
+}
+
+void render_fill_triangle(SDL_Renderer* renderer, Vector2 v1, Vector2 v2, Vector2 v3, RGB_Color color) {
+	SDL_Vertex vertex_1 = { {v1.x, v1.y}, {color.r, color.g, color.b, 255}, {1, 1}};
+	SDL_Vertex vertex_2 = { {v2.x, v2.y}, {color.r, color.g, color.b, 255}, {1, 1}};
+	SDL_Vertex vertex_3 = { {v3.x, v3.y}, {color.r, color.g, color.b, 255}, {1, 1}};
+
+	// Put them into array
+
+	SDL_Vertex vertices[] = {
+		vertex_1,
+		vertex_2,
+		vertex_3
+	};
+
+	SDL_RenderGeometry(renderer, NULL, vertices, 3, 0, 0);
+}

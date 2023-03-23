@@ -49,6 +49,8 @@ void load_game_assets(Game_State* game) {
 		Mix_AllocateChannels(32);
 		game_load_music(game, "assets/audio/WrappingAction.mp3", "Wrapping Action");
 		game_load_sfx(game, "assets/audio/PlayerShot.mp3", "Player Shot");
+//		game_load_sfx(game, "assets/audio/PlayerLaser.mp3", "Player Laser");
+//		game_load_sfx(game, "assets/audio/PlayerMissile.mp3", "Player Missile");
 	} else {
 		SDL_Log(SDL_GetError());
 		exit(1);
@@ -230,6 +232,18 @@ int main(int argc, char* argv[]) {
 
 		draw_particles(game, game->renderer);
 		draw_entities(game);
+
+		Vector2 vertices[4] = {
+			{.x= SCREEN_WIDTH/2 - 50, .y= SCREEN_HEIGHT/2 + 10},
+			{.x= SCREEN_WIDTH/2 - 44, .y= SCREEN_HEIGHT/2 - 10},
+			{.x= SCREEN_WIDTH/2 + 52, .y= SCREEN_HEIGHT/2 - 10},
+			{.x= SCREEN_WIDTH/2 + 46, .y= SCREEN_HEIGHT/2 + 10},
+		};
+
+		render_fill_polygon(game->renderer, (SDL_FPoint*)vertices, 4, SD_BLUE);
+		//render_draw_polygon(game->renderer, (SDL_FPoint*)vertices, 4);
+		//render_draw_triangle(game->renderer, vertices[0], vertices[1], vertices[2]);
+		//render_fill_triangle(game->renderer, vertices[0], vertices[1], vertices[2], SD_BLUE);
 
 		Uint64 frequency = SDL_GetPerformanceFrequency();
 
