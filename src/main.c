@@ -4,6 +4,7 @@
 #include "assets.c"
 #include "particles.c"
 #include "entities.c"
+#include "hud.c"
 
 void process_key_event(SDL_KeyboardEvent* event, game_controller_state* input) {
 	if (event->repeat == 0) {
@@ -36,9 +37,9 @@ void load_game_assets(Game_State* game) {
 	game_load_texture(game, "assets/images/tracker.png", "Enemy Tracker");
 	game_load_texture(game, "assets/images/turret_base.png", "Enemy Turret Base");
 	game_load_texture(game, "assets/images/turret_cannon.png", "Enemy Turret Cannon");
-//	game_load_texture(game, "assets/images/hud_missile.png", "HUD Missile");
-//	game_load_texture(game, "assets/images/hud_laser.png", "HUD Laser");
-//	game_load_texture(game, "assets/images/hud_mg.png", "HUD MG");
+	game_load_texture(game, "assets/images/hud_missile.png", "HUD Missile");
+	game_load_texture(game, "assets/images/hud_laser.png", "HUD Laser");
+	game_load_texture(game, "assets/images/hud_mg.png", "HUD MG");
 
 	//Generative textures
 	game_store_texture(game, generate_drifter_texture(game), "Enemy Drifter");
@@ -232,7 +233,9 @@ int main(int argc, char* argv[]) {
 
 		draw_particles(game, game->renderer);
 		draw_entities(game);
+		draw_HUD(game);
 
+/*
 		Vector2 vertices[4] = {
 			{.x= SCREEN_WIDTH/2 - 50, .y= SCREEN_HEIGHT/2 + 10},
 			{.x= SCREEN_WIDTH/2 - 44, .y= SCREEN_HEIGHT/2 - 10},
@@ -244,7 +247,7 @@ int main(int argc, char* argv[]) {
 		//render_draw_polygon(game->renderer, (SDL_FPoint*)vertices, 4);
 		//render_draw_triangle(game->renderer, vertices[0], vertices[1], vertices[2]);
 		//render_fill_triangle(game->renderer, vertices[0], vertices[1], vertices[2], SD_BLUE);
-
+*/
 		Uint64 frequency = SDL_GetPerformanceFrequency();
 
 		double time_elapsed = (double)(SDL_GetPerformanceCounter() - current_count) / (double)frequency * 1000.0;

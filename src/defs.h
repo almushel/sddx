@@ -60,6 +60,11 @@ typedef struct Transform2D {
 		struct {Vector2 position, scale; };				\
 	}
 
+typedef struct Game_Poly2D {
+	Vector2 vertices[8];
+	Uint32 vert_count;
+} Game_Poly2D;
+
 typedef struct Game_Sprite {
 	char* texture_name;
 	SDL_Rect rect;
