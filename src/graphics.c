@@ -1,5 +1,49 @@
 #include "SDL2/SDL.h"
 #include "assets.h"
+#include "stdio.h"
+
+#include "stb/stb_truetype.h"
+
+void render_text(SDL_Renderer* renderer, STBTTF_Font* font, float size, float x, float y, const char* text) {
+	Uint8 r, g, b, a;
+	SDL_GetRenderDrawColor(renderer, &r, &g, &b, &a);
+	SDL_SetTextureColorMod(font->atlas, r, g, b);
+	SDL_SetTextureAlphaMod(font->atlas, a);
+
+	float scale = size / font->size;
+
+	for (int i = 0; text[i]; i++) {
+		if (text[i] >= 32 && text[i] < 128) {
+
+			stbtt_packedchar* info = &font->chars[text[i] - 32];
+			SDL_Rect src_rect = {info->x0, info->y0, info->x1 - info->x0, info->y1 - info->y0};
+
+			SDL_Rect dst_rect = {
+				x + info->xoff * scale, 
+				y + info->yoff * scale, 
+				(info->x1 - info->x0) * scale, 
+				(info->y1 - info->y0) * scale 
+			};
+
+			SDL_RenderCopy(renderer, font->atlas, &src_rect, &dst_rect);
+			x += info->xadvance * scale;
+		}
+	}
+}
+
+float measure_text(STBTTF_Font* font, float size, const char* text) {
+	float result = 0; // width
+	float scale = size / font->size;
+	for (int i = 0; text[i]; i++) {
+		if (text[i] > 32 && text[i] < 128) {
+			stbtt_packedchar* info = &font->chars[text[i] - 32];
+			
+			result += info->xadvance * scale;
+		}
+	}
+
+	return result;
+}
 
 void render_draw_circle(SDL_Renderer* renderer, int cx, int cy, int r) {
 	if (r <= 0) return;

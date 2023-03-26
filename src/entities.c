@@ -66,7 +66,9 @@ Uint32 get_new_entity(Game_State* game) {
 			game->dead_entities[0] = game->dead_entities[game->dead_entities_count-1];
 		}
 		game->dead_entities_count--;
+#if DEBUG
 		SDL_Log("New Entity from Dead List: %i", result);
+#endif
 	} else if (game->entity_count < game->entities_size) {
 		result = game->entity_count++;
 	} else {

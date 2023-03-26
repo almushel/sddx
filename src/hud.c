@@ -87,20 +87,29 @@ void draw_player_lives(Game_State* game) {
 			.vert_count = 3,
 		};
 		render_fill_polygon(game->renderer, (SDL_FPoint*)translate_poly2d(player_lives_poly, (Vector2){SCREEN_WIDTH / 2 + 1, SCREEN_HEIGHT - 20}).vertices, player_lives_poly.vert_count, SD_BLUE);
-//		drawPolygon(canvas.width / 2 + 1, canvas.height - 20, [{ x: 0, y: -20 }, { x: 13, y: 20 }, { x: -13, y: 20 }], '#6DC2FF', true);
 
 		int player_width  = 0;
 		int player_height = 0;		
 		SDL_Texture* player_ship_texture = game_get_texture(game, "Player Ship");
 		SDL_QueryTexture(player_ship_texture, 0, 0, &player_width, &player_height);
-		float 	wScale = player_width / 1.7f,
-				hRatio = player_height / player_width,
-				hScale = wScale * hRatio;
+		float wScale = 1.0f / 1.7f;
+		float hRatio = (float)player_height / (float)player_width;
+		float hScale = wScale * hRatio;
 		
+		Game_Sprite player_lives_ship = {
+			.texture_name = "Player Ship",
+			.rotation = 1,
+		};
+
+		Transform2D transform = {
+			.position = {SCREEN_WIDTH / 2 + 1, SCREEN_HEIGHT - (float)player_height/1.5f * hScale},
+			.scale.x = wScale,
+			.scale.y = hScale,
+			.angle = -90.0f,
+		};
 //		shadowBlur = 2;
 //		shadowColor = 'black';
-
-		render_draw_texture(game->renderer, player_ship_texture, SCREEN_WIDTH / 2 - (hScale / 2) + 1, SCREEN_HEIGHT + 1, -90.0f, true);
+		render_draw_game_sprite(game, &player_lives_ship, transform, 1);
 
 //		font = '15px Orbitron';
 //		textAlign = 'center';
@@ -112,7 +121,7 @@ void draw_player_lives(Game_State* game) {
 
 		SDL_SetRenderDrawColor(game->renderer, 255, 255, 255, 255);
 		SDL_Rect lives_text_rect = {SCREEN_WIDTH / 2 + 1, SCREEN_HEIGHT - 8, 12, 15};
-		SDL_RenderFillRect(game->renderer, &lives_text_rect);
+		render_text(game->renderer, game->font, 15, lives_text_rect.x, lives_text_rect.y, "3"); // Player Lives
 }
 
 void draw_thrust_meter(Game_State* game) {
@@ -137,45 +146,15 @@ void draw_thrust_meter(Game_State* game) {
 void draw_score(Game_State* game) {
 //	updateChainTimer();
 
-/*
-		if (scoreMetrics !== null) {
-			ctx.clearRect(82, canvas.height - 24, Math.round(scoreMetrics.width + 12), 18);
-			ctx.save();
-			ctx.globalAlpha = 0.6;
-			colorRect(82, canvas.height - 24, Math.round(scoreMetrics.width + 12), 18, '#383838')
-			ctx.restore();
-		}
-*/
-//		shadowColor = 'black';
-//		shadowBlur = 2;
-//		font = '20px Orbitron';
-//		textAlign = 'left';
-//		fillStyle = 'white';
-//		scoreMetrics = ctx.measureText(currentScore);
 
 		SDL_Rect score_rect = {88, SCREEN_HEIGHT - 7.5, 16 ,20};
 		SDL_SetRenderDrawColor(game->renderer, 255, 255, 255, 255);
-		SDL_RenderFillRect(game->renderer, &score_rect);
-/*
-		if (multiMetrics !== null) {
-			let rectLeft = 186 - Math.round(multiMetrics.width / 2) - 6;
-			ctx.clearRect(rectLeft, canvas.height - 52, Math.round(multiMetrics.width + 12), 18);
-			ctx.save();
-			ctx.globalAlpha = 0.6;
-			colorRect(rectLeft, canvas.height - 52, Math.round(multiMetrics.width + 12), 18, '#383838')
-			ctx.restore();
-		}
-*/
-//		shadowColor = 'black';
-//		shadowBlur = 2;
-//		font = '20px Orbitron';
-//		fillStyle = 'white';
-//		textAlign = 'center';
-//		multiMetrics = ctx.measureText('x' + currentMultiplier);
+		render_text(game->renderer, game->font, 20, score_rect.x, score_rect.y, "1000");
+
 		SDL_Rect multiplier_rect = {186, SCREEN_HEIGHT - 36, 16 ,20};
 		SDL_SetRenderDrawColor(game->renderer, 255, 255, 255, 255);
-		SDL_RenderFillRect(game->renderer, &multiplier_rect);
-
+		multiplier_rect.x -= measure_text(game->font, 20, "x1");
+		render_text(game->renderer, game->font, 20, multiplier_rect.x, multiplier_rect.y, "x1");
 
 /*
 	for (let t = 0; t < SCORE_CHAIN_TIME; t++) {
@@ -200,20 +179,20 @@ void draw_active_weapon(Game_State* game) {
 		int hw_width, hw_height;
 		SDL_QueryTexture(hud_weapon, 0, 0, &hw_width, &hw_height);
 //		textBaseline = 'middle'
-		SDL_Rect text_rect = {SCREEN_WIDTH - 160, SCREEN_HEIGHT - hw_height + 2, 16, 14};
+		SDL_Rect text_rect = {SCREEN_WIDTH - 160, SCREEN_HEIGHT - hw_height, 16, 14};
 		SDL_SetRenderDrawColor(game->renderer, 255, 255, 255, 255);
-		SDL_RenderFillRect(game->renderer, &text_rect);
-//		colorAlignedText(canvas.width - 160, canvas.height - hw_height + 2, 'center', '14px Orbitron', 'white', 'Ammo');
-
+		text_rect.x -= measure_text(game->font, 14, "Ammo")/2.0f;
+		render_text(game->renderer, game->font, 14, text_rect.x, text_rect.y, "Ammo");
+		text_rect.x = SCREEN_WIDTH - 160;
+		text_rect.x -= measure_text(game->font, 34, "100")/2.0f;
 		text_rect.y = SCREEN_HEIGHT - 16;
-		SDL_RenderFillRect(game->renderer, &text_rect);
-//		colorAlignedText(canvas.width - 160, canvas.height - 16, 'center', '34px Orbitron', '#6DC2FF', wAmmo);
+		render_text(game->renderer, game->font, 34, text_rect.x, text_rect.y, "100");
 
-		text_rect.x = SCREEN_WIDTH - hw_width / 2 - 6;
-		SDL_RenderFillRect(game->renderer, &text_rect);
-//		colorAlignedText(canvas.width - hw_width / 2 - 6, canvas.height - hw_height + 2, 'center', '14px Orbitron', 'white', p1.activeWeapon);
-		render_draw_texture(game->renderer, hud_weapon, SCREEN_WIDTH - hw_width - 6, SCREEN_HEIGHT - hw_height + 6, 0, 0);
-//		ctx.drawImage(wHUD, canvas.width - hw_width - 6, canvas.height - hw_height + 6);
+		text_rect.x = SCREEN_WIDTH - hw_width / 2;
+		text_rect.x -= measure_text(game->font, 14, "Missiles")/2.0f;
+		text_rect.y = SCREEN_HEIGHT - hw_height;
+		render_text(game->renderer, game->font, 14, text_rect.x, text_rect.y, "Missiles"); // Active weapon name
+		render_draw_texture(game->renderer, hud_weapon, SCREEN_WIDTH - hw_width, SCREEN_HEIGHT - hw_height, 0, 0);
 }
 
 void draw_weapon_heat(Game_State* game) {
@@ -290,22 +269,17 @@ void draw_HUD(Game_State* game) {
 //		shadowBlur = 5;
 		SDL_SetRenderDrawColor(game->renderer, 255, 255, 255, 255);
 		SDL_Rect text_rect = {SCREEN_WIDTH / 2 - 56, SCREEN_HEIGHT - 30, 15, 10};
-		SDL_RenderFillRect(game->renderer, &text_rect);
-		text_rect.x = SCREEN_WIDTH / 2 + 56;
+		text_rect.x -= measure_text(game->font, 12, "Thrust Power")/2.0f;
+		render_text(game->renderer, game->font, 12, text_rect.x, text_rect.y, "Thrust Power");
+
+		text_rect.x = SCREEN_WIDTH / 2 + 56 - measure_text(game->font, 12, "Weapon Temp")/2.0f;
 		text_rect.y = SCREEN_HEIGHT - 30;
-		SDL_RenderFillRect(game->renderer, &text_rect);
-//		colorAlignedText(canvas.width / 2 - 56, canvas.height - 30, 'center', '10px Orbitron', 'white', 'Thrust Power');
-//		colorAlignedText(canvas.width / 2 + 56, canvas.height - 30, 'center', '10px Orbitron', 'white', 'Weapon Temp');
+		render_text(game->renderer, game->font, 12, text_rect.x, text_rect.y, "Weapon Temp");
 
 //		font = '20px Orbitron';
-//		textAlign = 'left';
-//		fillStyle = 'white';
-//		ctx.fillText('Score: ', 8, canvas.height - 8);
+		render_text(game->renderer, game->font, 20, 8, SCREEN_HEIGHT - 8, "Score:");
 
-//		textAlign = 'right';
 		draw_score(game);
-		draw_player_lives(game);
-
 		draw_player_lives(game);
 		draw_thrust_meter(game);
 		draw_weapon_heat(game);

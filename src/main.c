@@ -106,6 +106,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	load_game_assets(game);
+	game->font = load_stbtt_font(game->renderer, "c:/windows/fonts/times.ttf", 32);
 	Mix_PlayMusic(game_get_music(game, "Wrapping Action"), -1);
 
 	{ // Generate star field

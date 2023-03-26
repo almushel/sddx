@@ -152,6 +152,18 @@ typedef struct Mix_Music_Node 	{ char* name; Mix_Music* data; struct Mix_Music_N
 typedef struct Mix_Chunk_Node 	{ char* name; Mix_Chunk* data; struct Mix_Chunk_Node* next; } Mix_Chunk_Node;
 typedef struct SDL_Texture_Node { char* name; SDL_Texture* data; struct SDL_Texture_Node* next; } SDL_Texture_Node;
 
+#include "stb/stb_truetype.h"
+typedef struct STBTTF_Font {
+	stbtt_fontinfo* info;
+	stbtt_packedchar* chars;
+	SDL_Texture* atlas;
+	int texture_size;
+	float size;
+	float scale;
+	int ascent;
+	int baseline;
+} STBTTF_Font;
+
 typedef struct Game_Assets {
 	Mix_Music_Node music[8];
 	Mix_Chunk_Node sfx[16];
@@ -235,6 +247,7 @@ typedef struct Game_Starfield {
 typedef struct Game_State {
 	SDL_Window* window;
 	SDL_Renderer* renderer;
+	STBTTF_Font* font;
 
 	Game_Assets assets;
 
@@ -252,17 +265,5 @@ typedef struct Game_State {
 	game_controller_state player_controller;
 	Entity* player;
 } Game_State;
-
-static inline double sin_deg  (double degrees) 		{ return SDL_sin(DEG_TO_RAD(degrees)); }
-static inline double cos_deg  (double degrees) 		{ return SDL_cos(DEG_TO_RAD(degrees)); }
-static inline double atan2_deg(double y, double x) 	{ return RAD_TO_DEG(SDL_atan2(y, x )); }
-static inline double normalize_degrees(double degrees) {
-	double result = degrees;
-	while (result < 0) result += 360.0f; 
-	while (result > 360.0f) result -= 360.0f;
-	return result;
-}
-
-float random(void);
 
 #endif

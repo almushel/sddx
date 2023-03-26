@@ -4,6 +4,81 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb/stb_image.h"
 
+#define STB_RECT_PACK_IMPLEMENTATION
+#include "stb/stb_rect_pack.h"
+
+#define STB_TRUETYPE_IMPLEMENTATION
+#include "stb/stb_truetype.h"
+
+STBTTF_Font* load_stbtt_font(SDL_Renderer* renderer, const char* file_name, float font_size) {
+	STBTTF_Font* result = 0;
+
+	SDL_RWops *file = SDL_RWFromFile(file_name, "rb");
+	Sint64 file_size = 0;
+	if (file) file_size = SDL_RWsize(file);
+	
+	if (file_size) {
+		unsigned char* file_buffer = malloc(file_size);
+		if (SDL_RWread(file, file_buffer, file_size, 1) != 1) return 0;
+		SDL_RWclose(file);
+
+		result = calloc(sizeof(STBTTF_Font), 1);
+		result->info = malloc(sizeof(stbtt_fontinfo));
+		result->chars = malloc(sizeof(stbtt_packedchar) * 96);
+		result->size = font_size;
+	
+		if (stbtt_InitFont(result->info, file_buffer, 0) == 0) {
+			free(file_buffer);
+			free(result->info);
+			free(result->chars);
+			free(result);
+
+			result = 0;
+			return result;
+		}
+
+		unsigned char* bitmap = 0;
+		result->texture_size = 32;
+
+		while(1) {
+			bitmap = malloc(result->texture_size * result->texture_size);
+			stbtt_pack_context pack_context;
+			stbtt_PackBegin(&pack_context, bitmap, result->texture_size, result->texture_size, 0, 1, 0);
+			stbtt_PackSetOversampling(&pack_context, 1, 1);
+			if (!stbtt_PackFontRange(&pack_context, file_buffer, 0, font_size, 32, 95, result->chars)) {
+				free(bitmap);
+				stbtt_PackEnd(&pack_context);
+				result->texture_size *= 2;
+			} else {
+				stbtt_PackEnd(&pack_context);
+				break;
+			}
+		}
+
+		result->atlas = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC, result->texture_size, result->texture_size);
+		SDL_SetTextureBlendMode(result->atlas, SDL_BLENDMODE_BLEND);
+
+		Uint32* pixels = malloc(result->texture_size * result->texture_size * sizeof(Uint32));
+		static SDL_PixelFormat* format = 0;
+		if(format == 0) format = SDL_AllocFormat(SDL_PIXELFORMAT_RGBA32);
+		for (int i = 0; i < result->texture_size * result->texture_size; i++) {
+			pixels[i] = SDL_MapRGBA(format, 0xff, 0xff, 0xff, bitmap[i]);
+		}
+		SDL_UpdateTexture(result->atlas, 0, pixels, result->texture_size * sizeof(Uint32));
+		
+		free(pixels);
+		free(bitmap);
+
+		result->scale = stbtt_ScaleForPixelHeight(result->info, font_size);
+		stbtt_GetFontVMetrics(result->info, &result->ascent, 0, 0);
+		result->baseline = (int) (result->ascent * result->scale);
+	
+		free(file_buffer);
+	}
+
+	return result;
+}
+
 // djb2 hash function
 Uint64 str_hash(unsigned char* str) {
 	Uint64 result = 5381;
