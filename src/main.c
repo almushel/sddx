@@ -154,6 +154,12 @@ int main(int argc, char* argv[]) {
 		entity->data.spawn_warp.spawn_type = i;
 	}
 
+	game->player_state.current_weapon = PLAYER_WEAPON_MG;
+	game->player_state.lives = 3;
+	game->player_state.ammo = 0;
+	game->player_state.weapon_heat = 0;
+	game->player_state.thrust_energy = THRUST_MAX;
+
 	double target_fps = (double)TARGET_FPS;
 	double target_frame_time = 1000.0/target_fps;
 	Uint64 last_count = SDL_GetPerformanceCounter();
@@ -202,8 +208,12 @@ int main(int argc, char* argv[]) {
 			else if (new_button->released) current_button->held = SDL_FALSE;
 		}
 
-		if (!game->player && game->player_controller.fire.held) {
+		if (!game->player 						&& 
+			game->player_controller.fire.held	&&
+			game->player_state.lives >= 0
+			) {
 			game->player = spawn_entity(game, ENTITY_TYPE_PLAYER, (Vector2){(float)SCREEN_WIDTH/2.0f, (float)SCREEN_HEIGHT/2.0f});
+			game->player_state.lives--;
 		}
 
 		update_entities(game, dt);
@@ -236,19 +246,6 @@ int main(int argc, char* argv[]) {
 		draw_entities(game);
 		draw_HUD(game);
 
-/*
-		Vector2 vertices[4] = {
-			{.x= SCREEN_WIDTH/2 - 50, .y= SCREEN_HEIGHT/2 + 10},
-			{.x= SCREEN_WIDTH/2 - 44, .y= SCREEN_HEIGHT/2 - 10},
-			{.x= SCREEN_WIDTH/2 + 52, .y= SCREEN_HEIGHT/2 - 10},
-			{.x= SCREEN_WIDTH/2 + 46, .y= SCREEN_HEIGHT/2 + 10},
-		};
-
-		render_fill_polygon(game->renderer, (SDL_FPoint*)vertices, 4, SD_BLUE);
-		//render_draw_polygon(game->renderer, (SDL_FPoint*)vertices, 4);
-		//render_draw_triangle(game->renderer, vertices[0], vertices[1], vertices[2]);
-		//render_fill_triangle(game->renderer, vertices[0], vertices[1], vertices[2], SD_BLUE);
-*/
 		Uint64 frequency = SDL_GetPerformanceFrequency();
 
 		double time_elapsed = (double)(SDL_GetPerformanceCounter() - current_count) / (double)frequency * 1000.0;

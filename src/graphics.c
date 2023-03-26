@@ -18,14 +18,15 @@ void render_text(SDL_Renderer* renderer, STBTTF_Font* font, float size, float x,
 			stbtt_packedchar* info = &font->chars[text[i] - 32];
 			SDL_Rect src_rect = {info->x0, info->y0, info->x1 - info->x0, info->y1 - info->y0};
 
-			SDL_Rect dst_rect = {
+			SDL_FRect dst_rect = {
 				x + info->xoff * scale, 
 				y + info->yoff * scale, 
 				(info->x1 - info->x0) * scale, 
 				(info->y1 - info->y0) * scale 
 			};
 
-			SDL_RenderCopy(renderer, font->atlas, &src_rect, &dst_rect);
+			SDL_RenderCopyF(renderer, font->atlas, &src_rect, &dst_rect);
+			//SDL_RenderCopy(renderer, font->atlas, &src_rect, &dst_rect);
 			x += info->xadvance * scale;
 		}
 	}

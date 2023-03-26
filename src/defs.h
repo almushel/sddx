@@ -264,6 +264,19 @@ typedef struct Game_State {
 
 	game_controller_state player_controller;
 	Entity* player;
+	struct {
+		enum Player_Weapon {
+			PLAYER_WEAPON_MG,
+			PLAYER_WEAPON_MISSILE,
+			PLAYER_WEAPON_LASER,
+		} current_weapon;
+		
+		int lives;
+		int ammo;
+		float weapon_heat;
+		float thrust_energy;
+		
+	} player_state;
 } Game_State;
 
 #endif

@@ -17,13 +17,17 @@
 #define PLAYER_SHOT_LIFE 80.0f
 #define HEAT_MAX 100
 #define THRUST_MAX 100
-#define THRUST_CONSUMPTION 0.3f
+#define THRUST_CONSUMPTION 0.45f
 #define SHIP_RADIUS 13
 #define PLAYER_STARTING_LIVES 3
 
 #define PLAYER_MG_COOLDOWN 200.0f/16.666f
 #define PLAYER_LASER_COOLDOWN 250.0f/16.666f
 #define PLAYER_MISSILE_COOLDOWN 800.0f/16.666f
+
+#define PLAYER_MG_HEAT 25.0f
+#define PLAYER_LASER_HEAT 35.0f
+#define PLAYER_MISSILE_HEAT 45.0f
 
 #define DRIFT_RATE 1
 #define DRIFT_RADIUS 40
@@ -334,66 +338,79 @@ void update_entities(Game_State* game, float dt) {
 					if (game->player_controller.turn_left.held)  entity->angle -= PLAYER_TURN_SPEED * dt;
 					if (game->player_controller.turn_right.held) entity->angle += PLAYER_TURN_SPEED * dt;
 					
-					if (game->player_controller.thrust.held) {
-						entity->vx += cos_deg(entity->angle) * PLAYER_FORWARD_THRUST * dt;
-						entity->vy += sin_deg(entity->angle) * PLAYER_FORWARD_THRUST * dt;
-					}
-
-					if (game->player_controller.thrust_left.held) {
-						entity->vx += cos_deg(entity->angle + 90) * PLAYER_LATERAL_THRUST * dt;
-						entity->vy += sin_deg(entity->angle + 90) * PLAYER_LATERAL_THRUST * dt;
-					}
+					SDL_bool thrust_inputs[] = {
+						game->player_controller.thrust.held,
+						game->player_controller.thrust_right.held,
+						game->player_controller.thrust_left.held,
+					};
 					
-					if (game->player_controller.thrust_right.held) {
-						entity->vx += cos_deg(entity->angle - 90) * PLAYER_LATERAL_THRUST * dt;
-						entity->vy += sin_deg(entity->angle - 90) * PLAYER_LATERAL_THRUST * dt;
-					}
+					Particle_Emitter* thrusters[] = {
+						get_particle_emitter(&game->particle_system, entity->data.player.main_thruster),
+						get_particle_emitter(&game->particle_system, entity->data.player.right_thruster),
+						get_particle_emitter(&game->particle_system, entity->data.player.left_thruster),
+					};
 
-					if (game->player_controller.fire.held && entity->timer <= 0)  {
-						// TO-DO: Figure out weird galloping timing problem for multiple SFX calls in a row
-						Mix_PlayChannel(-1, game_get_sfx(game, "Player Shot"), 0);
-						Entity* bullet = spawn_entity(game, ENTITY_TYPE_BULLET, entity->position);
-						if (bullet) {
-							bullet->timer = PLAYER_SHOT_LIFE;
-							Vector2 angle = {
-								cos_deg(entity->angle),
-								sin_deg(entity->angle)
-							};
-							
-							bullet->x += angle.x * SHIP_RADIUS;
-							bullet->y += angle.y * SHIP_RADIUS;
-							
-							bullet->vx = entity->vx + (angle.x * PLAYER_SHOT_SPEED);
-							bullet->vy = entity->vy + (angle.y * PLAYER_SHOT_SPEED);
-							bullet->color = SD_BLUE;
-							bullet->team = ENTITY_TEAM_PLAYER;
+					SDL_bool thrusting = 0;
+					float angle_offset = 0.0f;
+					for (int i = 0; i < array_length(thrust_inputs); i++) {
+						thrusters[i]->state = EMITTER_STATE_INACTIVE;
+						if (thrust_inputs[i]) {
+							thrusting = 1;
+							if (game->player_state.thrust_energy > 0) {
+								float thrust_speed = (i > 0) ? PLAYER_LATERAL_THRUST : PLAYER_FORWARD_THRUST;
+
+								thrusters[i]->state = EMITTER_STATE_ACTIVE;
+								entity->vx += cos_deg(entity->angle + angle_offset) * thrust_speed * dt;
+								entity->vy += sin_deg(entity->angle + angle_offset) * thrust_speed * dt;
+								game->player_state.thrust_energy -= THRUST_CONSUMPTION *dt;
+							}
 						}
+
+						if (thrusters[i]->state == EMITTER_STATE_ACTIVE) {
+							thrusters[i]->angle = entity->angle + angle_offset + 180;
+							thrusters[i]->y = entity->y + sin_deg(thrusters[i]->angle);// * (SHIP_RADIUS + PARTICLE_MAX_START_RADIUS);
+							thrusters[i]->x = entity->x + cos_deg(thrusters[i]->angle);// * (SHIP_RADIUS + PARTICLE_MAX_START_RADIUS);
+						}
+
+						angle_offset -= 90.0f * (float)(i+1);
+					}
+					game->player_state.thrust_energy = SDL_clamp(game->player_state.thrust_energy + (float)(int)(!thrusting) * dt, 0, THRUST_MAX);
+
+					if (game->player_controller.fire.held) {
+						if (game->player_state.weapon_heat < HEAT_MAX) {
+							game->player_state.weapon_heat -= dt;
 						
-						entity->timer = PLAYER_MG_COOLDOWN;
+							if (entity->timer <= 0)  {
+							// TO-DO: Figure out weird galloping timing problem for multiple SFX calls in a row
+							game->player_state.weapon_heat += PLAYER_MG_HEAT;
+								Mix_PlayChannel(-1, game_get_sfx(game, "Player Shot"), 0);
+								Entity* bullet = spawn_entity(game, ENTITY_TYPE_BULLET, entity->position);
+								if (bullet) {
+									bullet->timer = PLAYER_SHOT_LIFE;
+									Vector2 angle = {
+										cos_deg(entity->angle),
+										sin_deg(entity->angle)
+									};
+									
+									bullet->x += angle.x * SHIP_RADIUS;
+									bullet->y += angle.y * SHIP_RADIUS;
+									
+									bullet->vx = entity->vx + (angle.x * PLAYER_SHOT_SPEED);
+									bullet->vy = entity->vy + (angle.y * PLAYER_SHOT_SPEED);
+									bullet->color = SD_BLUE;
+									bullet->team = ENTITY_TEAM_PLAYER;
+								}
+								
+								entity->timer = PLAYER_MG_COOLDOWN;
+							}
+						}
+
+					// NOTE: Would prefer to cool down as long as !fire.held && weapon_heat < HEAT_MAX
+					} else if (game->player_state.weapon_heat > 0) {
+						game->player_state.weapon_heat -= dt;
 					}
 
-					Particle_Emitter* main_thruster  = get_particle_emitter(&game->particle_system, entity->data.player.main_thruster);
-					Particle_Emitter* left_thruster  = get_particle_emitter(&game->particle_system, entity->data.player.left_thruster);
-					Particle_Emitter* right_thruster = get_particle_emitter(&game->particle_system, entity->data.player.right_thruster);
-					
-					if (main_thruster) {
-						main_thruster->state = game->player_controller.thrust.held;
-						main_thruster->angle = entity->angle + 180;
-						main_thruster->x = entity->x + cos_deg(main_thruster->angle);// * (SHIP_RADIUS + PARTICLE_MAX_START_RADIUS);
-						main_thruster->y = entity->y + sin_deg(main_thruster->angle);// * (SHIP_RADIUS + PARTICLE_MAX_START_RADIUS);
-					}
-					if (left_thruster) {
-						left_thruster->state = game->player_controller.thrust_right.held;
-						left_thruster->angle = entity->angle + 90;
-						left_thruster->x = entity->x + cos_deg(left_thruster->angle);// * (SHIP_RADIUS + PARTICLE_MAX_START_RADIUS);
-						left_thruster->y = entity->y + sin_deg(left_thruster->angle);// * (SHIP_RADIUS + PARTICLE_MAX_START_RADIUS);
-					}
-					if (right_thruster) {
-						right_thruster->state = game->player_controller.thrust_left.held;
-						right_thruster->angle = entity->angle - 90;
-						right_thruster->x = entity->x + cos_deg(right_thruster->angle);// * (SHIP_RADIUS + PARTICLE_MAX_START_RADIUS);
-						right_thruster->y = entity->y + sin_deg(right_thruster->angle);// * (SHIP_RADIUS + PARTICLE_MAX_START_RADIUS);
-					}
+					game->player_state.weapon_heat = SDL_clamp(game->player_state.weapon_heat, 0, HEAT_MAX);
 				} break;
 
 				case ENTITY_TYPE_BULLET: {
@@ -438,16 +455,12 @@ void update_entities(Game_State* game, float dt) {
 				} break;
 				
 				case ENTITY_TYPE_ENEMY_TRACKER:{
+					Particle_Emitter* thruster = get_particle_emitter(&game->particle_system, entity->data.tracker.thruster);
+					if (thruster) thruster->state = 0;
+				
 					Entity* target = game->player;
 					if (target) {
 						entity->target_angle = atan2_deg(target->y - entity->y, target->x - entity->x); //Angle to player
-						
-						Particle_Emitter* thruster = get_particle_emitter(&game->particle_system, entity->data.tracker.thruster);
-						if (thruster) {
-							thruster->angle = entity->angle + 180;
-							thruster->x = entity->x + cos_deg(thruster->angle);// * (entity->collision_radius + PARTICLE_MAX_START_RADIUS) / 2.0f;
-							thruster->y = entity->y + sin_deg(thruster->angle);// * (entity->collision_radius + PARTICLE_MAX_START_RADIUS) / 2.0f;
-						}
 
 						entity->target_angle = normalize_degrees(entity->target_angle);
 						float angle_delta = cos_deg(entity->target_angle)*sin_deg(entity->angle) - sin_deg(entity->target_angle)*cos_deg(entity->angle);
@@ -456,10 +469,15 @@ void update_entities(Game_State* game, float dt) {
 						if (fabs(angle_delta) > TRACKER_PRECISION) {
 							float sign = (float)(1 - ((int)(angle_delta < 0) * 2));
 							entity->angle -= TRACKER_TURN_RATE * sign * dt;
-							if (thruster) thruster->state = 0;
 						} else {
 							acceleration_speed *=2;
 							if (thruster) thruster->state = 1;
+						}
+
+						if (thruster && thruster->state == 1) {
+							thruster->angle = entity->angle + 180;
+							thruster->x = entity->x + cos_deg(thruster->angle);// * (entity->collision_radius + PARTICLE_MAX_START_RADIUS) / 2.0f;
+							thruster->y = entity->y + sin_deg(thruster->angle);// * (entity->collision_radius + PARTICLE_MAX_START_RADIUS) / 2.0f;
 						}
 
 						entity->vx += cos_deg(entity->angle) * acceleration_speed * dt;
@@ -617,6 +635,9 @@ void update_entities(Game_State* game, float dt) {
 					remove_particle_emitter(&game->particle_system, entity->data.player.left_thruster);
 					remove_particle_emitter(&game->particle_system, entity->data.player.right_thruster);
 					game->player = 0;
+					
+					game->player_state.thrust_energy = THRUST_MAX;
+					game->player_state.weapon_heat = 0;
 				} break;
 
 				case ENTITY_TYPE_ENEMY_TRACKER: {
