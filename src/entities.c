@@ -582,11 +582,7 @@ void update_entities(Game_State* game, float dt) {
 			entity->vx *= 1.0 - (PHYSICS_FRICTION*dt);
 			entity->vy *= 1.0 - (PHYSICS_FRICTION*dt);
 
-			if (entity->x < 0) entity->x = SCREEN_WIDTH + entity->x;
-			else if (entity->x > SCREEN_WIDTH) entity->x -= SCREEN_WIDTH;
-
-			if (entity->y < 0) entity->y = SCREEN_HEIGHT + entity->y;
-			else if (entity->y > SCREEN_HEIGHT) entity->y -= SCREEN_HEIGHT;
+			entity->position = wrap_world_coords(entity->x, entity->y, 0, 0, game->world_w, game->world_h);
 		
 			if (entity->type  != ENTITY_TYPE_SPAWN_WARP) {
 				for (int collision_entity_index = entity_index+1; collision_entity_index < game->entity_count; collision_entity_index++) {

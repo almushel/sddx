@@ -4,6 +4,8 @@
 
 #include "stb/stb_truetype.h"
 
+#include "game_math.h"
+
 void render_text(SDL_Renderer* renderer, STBTTF_Font* font, float size, float x, float y, const char* text) {
 	Uint8 r, g, b, a;
 	SDL_GetRenderDrawColor(renderer, &r, &g, &b, &a);
@@ -172,12 +174,6 @@ void render_fill_circlef(SDL_Renderer* renderer, float cx, float cy, float r) {
 			}
 		}
 	}
-}
-
-static inline float lerp(float start, float end, float t) {
-	t = SDL_clamp(t, 0.0f, 1.0f);
-
-	return (1.0f - t) * start + (t * end);
 }
 
 void render_fill_circlef_linear_gradient(SDL_Renderer* renderer, float cx, float cy, float r, RGB_Color start_color, RGB_Color end_color) {

@@ -14,6 +14,25 @@ float normalize_degrees(float degrees) {
 	return result;
 }
 
+float lerp(float start, float end, float t) {
+	t = SDL_clamp(t, 0.0f, 1.0f);
+
+	return (1.0f - t) * start + (t * end);
+}
+
+// Returns a pseudo-random value between 0 and 1
+float random(void) {
+	static SDL_bool seeded = 0;
+	if (!seeded) {
+		srand(42);
+		seeded = 1;
+	}
+
+	float result = (float)(rand() % 1000) / 1000.0f;
+
+	return result;
+}
+
 Game_Poly2D translate_poly2d(Game_Poly2D polygon, Vector2 translation) {
 	Game_Poly2D result = {0};
 	result.vert_count = polygon.vert_count;
@@ -22,6 +41,18 @@ Game_Poly2D translate_poly2d(Game_Poly2D polygon, Vector2 translation) {
 		result.vertices[i].x = polygon.vertices[i].x + translation.x;
 		result.vertices[i].y = polygon.vertices[i].y + translation.y;
 	}
+
+	return result;
+}
+
+Vector2 wrap_world_coords(float x, float y, float min_x, float min_y, float max_x, float max_y) {
+	Vector2 result = {x, y};
+
+	if (result.x < min_x) result.x = max_x + result.x;
+	else if (result.x > max_x) result.x -= max_x;
+
+	if (result.y < min_y) result.y = max_y + result.y;
+	else if (result.y > max_y) result.y -= max_y;
 
 	return result;
 }

@@ -13,19 +13,6 @@
 #define EXPLOSION_STARTING_PARTICLES 12
 #define DEFAULT_PARTICLE_COLOR (RGB_Color){255, 255, 255}
 
-// Returns a pseudo-random value between 0 and 1
-float random(void) {
-	static SDL_bool seeded = 0;
-	if (!seeded) {
-		srand(42);
-		seeded = 1;
-	}
-
-	float result = (float)(rand() % 1000) / 1000.0f;
-
-	return result;
-}
-
 void update_particles(Particle_System* ps, float dt) {
 	Uint32* dead_particles = SDL_malloc(sizeof(Uint32) * ps->particle_count);
 	Uint32 dead_particle_count = 0;

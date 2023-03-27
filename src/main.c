@@ -78,6 +78,9 @@ static void precise_delay(double ms) {
 
 int main(int argc, char* argv[]) {
 
+	int screen_w = 1280;
+	int screen_h = 720;
+
 	SDL_Init(SDL_INIT_EVERYTHING);
 
 	Game_State* game = SDL_malloc(sizeof(Game_State));
@@ -91,7 +94,7 @@ int main(int argc, char* argv[]) {
 	game->dead_entities = SDL_malloc(sizeof(Uint32) * game->dead_entities_size);
 	SDL_memset(game->dead_entities, 0, sizeof(Uint32) * game->dead_entities_size);
 
-	game->window = SDL_CreateWindow("Space Drifter DX", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, 0);
+	game->window = SDL_CreateWindow("Space Drifter DX", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, screen_w, screen_h, SDL_WINDOW_RESIZABLE);
 	if (game->window == NULL) {
 		SDL_LogError(0, SDL_GetError());
 		exit(1);
@@ -105,6 +108,13 @@ int main(int argc, char* argv[]) {
 		exit(1);
 	}
 
+	game->world_w = 800;
+	game->world_h = 600;
+	game->world_buffer = SDL_CreateTexture(game->renderer, SDL_PIXELFORMAT_ARGB32, SDL_TEXTUREACCESS_TARGET, game->world_w, game->world_h);
+	if (!game->world_buffer) {
+		SDL_Log("Creating world buffer failed. %s", SDL_GetError());
+	}
+
 	load_game_assets(game);
 	game->font = load_stbtt_font(game->renderer, "c:/windows/fonts/times.ttf", 32);
 	Mix_PlayMusic(game_get_music(game, "Wrapping Action"), -1);
@@ -112,7 +122,7 @@ int main(int argc, char* argv[]) {
 	{ // Generate star field
 		int stars_per_row = 20;
 		int stars_per_column = STARFIELD_STAR_COUNT / stars_per_row;
-		Vector2 star_offset = {SCREEN_WIDTH / stars_per_row, SCREEN_HEIGHT / stars_per_column};
+		Vector2 star_offset = {game->world_w / stars_per_row, game->world_h / stars_per_column};
 		Vector2 deviation = {star_offset.x / 1.5f, star_offset.y / 1.5f};
 		Vector2 next_position = {0};
 		for (int star_y = 0; star_y < stars_per_column; star_y++) {
@@ -148,9 +158,9 @@ int main(int argc, char* argv[]) {
 	game_controller_state new_player_controller = {0};
 	
 	get_new_entity(game); // reserve 0
-	game->player = spawn_entity(game, ENTITY_TYPE_PLAYER, (Vector2){SCREEN_WIDTH/2, SCREEN_HEIGHT/2});
+	game->player = spawn_entity(game, ENTITY_TYPE_PLAYER, (Vector2){(float)game->world_w/2, (float)game->world_h/2});
 	for (int i = ENTITY_TYPE_PLAYER+1; i < ENTITY_TYPE_SPAWN_WARP; i++) {
-		Entity* entity = spawn_entity(game, ENTITY_TYPE_SPAWN_WARP, (Vector2){random() * SCREEN_WIDTH, random() * SCREEN_HEIGHT});
+		Entity* entity = spawn_entity(game, ENTITY_TYPE_SPAWN_WARP, (Vector2){random() * (float)game->world_w, random() * (float)game->world_h});
 		entity->data.spawn_warp.spawn_type = i;
 	}
 
@@ -212,7 +222,7 @@ int main(int argc, char* argv[]) {
 			game->player_controller.fire.held	&&
 			game->player_state.lives >= 0
 			) {
-			game->player = spawn_entity(game, ENTITY_TYPE_PLAYER, (Vector2){(float)SCREEN_WIDTH/2.0f, (float)SCREEN_HEIGHT/2.0f});
+			game->player = spawn_entity(game, ENTITY_TYPE_PLAYER, (Vector2){(float)(float)game->world_w/2.0f, (float)(float)game->world_h/2.0f});
 			game->player_state.lives--;
 		}
 
@@ -220,9 +230,13 @@ int main(int argc, char* argv[]) {
 		update_particle_emitters(&game->particle_system, dt);
 		update_particles(&game->particle_system, dt);
 
-		SDL_SetRenderDrawColor(game->renderer,CLEAR_COLOR.r,CLEAR_COLOR.g,CLEAR_COLOR.b,255);	
+		SDL_SetRenderDrawColor(game->renderer,0,0,0,0);
 		SDL_RenderClear(game->renderer);
 
+		// Start world draw
+		SDL_SetRenderTarget(game->renderer, game->world_buffer);
+		SDL_SetRenderDrawColor(game->renderer,CLEAR_COLOR.r,CLEAR_COLOR.g,CLEAR_COLOR.b,255);
+		SDL_RenderClear(game->renderer);
 		SDL_SetRenderDrawBlendMode(game->renderer, SDL_BLENDMODE_BLEND);
 		for (int star_index = 0; star_index < STARFIELD_STAR_COUNT; star_index++) {
 			game->starfield.timers[star_index] += dt * (float)(1 - (2 * (int)game->starfield.twinkle_direction[star_index]));
@@ -241,9 +255,38 @@ int main(int argc, char* argv[]) {
 			SDL_RenderDrawPointF(game->renderer, game->starfield.positions[star_index].x, game->starfield.positions[star_index].y);
 		}
 		SDL_SetRenderDrawBlendMode(game->renderer, SDL_BLENDMODE_NONE);
-
 		draw_particles(game, game->renderer);
 		draw_entities(game);
+		// End of world draw
+
+		SDL_SetRenderTarget(game->renderer, 0);
+		SDL_GetWindowSizeInPixels(game->window, &screen_w, &screen_h);
+
+		float world_scale = 1;
+		int world_offset_x = 1, world_offset_y = 1;
+
+#if 1
+		// scale world to fit screen
+		if (screen_h < screen_w) {
+			world_scale = (float)screen_h / (float)game->world_h;
+			world_offset_y = 0;
+		} else {
+			world_scale = (float)screen_w / (float)game->world_w;
+			world_offset_x = 0;
+		}
+#endif
+		int scaled_world_w = (int)((float)game->world_w * world_scale);
+		int scaled_world_h = (int)((float)game->world_h * world_scale);
+		world_offset_x *= (screen_w - scaled_world_w)/2;
+		world_offset_y *= (screen_h - scaled_world_h)/2;
+
+		SDL_Rect world_draw_rect = {
+			world_offset_x, world_offset_y,
+			scaled_world_w, scaled_world_h,
+		};
+		
+//		SDL_Rect world_draw_rect = {(screen_w - game->world_w)/2, (screen_h - game->world_h)/2 , game->world_w, game->world_h};
+		SDL_RenderCopy(game->renderer, game->world_buffer, 0, &world_draw_rect);
 		draw_HUD(game);
 
 		Uint64 frequency = SDL_GetPerformanceFrequency();

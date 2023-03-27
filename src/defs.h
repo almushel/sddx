@@ -12,9 +12,6 @@ typedef struct RGB_Color {uint8_t r, g, b;} RGB_Color;
 #define CLEAR_COLOR (RGB_Color){0,10,48}
 #define SD_BLUE (RGB_Color){109, 194, 255}
 
-#define SCREEN_WIDTH 1280
-#define SCREEN_HEIGHT 720
-
 #define array_length(array) ( sizeof(array) / sizeof(array[0]) )
 
 #define TARGET_FPS 60
@@ -248,8 +245,10 @@ typedef struct Game_State {
 	SDL_Window* window;
 	SDL_Renderer* renderer;
 	STBTTF_Font* font;
-
 	Game_Assets assets;
+
+	SDL_Texture* world_buffer;
+	int world_w, world_h;
 
 	Entity* entities;
 	Uint32 entity_count;
