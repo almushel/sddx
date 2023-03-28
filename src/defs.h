@@ -75,6 +75,109 @@ typedef enum Primitive_Shapes {
 	PRIMITIVE_SHAPE_COUNT,
 } Primitive_Shapes;
 
+typedef struct Mix_Music_Node 	{ char* name; Mix_Music* data; struct Mix_Music_Node* next; } Mix_Music_Node;
+typedef struct Mix_Chunk_Node 	{ char* name; Mix_Chunk* data; struct Mix_Chunk_Node* next; } Mix_Chunk_Node;
+typedef struct SDL_Texture_Node { char* name; SDL_Texture* data; struct SDL_Texture_Node* next; } SDL_Texture_Node;
+
+#include "stb/stb_truetype.h"
+typedef struct STBTTF_Font {
+	stbtt_fontinfo* info;
+	stbtt_packedchar* chars;
+	SDL_Texture* atlas;
+	int texture_size;
+	float size;
+	float scale;
+	int ascent;
+	int baseline;
+} STBTTF_Font;
+
+typedef struct Game_Assets {
+	Mix_Music_Node music[8];
+	Mix_Chunk_Node sfx[16];
+	SDL_Texture_Node textures[16];
+} Game_Assets;
+
+typedef struct Game_Button_State {
+	SDL_Scancode scan_code;
+	SDL_bool pressed, held, released;
+} Game_Button_State;
+
+typedef union Game_Controller_State {
+	struct {
+		Game_Button_State thrust;
+		Game_Button_State turn_left;
+		Game_Button_State turn_right;
+		Game_Button_State thrust_left;
+		Game_Button_State thrust_right;
+		Game_Button_State fire;
+	};
+	Game_Button_State list[6];
+} Game_Controller_State;
+
+typedef struct Particle {
+	Transform2D_Union;
+	Vec2_Union(velocity, vx, vy);
+	float mass;
+	float collision_radius;
+	float timer;
+
+	Game_Sprite sprite;
+	Primitive_Shapes shape;
+	RGB_Color color;
+	Uint32 parent;
+} Particle;
+
+typedef struct Particle_Emitter {
+	union {
+		Vector2 position;
+		struct { float x, y; };
+	};
+	float angle;
+
+	Uint32 parent;
+
+	float density;
+//	Game_Sprite sprite;
+	Primitive_Shapes shape;
+	RGB_Color colors[16];
+	Uint32 color_count;
+
+	float counter;
+	float scale;
+	enum Emitter_State {
+		EMITTER_STATE_INACTIVE,
+		EMITTER_STATE_ACTIVE,
+		EMITTER_STATE_DEAD,
+	} state;
+} Particle_Emitter;
+
+#define MAX_PARTICLES 512
+#define MAX_PARTICLE_EMITTERS 128
+typedef struct Particle_System {
+	Particle particles[MAX_PARTICLES];
+	Uint32 particle_count;
+
+	Particle_Emitter emitters[MAX_PARTICLE_EMITTERS];
+	Uint32 dead_emitters[MAX_PARTICLE_EMITTERS];
+	Uint32 emitter_count;
+	Uint32 dead_emitter_count;
+} Particle_System;
+
+#define STARFIELD_STAR_COUNT 500
+typedef struct Game_Starfield {
+	Vector2 positions[STARFIELD_STAR_COUNT];
+	float timers[STARFIELD_STAR_COUNT];
+	RGB_Color colors[STARFIELD_STAR_COUNT];
+	SDL_bool twinkle_direction[STARFIELD_STAR_COUNT];
+} Game_Starfield;
+
+typedef struct Score_System {
+	int total;
+	int combo;
+	int multiplier;
+	float timer;
+} Score_System;
+
 typedef enum Entity_Types {
 	ENTITY_TYPE_UNDEFINED,
 	ENTITY_TYPE_PLAYER,
@@ -145,102 +248,6 @@ typedef struct Entity {
 	Entity_Teams team;
 } Entity;
 
-typedef struct Mix_Music_Node 	{ char* name; Mix_Music* data; struct Mix_Music_Node* next; } Mix_Music_Node;
-typedef struct Mix_Chunk_Node 	{ char* name; Mix_Chunk* data; struct Mix_Chunk_Node* next; } Mix_Chunk_Node;
-typedef struct SDL_Texture_Node { char* name; SDL_Texture* data; struct SDL_Texture_Node* next; } SDL_Texture_Node;
-
-#include "stb/stb_truetype.h"
-typedef struct STBTTF_Font {
-	stbtt_fontinfo* info;
-	stbtt_packedchar* chars;
-	SDL_Texture* atlas;
-	int texture_size;
-	float size;
-	float scale;
-	int ascent;
-	int baseline;
-} STBTTF_Font;
-
-typedef struct Game_Assets {
-	Mix_Music_Node music[8];
-	Mix_Chunk_Node sfx[16];
-	SDL_Texture_Node textures[16];
-} Game_Assets;
-
-typedef struct game_button_state {
-	SDL_Scancode scan_code;
-	SDL_bool pressed, held, released;
-} game_button_state;
-
-typedef union game_controller_state {
-	struct {
-		game_button_state thrust;
-		game_button_state turn_left;
-		game_button_state turn_right;
-		game_button_state thrust_left;
-		game_button_state thrust_right;
-		game_button_state fire;
-	};
-	game_button_state list[6];
-} game_controller_state;
-
-typedef struct Particle {
-	Transform2D_Union;
-	Vec2_Union(velocity, vx, vy);
-	float mass;
-	float collision_radius;
-	float timer;
-
-	Game_Sprite sprite;
-	Primitive_Shapes shape;
-	RGB_Color color;
-	Uint32 parent;
-} Particle;
-
-typedef struct Particle_Emitter {
-	union {
-		Vector2 position;
-		struct { float x, y; };
-	};
-	float angle;
-
-	Uint32 parent;
-
-	float density;
-//	Game_Sprite sprite;
-	Primitive_Shapes shape;
-	RGB_Color colors[16];
-	Uint32 color_count;
-
-	float counter;
-	float scale;
-	enum Emitter_State {
-		EMITTER_STATE_INACTIVE,
-		EMITTER_STATE_ACTIVE,
-		EMITTER_STATE_DEAD,
-	} state;
-} Particle_Emitter;
-
-#define MAX_PARTICLES 512
-#define MAX_PARTICLE_EMITTERS 128
-typedef struct Particle_System {
-	Particle particles[MAX_PARTICLES];
-	Uint32 particle_count;
-
-	Particle_Emitter emitters[MAX_PARTICLE_EMITTERS];
-	Uint32 dead_emitters[MAX_PARTICLE_EMITTERS];
-	Uint32 emitter_count;
-	Uint32 dead_emitter_count;
-} Particle_System;
-
-#define STARFIELD_STAR_COUNT 500
-typedef struct Game_Starfield {
-	Vector2 positions[STARFIELD_STAR_COUNT];
-	float timers[STARFIELD_STAR_COUNT];
-	RGB_Color colors[STARFIELD_STAR_COUNT];
-	SDL_bool twinkle_direction[STARFIELD_STAR_COUNT];
-} Game_Starfield;
-
 typedef struct Game_State {
 	SDL_Window* window;
 	SDL_Renderer* renderer;
@@ -254,14 +261,15 @@ typedef struct Game_State {
 	Uint32 entity_count;
 	Uint32 entities_size;
 	
+	Game_Starfield starfield;
+	Particle_System particle_system;
+	Score_System score;
+
 	Uint32* dead_entities;
 	Uint32 dead_entities_count;
 	Uint32 dead_entities_size;
 
-	Game_Starfield starfield;
-	Particle_System particle_system;
-
-	game_controller_state player_controller;
+	Game_Controller_State player_controller;
 	Entity* player;
 	struct {
 		enum Player_Weapon {

@@ -5,8 +5,9 @@
 #include "particles.c"
 #include "entities.c"
 #include "hud.c"
+#include "score.c"
 
-void process_key_event(SDL_KeyboardEvent* event, game_controller_state* input) {
+void process_key_event(SDL_KeyboardEvent* event, Game_Controller_State* input) {
 	if (event->repeat == 0) {
 		switch (event->keysym.scancode) {
 			case SDL_SCANCODE_ESCAPE: {
@@ -16,7 +17,7 @@ void process_key_event(SDL_KeyboardEvent* event, game_controller_state* input) {
 			} return;
 		}
 
-		game_button_state* button;
+		Game_Button_State* button;
 		for (int i = 0; i < array_length(input->list); i++) {
 			button = input->list + i;
 			if (button->scan_code == event->keysym.scancode) {
@@ -146,7 +147,7 @@ int main(int argc, char* argv[]) {
 		}
 
 	}
-	game->player_controller = (game_controller_state){
+	game->player_controller = (Game_Controller_State){
 		.thrust.scan_code = SDL_SCANCODE_W,
 		.thrust_left.scan_code = SDL_SCANCODE_E,
 		.thrust_right.scan_code = SDL_SCANCODE_Q,
@@ -155,7 +156,7 @@ int main(int argc, char* argv[]) {
 		.fire.scan_code = SDL_SCANCODE_SPACE,
 	};
 
-	game_controller_state new_player_controller = {0};
+	Game_Controller_State new_player_controller = {0};
 	
 	get_new_entity(game); // reserve 0
 	game->player = spawn_entity(game, ENTITY_TYPE_PLAYER, (Vector2){(float)game->world_w/2, (float)game->world_h/2});
@@ -180,7 +181,7 @@ int main(int argc, char* argv[]) {
 		double dt = (double)(current_count - last_count) / (double)SDL_GetPerformanceFrequency();
 		dt = dt/(1.0 / (double)TICK_RATE);
 
-		new_player_controller = (game_controller_state) {
+		new_player_controller = (Game_Controller_State) {
 			.thrust.scan_code 		= 	game->player_controller.thrust.scan_code,
 			.thrust_left.scan_code 	= 	game->player_controller.thrust_left.scan_code,
 			.thrust_right.scan_code = 	game->player_controller.thrust_right.scan_code,
@@ -206,7 +207,7 @@ int main(int argc, char* argv[]) {
 		}
 		if (!running) break;
 
-		game_button_state* current_button,* new_button;
+		Game_Button_State* current_button,* new_button;
 		for (int i = 0; i < array_length(new_player_controller.list); i++) {
 			new_button = new_player_controller.list + i;
 			current_button = game->player_controller.list + i;
@@ -220,12 +221,13 @@ int main(int argc, char* argv[]) {
 
 		if (!game->player 						&& 
 			game->player_controller.fire.held	&&
-			game->player_state.lives >= 0
+			game->player_state.lives > 0
 			) {
 			game->player = spawn_entity(game, ENTITY_TYPE_PLAYER, (Vector2){(float)(float)game->world_w/2.0f, (float)(float)game->world_h/2.0f});
 			game->player_state.lives--;
 		}
 
+		update_score_timer(&game->score, dt);
 		update_entities(game, dt);
 		update_particle_emitters(&game->particle_system, dt);
 		update_particles(&game->particle_system, dt);

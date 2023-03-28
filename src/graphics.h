@@ -1,5 +1,5 @@
-#ifndef GRAPHICS_H
-#define GRAPHICS_H
+#ifndef GAME_GRAPHICS_H
+#define GAME_GRAPHICS_H
 
 #include "SDL2/SDL.h"
 #include "defs.h"

@@ -6,15 +6,10 @@
 #define HUD_SPEED 4
 #define MENU_COLOR (RGB_Color){56, 56, 56}
 
-#define SCORE_CHAIN_TIME 5
-#define HIGH_SCORE_TABLE_LENGTH 10
-#define LIFE_UP_MILESTONE 5000
-
-#define SCORE_MULTI_MILESTONES (int*){10, 25, 50, 100}
-
 float hudDir = 0, hudAccumulator = 0;
 
 void draw_score(Game_State* game) {
+	char text_buffer[32] = ""; // NOTE: Hopefully able to contain highest practical score value?
 	int screen_w, screen_h;
 	SDL_GetWindowSizeInPixels(game->window, &screen_w, &screen_h);
 
@@ -22,19 +17,24 @@ void draw_score(Game_State* game) {
 	Vector2 text_pos = {8, screen_h - 8};
 	render_text(game->renderer, game->font, 20, text_pos.x, text_pos.y, "Score:");
 	
-	text_pos.x = 88;
+	text_pos.x += measure_text(game->font, text_size, "Score:");
 	text_pos.y = screen_h - 7.5;
 	SDL_SetRenderDrawColor(game->renderer, 255, 255, 255, 255);
-	render_text(game->renderer, game->font, text_size, text_pos.x, text_pos.y, "1000");
+	itoa(game->score.total, text_buffer, 10);
+	render_text(game->renderer, game->font, text_size, text_pos.x, text_pos.y, text_buffer);
 
 	text_pos = (Vector2){186, screen_h - 36};
 	SDL_SetRenderDrawColor(game->renderer, 255, 255, 255, 255);
-	render_text(game->renderer, game->font, text_size, text_pos.x, text_pos.y, "x1");
+	text_buffer[0] = 'x';
+	itoa(game->score.multiplier, text_buffer+1, 10);
+	render_text(game->renderer, game->font, text_size, text_pos.x, text_pos.y, text_buffer);
 
-	int temp_current_time_count = 3; // TO-DO: Hook up to score multiplier timer
-	for (int t = 0; t < SCORE_CHAIN_TIME; t++) {
+	int combo_decay_seconds = SCORE_COMBO_DECAY/TICK_RATE;
+	float combo_seconds_remaining = (game->score.timer/(float)TICK_RATE);
+
+	for (int t = 0; t < combo_decay_seconds; t++) {
 		RGB_Color rect_color = {125, 125, 125};
-		if (temp_current_time_count > t) rect_color = SD_BLUE;
+		if ((int)(combo_seconds_remaining+0.5f) > t) rect_color = SD_BLUE;
 
 		SDL_Rect rect = {8 + 32 * t, screen_h - 56, 26, 26};
 

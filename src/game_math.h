@@ -1,3 +1,6 @@
+#ifndef GAME_MATH_H
+#define GAME_MATH_H
+
 #include "sc2d/src/sc2d.h"
 
 Game_Poly2D translate_poly2d(Game_Poly2D polygon, Vector2 translation);
@@ -12,3 +15,5 @@ float lerp(float start, float end, float t);
 float random(void);
 
 Vector2 wrap_world_coords(float x, float y, float min_x, float min_y, float max_x, float max_y);
+
+#endif

@@ -2,6 +2,7 @@
 #include "defs.h"
 #include "game_math.h"
 #include "graphics.h"
+#include "score.h"
 
 #define ENTITY_WARP_DELAY 26.0f
 #define ENTITY_WARP_RADIUS 20
@@ -155,6 +156,20 @@ SDL_Texture* generate_item_texture(Game_State* game, SDL_Texture* icon) {
 //		SDL_RenderDrawLineF(game->renderer, 0, (float)result_size/2.0f, result_size, (float)result_size/2.0f);
 	
 		SDL_SetRenderTarget(game->renderer, original_render_target);
+	}
+
+	return result;
+}
+
+static float get_entity_score_value(Entity_Types type) {
+	float result = 0.0f;
+	switch(type) {
+		case ENTITY_TYPE_ENEMY_DRIFTER: {result = 0.25; } break;
+		case ENTITY_TYPE_ENEMY_UFO: { result = 1.0f; } break;
+		case ENTITY_TYPE_ENEMY_TRACKER: { result = 3.0f; } break;
+		case ENTITY_TYPE_ENEMY_TURRET: { result = 4.0f; } break;
+		case ENTITY_TYPE_ENEMY_GRAPPLER: { result = 5.0f; } break;
+		default: break;
 	}
 
 	return result;
@@ -634,6 +649,8 @@ void update_entities(Game_State* game, float dt) {
 					
 					game->player_state.thrust_energy = THRUST_MAX;
 					game->player_state.weapon_heat = 0;
+
+					end_score_combo(&game->score);
 				} break;
 
 				case ENTITY_TYPE_ENEMY_TRACKER: {
@@ -641,10 +658,14 @@ void update_entities(Game_State* game, float dt) {
 				}
 			}
 
+			if (entity->team == ENTITY_TEAM_ENEMY) {
+				float score_value = get_entity_score_value(entity->type);
+				if (score_value) add_score(game, score_value);
+			}
+
 			for (int sprite_index = 0; sprite_index < entity->sprite_count; sprite_index++) {
 				explode_sprite(game, entity->sprites+sprite_index, entity->x, entity->y, entity->angle, 6);
 			}
-
 			
 			if (game->dead_entities_count >= game->dead_entities_size) {
 				Uint32* new_dead_entities = SDL_realloc(game->dead_entities, game->dead_entities_size * 2);
