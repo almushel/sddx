@@ -35,9 +35,6 @@ typedef struct Vector2 {
 	float x, y;
 } Vector2;
 
-typedef Vector2 sc2d_v2;
-#define SIMPLE_COLLISION_2D_TYPES
-
 #define Vec2_Union(v2_name, fx, fy) \
 	union { 						\
 		Vector2 v2_name; 			\
@@ -176,6 +173,11 @@ typedef struct Score_System {
 	int combo;
 	int multiplier;
 	float timer;
+
+	float item_accumulator;
+	int current_wave;
+	int spawn_points_max;
+
 } Score_System;
 
 typedef enum Entity_Types {
@@ -189,6 +191,7 @@ typedef enum Entity_Types {
 	ENTITY_TYPE_ENEMY_GRAPPLER,
 	ENTITY_TYPE_ITEM_MISSILE,
 	ENTITY_TYPE_ITEM_LIFEUP,
+	ENTITY_TYPE_ITEM_LASER,
 	ENTITY_TYPE_SPAWN_WARP,
 	ENTITY_TYPE_COUNT
 } Entity_Types;
@@ -256,6 +259,9 @@ typedef struct Game_State {
 
 	SDL_Texture* world_buffer;
 	int world_w, world_h;
+#if DEBUG
+	SDL_bool DEBUG_fit_world_to_screen;
+#endif
 
 	Entity* entities;
 	Uint32 entity_count;

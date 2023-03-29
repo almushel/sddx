@@ -3,6 +3,7 @@
 #include "game_math.h"
 #include "graphics.h"
 #include "score.h"
+#include "entity_spawn.h"
 
 #define ENTITY_WARP_DELAY 26.0f
 #define ENTITY_WARP_RADIUS 20
@@ -66,11 +67,7 @@ Uint32 get_new_entity(Game_State* game) {
 	Uint32 result = 0;
 
 	if (game->dead_entities_count > 0) {
-		result = game->dead_entities[0];
-		if (game->dead_entities_count > 1) {
-			game->dead_entities[0] = game->dead_entities[game->dead_entities_count-1];
-		}
-		game->dead_entities_count--;
+		result = game->dead_entities[--game->dead_entities_count];
 #if DEBUG
 		SDL_Log("New Entity from Dead List: %i", result);
 #endif
@@ -113,8 +110,7 @@ SDL_Texture* generate_drifter_texture(Game_State* game) {
 		SDL_RenderClear(game->renderer);
 		
 		SDL_SetRenderDrawColor(game->renderer, 255, 255, 255, 255);
-		SDL_RenderDrawLinesF(game->renderer, vertices, vert_count);
-		SDL_RenderDrawLineF(game->renderer, vertices[vert_count-1].x, vertices[vert_count-1].y, vertices[0].x, vertices[0].y);
+		render_fill_polygon(game->renderer, vertices, vert_count, (RGB_Color){105, 105, 105});
 		
 		SDL_SetRenderTarget(game->renderer, original_render_target);
 		SDL_free(vertices);
@@ -132,13 +128,13 @@ SDL_Texture* generate_item_texture(Game_State* game, SDL_Texture* icon) {
 	if (result) {
 		SDL_SetTextureBlendMode(result, SDL_BLENDMODE_BLEND);
 		
-		SDL_Texture* original_render_target = SDL_GetRenderTarget(game->renderer);
 		SDL_SetRenderTarget(game->renderer, result);
 
 		SDL_SetRenderDrawColor(game->renderer, 0, 0, 0, 0);
 		SDL_RenderClear(game->renderer);
 		render_fill_circlef_linear_gradient(game->renderer, (float)result_size/2.0f, (float)result_size/2.0f, ITEM_RADIUS, CLEAR_COLOR, SD_BLUE);
 		
+	if (icon) {
 		int w, h;
 		SDL_QueryTexture(icon, NULL, NULL, &w, &h);
 		float dim = w > h ? w : h;
@@ -151,28 +147,23 @@ SDL_Texture* generate_item_texture(Game_State* game, SDL_Texture* icon) {
 		dest.y = ((float)result_size-dest.h) / 2.0f;
 		
 		SDL_RenderCopyExF(game->renderer, icon, NULL, &dest, 0, 0, SDL_FLIP_NONE);
-		SDL_SetRenderDrawColor(game->renderer, 255, 255, 0, 255);
+	}
+
+//		SDL_SetRenderDrawColor(game->renderer, 255, 255, 0, 255);
 //		SDL_RenderDrawLineF(game->renderer, (float)result_size/2.0f, 0, result_size/2.0f, result_size);
 //		SDL_RenderDrawLineF(game->renderer, 0, (float)result_size/2.0f, result_size, (float)result_size/2.0f);
 	
-		SDL_SetRenderTarget(game->renderer, original_render_target);
+		SDL_SetRenderTarget(game->renderer, 0);
 	}
 
 	return result;
 }
 
-static float get_entity_score_value(Entity_Types type) {
-	float result = 0.0f;
-	switch(type) {
-		case ENTITY_TYPE_ENEMY_DRIFTER: {result = 0.25; } break;
-		case ENTITY_TYPE_ENEMY_UFO: { result = 1.0f; } break;
-		case ENTITY_TYPE_ENEMY_TRACKER: { result = 3.0f; } break;
-		case ENTITY_TYPE_ENEMY_TURRET: { result = 4.0f; } break;
-		case ENTITY_TYPE_ENEMY_GRAPPLER: { result = 5.0f; } break;
-		default: break;
-	}
-
-	return result;
+static inline SDL_bool entity_is_item(Entity_Types type) {
+	return (
+		type >= ENTITY_TYPE_ITEM_MISSILE &&
+		type <= ENTITY_TYPE_ITEM_LASER
+	);
 }
 
 Entity* spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
@@ -292,6 +283,14 @@ Entity* spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 				result->sprite_count = 1;
 			} break;
 
+			case ENTITY_TYPE_ITEM_LASER: {
+				result->team = ENTITY_TEAM_UNDEFINED;
+				result->collision_radius = ITEM_RADIUS;
+				result->sprites[0].texture_name = "Item Laser";
+				result->sprites[0].rotation = 1;
+				result->sprite_count = 1;
+			}
+
 			case ENTITY_TYPE_SPAWN_WARP: {
 				result->collision_radius = ENTITY_WARP_RADIUS;
 				result->team = ENTITY_TEAM_UNDEFINED;
@@ -314,8 +313,7 @@ void update_entities(Game_State* game, float dt) {
 		entity = game->entities + entity_index;
 		
 		if (entity->state == ENTITY_STATE_SPAWNING) {
-			if (entity->timer > 0) entity->timer -= dt;
-			else entity->timer = 0;
+			entity->timer -= dt * (float)(int)(entity->timer > 0);
 
 			float t = 1.0f - SDL_clamp((entity->timer/ENTITY_WARP_DELAY), 0.0f, 1.0f);
 
@@ -335,7 +333,8 @@ void update_entities(Game_State* game, float dt) {
 				entity->state = ENTITY_STATE_ACTIVE;
 			}
 		} else if (entity->state == ENTITY_STATE_DESPAWNING) {
-			if (entity->timer > 0) entity->timer -= dt;
+			entity->timer -= dt * (float)(int)(entity->timer > 0);
+			
 			entity->transform.scale.x = 
 				entity->transform.scale.y = 
 					SDL_clamp(entity->timer/ENTITY_WARP_DELAY, 0.0f, 1.0f);
@@ -347,7 +346,7 @@ void update_entities(Game_State* game, float dt) {
 				dead_entity_count++;
 			}
 		} else if (entity->state == ENTITY_STATE_ACTIVE) {
-			if (entity->timer > 0) entity->timer -= dt;
+			entity->timer -= dt * (float)(int)(entity->timer > 0);
 			switch(entity->type) {
 				case ENTITY_TYPE_PLAYER: {
 					if (game->player_controller.turn_left.held)  entity->angle -= PLAYER_TURN_SPEED * dt;
@@ -602,11 +601,20 @@ void update_entities(Game_State* game, float dt) {
 			if (entity->type  != ENTITY_TYPE_SPAWN_WARP) {
 				for (int collision_entity_index = entity_index+1; collision_entity_index < game->entity_count; collision_entity_index++) {
 					Entity* collision_entity 	 = game->entities + collision_entity_index;
-					if (collision_entity->state != ENTITY_STATE_ACTIVE || collision_entity->type  == ENTITY_TYPE_SPAWN_WARP) continue;
+					if (collision_entity->state != ENTITY_STATE_ACTIVE || collision_entity->type == ENTITY_TYPE_SPAWN_WARP) continue;
+					
 					Vector2 overlap = {0};
+					if (sc2d_check_circles(entity->position.x, entity->position.y, entity->collision_radius, 
+											collision_entity->position.x, collision_entity->position.y, collision_entity->collision_radius,
+											&overlap.x, &overlap.y)) {
 
-					if (sc2d_check_circles(entity->position, entity->collision_radius, collision_entity->position, collision_entity->collision_radius, &overlap)) {				
-						if (entity->team && collision_entity->team && entity->team != collision_entity->team) {
+						if (entity_is_item(entity->type) && collision_entity->type == ENTITY_TYPE_PLAYER) {
+							entity->state = ENTITY_STATE_DESPAWNING;
+							entity->timer = ENTITY_WARP_DELAY/2.0f;
+						} else if (entity->type == ENTITY_TYPE_PLAYER && entity_is_item(collision_entity->type)) {
+							collision_entity->state = ENTITY_STATE_DESPAWNING;
+							collision_entity->timer = ENTITY_WARP_DELAY/2.0f;
+						} if (entity->team && collision_entity->team && entity->team != collision_entity->team) {
 							entity->state  = ENTITY_STATE_DYING;
 							collision_entity->state = ENTITY_STATE_DYING;
 						}
@@ -624,7 +632,10 @@ void update_entities(Game_State* game, float dt) {
 				Particle* particle = game->particle_system.particles + particle_index;
 				Vector2 overlap = {0};
 
-				if ((particle->parent != entity_index) && sc2d_check_circles(entity->position, entity->collision_radius, particle->position, particle->collision_radius, &overlap)) {
+				if ((particle->parent != entity_index) && 
+					sc2d_check_circles(	entity->position.x, entity->position.y, entity->collision_radius, 
+										particle->position.x, particle->position.y, particle->collision_radius,
+										&overlap.x, &overlap.y)) {
 					particle->x += overlap.x;
 					particle->y += overlap.y;
 					particle->vx = overlap.x + particle->vx / 2.0f;
@@ -656,6 +667,10 @@ void update_entities(Game_State* game, float dt) {
 				case ENTITY_TYPE_ENEMY_TRACKER: {
 					remove_particle_emitter(&game->particle_system, entity->data.tracker.thruster);
 				}
+
+				case ENTITY_TYPE_ITEM_LIFEUP: {
+					game->player_state.lives++;
+				}
 			}
 
 			if (entity->team == ENTITY_TEAM_ENEMY) {
@@ -675,12 +690,26 @@ void update_entities(Game_State* game, float dt) {
 				}
 			}
 			
-			game->dead_entities[game->dead_entities_count] = dead_entity_index;
-			game->dead_entities_count++;
-			entity->state = ENTITY_STATE_DEAD;
+			if (dead_entity_index == game->entity_count-1) {
+				game->entity_count--;
+			} else {
+				game->dead_entities[game->dead_entities_count] = dead_entity_index;
+				game->dead_entities_count++;
+				entity->state = ENTITY_STATE_DEAD;
+			}
 #if DEBUG	
 			SDL_Log("Dead Entity Count: %i", game->dead_entities_count);
+			SDL_Log("Entity Count: %i", game->entity_count);
+
 #endif
+		}
+
+		//TO-DO: Implement better conditions for this.
+		// If there are as many dead entities as entities minus reserved 0 entity and player (if currently alive)
+		if (game->dead_entities_count >= game->entity_count - 1 - (int)(game->player > 0)) {
+			game->score.current_wave++;
+			game->score.spawn_points_max++;
+			spawn_wave(game, game->score.current_wave, game->score.spawn_points_max);
 		}
 	}
 }

@@ -4,6 +4,7 @@
 #include "assets.c"
 #include "particles.c"
 #include "entities.c"
+#include "entity_spawn.c"
 #include "hud.c"
 #include "score.c"
 
@@ -46,6 +47,7 @@ void load_game_assets(Game_State* game) {
 	game_store_texture(game, generate_drifter_texture(game), "Enemy Drifter");
 	game_store_texture(game, generate_item_texture(game, game_get_texture(game, "Projectile Missile")), "Item Missile");
 	game_store_texture(game, generate_item_texture(game, game_get_texture(game, "Player Ship")), "Item LifeUp");
+	game_store_texture(game, generate_item_texture(game, 0), "Item Laser");
 
 	if (Mix_OpenAudio(48000, AUDIO_S16SYS, 2, 4096) != -1) {
 		Mix_AllocateChannels(32);
@@ -115,6 +117,7 @@ int main(int argc, char* argv[]) {
 	if (!game->world_buffer) {
 		SDL_Log("Creating world buffer failed. %s", SDL_GetError());
 	}
+	game->DEBUG_fit_world_to_screen = 1;
 
 	load_game_assets(game);
 	game->font = load_stbtt_font(game->renderer, "c:/windows/fonts/times.ttf", 32);
@@ -194,6 +197,15 @@ int main(int argc, char* argv[]) {
 		while(SDL_PollEvent(&event)) {
 			switch(event.type) {
 				case SDL_KEYUP: {
+#if DEBUG					
+					if (event.key.keysym.scancode == SDL_SCANCODE_EQUALS) {
+						game->DEBUG_fit_world_to_screen = !game->DEBUG_fit_world_to_screen;
+					}
+					else if (event.key.keysym.scancode == SDL_SCANCODE_GRAVE) {
+						SDL_Log("Break");
+					}
+					else
+#endif
 					process_key_event(&event.key, &new_player_controller);
 				} break;
 				case SDL_KEYDOWN: {
@@ -267,14 +279,18 @@ int main(int argc, char* argv[]) {
 		float world_scale = 1;
 		int world_offset_x = 1, world_offset_y = 1;
 
-#if 1
-		// scale world to fit screen
-		if (screen_h < screen_w) {
-			world_scale = (float)screen_h / (float)game->world_h;
-			world_offset_y = 0;
+#if DEBUG
+		if (game->DEBUG_fit_world_to_screen) {
+			SDL_SetTextureScaleMode(game->world_buffer, SDL_ScaleModeBest);
+			if (screen_h < screen_w) {
+				world_scale = (float)screen_h / (float)game->world_h;
+				world_offset_y = 0;
+			} else {
+				world_scale = (float)screen_w / (float)game->world_w;
+				world_offset_x = 0;
+			}
 		} else {
-			world_scale = (float)screen_w / (float)game->world_w;
-			world_offset_x = 0;
+			SDL_SetTextureScaleMode(game->world_buffer, SDL_ScaleModeNearest);
 		}
 #endif
 		int scaled_world_w = (int)((float)game->world_w * world_scale);
@@ -287,7 +303,6 @@ int main(int argc, char* argv[]) {
 			scaled_world_w, scaled_world_h,
 		};
 		
-//		SDL_Rect world_draw_rect = {(screen_w - game->world_w)/2, (screen_h - game->world_h)/2 , game->world_w, game->world_h};
 		SDL_RenderCopy(game->renderer, game->world_buffer, 0, &world_draw_rect);
 		draw_HUD(game);
 
