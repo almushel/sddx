@@ -130,8 +130,7 @@ typedef struct Particle_Emitter {
 		struct { float x, y; };
 	};
 	float angle;
-
-	Uint32 parent;
+	float speed;
 
 	float density;
 //	Game_Sprite sprite;
@@ -202,7 +201,6 @@ typedef enum Entity_States {
 	ENTITY_STATE_ACTIVE,
 	ENTITY_STATE_DESPAWNING,
 	ENTITY_STATE_DYING,
-	ENTITY_STATE_DEAD,
 	ENTITY_STATE_COUNT,
 } Entity_States;
 
@@ -270,10 +268,6 @@ typedef struct Game_State {
 	Game_Starfield starfield;
 	Particle_System particle_system;
 	Score_System score;
-
-	Uint32* dead_entities;
-	Uint32 dead_entities_count;
-	Uint32 dead_entities_size;
 
 	Game_Controller_State player_controller;
 	Entity* player;

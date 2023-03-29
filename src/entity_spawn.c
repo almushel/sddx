@@ -5,8 +5,6 @@
 #define WAVE_ESCALATION_RATE 4
 #define ITEM_ACCUMULATE_RATE 1
 
-float pickUpAccumulator = 0;
-
 float get_entity_score_value(Entity_Types type) {
 	float result = 0.0f;
 	switch(type) {
@@ -30,7 +28,6 @@ Vector2 get_clear_spawn(Game_State* game, float radius, SDL_Rect boundary) {
 	Vector2 overlap = {0};
 	Entity* entities = game->entities;
 	for (int i = 0; i < game->entity_count; i++) {
-		
 		if (sc2d_check_circles(result.x, result.y, radius,
 			entities[i].x, entities[i].y, entities[i].collision_radius, &overlap.x, &overlap.y)) {
 
@@ -73,8 +70,12 @@ void spawn_wave(Game_State* game, int wave, int points_max) {
 			float entity_radius = 25;
 			Vector2 new_position = get_clear_spawn(game, entity_radius, spawn_zones[zone_index]);
 			
-			Entity* warp = spawn_entity(game, ENTITY_TYPE_SPAWN_WARP, new_position);
-			warp->data.spawn_warp.spawn_type = spawn_type;
+			Uint32 warp_id = spawn_entity(game, ENTITY_TYPE_SPAWN_WARP, new_position);
+			if (warp_id){
+				Entity* warp = get_entity(game, warp_id);
+				warp->data.spawn_warp.spawn_type = spawn_type;
+			}
+
 		}
 		
 		zone_index = (zone_index + 1) % array_length(spawn_zones);
@@ -109,20 +110,19 @@ void forceCircle(x, y, radius, force) {
 }
 */
 
-void spawnItems(Game_State* game, Vector2 position, float accumulation) {
-	pickUpAccumulator += ITEM_ACCUMULATE_RATE * accumulation;
+void random_item_spawn(Game_State* game, Vector2 position, float accumulation) {
+	game->score.item_accumulator += ITEM_ACCUMULATE_RATE * accumulation;
 
 	float roll = 5.0f + random() * 95.0f;
 
-	if (roll < pickUpAccumulator) {
+	if (roll < game->score.item_accumulator) {
 		float roll = random() * 100.0f;
-		Entity* pickup;
 		if (roll > 55) {
-			pickup = spawn_entity(game, ENTITY_TYPE_ITEM_MISSILE, position);
+			spawn_entity(game, ENTITY_TYPE_ITEM_MISSILE, position);
 		} else {
-			pickup = spawn_entity(game, ENTITY_TYPE_ITEM_LASER, position);
+			spawn_entity(game, ENTITY_TYPE_ITEM_LASER, position);
 		} 
 
-		pickUpAccumulator = 0;
+		game->score.item_accumulator = 0;
 	}
 }

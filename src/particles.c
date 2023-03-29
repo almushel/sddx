@@ -12,9 +12,10 @@
 #define PARTICLE_DECAY 0.75f
 #define EXPLOSION_STARTING_PARTICLES 12
 #define DEFAULT_PARTICLE_COLOR (RGB_Color){255, 255, 255}
+#define DEAD_PARTICLE_MAX 16
 
 void update_particles(Particle_System* ps, float dt) {
-	Uint32* dead_particles = SDL_malloc(sizeof(Uint32) * ps->particle_count);
+	Uint32 dead_particles[DEAD_PARTICLE_MAX];
 	Uint32 dead_particle_count = 0;
 
 	for (int p = 0; p < ps->particle_count; p++) {
@@ -26,7 +27,7 @@ void update_particles(Particle_System* ps, float dt) {
 			if (particle->collision_radius < 0) particle->collision_radius = 0;
 		}
 		
-		if (particle->timer <= 0) {
+		if (particle->timer <= 0 && dead_particle_count < array_length(dead_particles)) {
 			dead_particles[dead_particle_count] = p;
 			dead_particle_count++;
 		}
@@ -41,14 +42,13 @@ void update_particles(Particle_System* ps, float dt) {
 		}
 		ps->particle_count--;
 	}
-
-	SDL_free(dead_particles);
 }
 
 void draw_particles(Game_State* game, SDL_Renderer* renderer) {
 	Particle_System* ps = &game->particle_system;
 	for (int p = 0; p < ps->particle_count; p++) {
 		Particle particle = ps->particles[p];
+		if (particle.timer <= 0) continue;
 		if (particle.sprite.texture_name) {
 			render_draw_game_sprite(game, &particle.sprite, particle.transform, 1);
 		} else {
@@ -80,10 +80,11 @@ void init_particle(Particle* p) {
 	p->sx = p->sy = 1.0f;
 }
 
-Particle* get_new_particle(Particle_System* ps) {
-	Particle* result = 0;
+Uint32 get_new_particle(Particle_System* ps) {
+	Uint32 result = 0;
+	if (ps->particle_count == 0) ps->particle_count++;
 	if (ps->particle_count < MAX_PARTICLES) {
-		result = ps->particles + ps->particle_count++;
+		result = ps->particle_count++;
 	} else {
 		SDL_Log("get_new_particle(): max Particle count reached");
 	}
@@ -91,12 +92,13 @@ Particle* get_new_particle(Particle_System* ps) {
 	return result;
 }
 
-Particle* instantiate_particle(Particle_System* ps, Game_Sprite* sprite, Primitive_Shapes shape) {
-	Particle* result = get_new_particle(ps);
+Uint32 spawn_particle(Particle_System* ps, Game_Sprite* sprite, Primitive_Shapes shape) {
+	Uint32 result = get_new_particle(ps);
 	if (result) {
-		init_particle(result);
-		if (sprite) result->sprite = *sprite;
-		result->shape = shape;
+		Particle* particle = ps->particles + result;
+		init_particle(particle);
+		if (sprite) particle->sprite = *sprite;
+		particle->shape = shape;
 	}
 
 	return result;
@@ -135,32 +137,35 @@ void randomize_particle(Particle* p, RGB_Color* colors, Uint32 color_count) {
 void explode_at_point(Particle_System* ps, float x, float y, float force, RGB_Color* colors, Uint32 num_colors, Game_Sprite* sprite, Primitive_Shapes shape) {
 //	if (force != 0) {force_circle(x, x, 120, force); }
 	for (int p = 0; p < EXPLOSION_STARTING_PARTICLES; p++) {
-		Particle* p = instantiate_particle(ps, sprite, shape);
-		randomize_particle(p, colors, num_colors);
-		p->x = x;
-		p->y = y;
+		Uint32 id = spawn_particle(ps, sprite, shape);
+		if (id) {
+			Particle* p = ps->particles + id;
+			randomize_particle(p, colors, num_colors);
+			p->x = x;
+			p->y = y;
+		}
+
 	}
 }
 
-Uint32 new_particle_emitter(Particle_System* ps) {
+Uint32 get_new_particle_emitter(Particle_System* ps) {
 	Uint32 result = 0;
 	if (ps->dead_emitter_count > 0) {
 		result = ps->dead_emitters[0];
 		ps->dead_emitters[0] = ps->dead_emitters[ps->dead_emitter_count-1];
 		ps->dead_emitter_count--;
 #if DEBUG
-		SDL_Log("New Entity from Dead List: %i", result);
+		SDL_Log("New Emitter from dead list: %i", result);
 #endif
 	} else if (ps->emitter_count < array_length(ps->emitters)) {
 		result = ps->emitter_count++;
 	} else {
-		SDL_Log("get_new_particle_emitter(): Particle emitter maximum reached");
+		SDL_Log("get_get_new_particle_emitter(): Particle emitter maximum reached");
 	}
 
 	return result;
 }
 
-// TO-DO: Handle "Dead" emitter indexes
 Particle_Emitter* get_particle_emitter(Particle_System* ps, Uint32 index) {
 	Particle_Emitter* result = 0;
 
@@ -171,10 +176,13 @@ Particle_Emitter* get_particle_emitter(Particle_System* ps, Uint32 index) {
 
 void remove_particle_emitter(Particle_System* ps, Uint32 index) {
 	if (index > ps->emitter_count) return;
-
-	ps->emitters[index].state = EMITTER_STATE_DEAD;
-	ps->dead_emitters[ps->dead_emitter_count] = index;
-	ps->dead_emitter_count++;
+	if (index == ps->emitter_count-1) {
+		ps->emitter_count--;
+	} else {
+		ps->emitters[index].state = EMITTER_STATE_DEAD;
+		ps->dead_emitters[ps->dead_emitter_count] = index;
+		ps->dead_emitter_count++;
+	}
 #if DEBUG
 	SDL_Log("Dead Emitter Count: %i", ps->dead_emitter_count);
 #endif
@@ -190,10 +198,10 @@ void update_particle_emitters(Particle_System* ps, float dt) {
 		if (emitter->counter >= 1.0f) {
 			int particles_to_emit = (int)emitter->counter;
 			while (particles_to_emit) {
-				Particle* p = instantiate_particle(ps, 0, 0);
-				if (p) {
+				Uint32 id = spawn_particle(ps, 0, 0);
+				if (id) {
+					Particle* p = ps->particles + id;
 					randomize_particle(p, emitter->colors, emitter->color_count);
-					p->parent = emitter->parent;
 					//p->collision_radius *= emitter->scale;
 
 					p->x = emitter->x;
@@ -221,22 +229,25 @@ void explode_sprite(Game_State* game, Game_Sprite* sprite, float x, float y, flo
 
 	// Create explosion using chunks as particle sprites
 	for (int chunk_index = 0; chunk_index < pieces; chunk_index++) {
-		Particle* particle = instantiate_particle(&game->particle_system, chunks + chunk_index, 0);
-		const float random_deviation = 30.0f;
+		Uint32 particle_id = spawn_particle(&game->particle_system, chunks + chunk_index, 0);
+		if (particle_id) {
+			const float random_deviation = 30.0f;
 
-		float chunk_angle = angle + 180.0f + (chunk_index * angle_division);
-			  chunk_angle += random_deviation/2.0f - (random() * random_deviation);
-		float vx = cos_deg(chunk_angle) * (float)PARTICLE_SPEED;
-		float vy = sin_deg(chunk_angle) * (float)PARTICLE_SPEED;
+			float chunk_angle = angle + 180.0f + (chunk_index * angle_division);
+				chunk_angle += random_deviation/2.0f - (random() * random_deviation);
+			float vx = cos_deg(chunk_angle) * (float)PARTICLE_SPEED;
+			float vy = sin_deg(chunk_angle) * (float)PARTICLE_SPEED;
 
-		randomize_particle(particle, 0, 0);
-		particle->collision_radius = radius;
-		particle->timer = PARTICLE_LIFETIME;
-		particle->angle = angle;
-		particle->x = x;
-		particle->y = y;
-		particle->vx = vx;
-		particle->vy = vy;
+			Particle* particle = game->particle_system.particles + particle_id;
+			randomize_particle(particle, 0, 0);
+			particle->collision_radius = radius;
+			particle->timer = PARTICLE_LIFETIME;
+			particle->angle = angle;
+			particle->x = x;
+			particle->y = y;
+			particle->vx = vx;
+			particle->vy = vy;
+		}
 	}
 
 	SDL_free(chunks);

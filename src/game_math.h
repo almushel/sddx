@@ -3,6 +3,9 @@
 
 #include "sc2d/src/sc2d.h"
 
+Vector2 normalize_vector2(Vector2 v);
+Vector2 scale_vector2(Vector2 v, float scalar);
+
 Game_Poly2D translate_poly2d(Game_Poly2D polygon, Vector2 translation);
 
 float sin_deg  (float degrees);

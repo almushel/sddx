@@ -92,10 +92,6 @@ int main(int argc, char* argv[]) {
 	game->entities_size = 512;
 	game->entities = SDL_malloc(sizeof(Entity) * game->entities_size);
 	SDL_memset(game->entities, 0, sizeof(Entity) * game->entities_size);
-	
-	game->dead_entities_size = 32;
-	game->dead_entities = SDL_malloc(sizeof(Uint32) * game->dead_entities_size);
-	SDL_memset(game->dead_entities, 0, sizeof(Uint32) * game->dead_entities_size);
 
 	game->window = SDL_CreateWindow("Space Drifter DX", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, screen_w, screen_h, SDL_WINDOW_RESIZABLE);
 	if (game->window == NULL) {
@@ -162,10 +158,15 @@ int main(int argc, char* argv[]) {
 	Game_Controller_State new_player_controller = {0};
 	
 	get_new_entity(game); // reserve 0
-	game->player = spawn_entity(game, ENTITY_TYPE_PLAYER, (Vector2){(float)game->world_w/2, (float)game->world_h/2});
+	game->player = get_entity(game,
+		spawn_entity(game, ENTITY_TYPE_PLAYER, (Vector2){(float)game->world_w/2, (float)game->world_h/2})
+	);
 	for (int i = ENTITY_TYPE_PLAYER+1; i < ENTITY_TYPE_SPAWN_WARP; i++) {
-		Entity* entity = spawn_entity(game, ENTITY_TYPE_SPAWN_WARP, (Vector2){random() * (float)game->world_w, random() * (float)game->world_h});
-		entity->data.spawn_warp.spawn_type = i;
+		Uint32 entity_id = spawn_entity(game, ENTITY_TYPE_SPAWN_WARP, (Vector2){random() * (float)game->world_w, random() * (float)game->world_h});
+		if (entity_id) {
+			Entity* entity = get_entity(game, entity_id);
+			entity->data.spawn_warp.spawn_type = i;
+		}
 	}
 
 	game->player_state.current_weapon = PLAYER_WEAPON_MG;
@@ -235,7 +236,9 @@ int main(int argc, char* argv[]) {
 			game->player_controller.fire.held	&&
 			game->player_state.lives > 0
 			) {
-			game->player = spawn_entity(game, ENTITY_TYPE_PLAYER, (Vector2){(float)(float)game->world_w/2.0f, (float)(float)game->world_h/2.0f});
+			game->player = get_entity(game,
+				spawn_entity(game, ENTITY_TYPE_PLAYER, (Vector2){(float)(float)game->world_w/2.0f, (float)(float)game->world_h/2.0f})
+			);
 			game->player_state.lives--;
 		}
 

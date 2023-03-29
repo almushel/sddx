@@ -3,6 +3,6 @@
 
 #include "defs.h"
 
-Entity* spawn_entity(Game_State* game, Entity_Types type, Vector2 position);
+Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position);
 
 #endif

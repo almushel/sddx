@@ -33,6 +33,25 @@ float random(void) {
 	return result;
 }
 
+Vector2 scale_vector2(Vector2 v, float scalar) {
+	Vector2 result = v;
+
+	result.x *= scalar;
+	result.y *= scalar;
+
+	return result;
+}
+
+Vector2 normalize_vector2(Vector2 v) {
+	Vector2 result = v;
+
+	float magnitude = sqrtf( (v.x*v.x) + (v.y*v.y) );
+	result.x /= magnitude;
+	result.y /= magnitude;
+
+	return result;
+}
+
 Game_Poly2D translate_poly2d(Game_Poly2D polygon, Vector2 translation) {
 	Game_Poly2D result = {0};
 	result.vert_count = polygon.vert_count;
