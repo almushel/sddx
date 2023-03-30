@@ -4,7 +4,6 @@
 #include "assets.c"
 #include "particles.c"
 #include "entities.c"
-#include "entity_spawn.c"
 #include "hud.c"
 #include "score.c"
 
@@ -53,6 +52,8 @@ void load_game_assets(Game_State* game) {
 		Mix_AllocateChannels(32);
 		game_load_music(game, "assets/audio/WrappingAction.mp3", "Wrapping Action");
 		game_load_sfx(game, "assets/audio/PlayerShot.mp3", "Player Shot");
+		game_load_sfx(game, "assets/audio/PlayerSpawn.mp3", "Player Spawn");
+//		game_load_sfx(game, "assets/audio/WeaponPickup.mp3", "Weapon Pickup");
 //		game_load_sfx(game, "assets/audio/PlayerLaser.mp3", "Player Laser");
 //		game_load_sfx(game, "assets/audio/PlayerMissile.mp3", "Player Missile");
 	} else {
@@ -158,9 +159,6 @@ int main(int argc, char* argv[]) {
 	Game_Controller_State new_player_controller = {0};
 	
 	get_new_entity(game); // reserve 0
-	game->player = get_entity(game,
-		spawn_entity(game, ENTITY_TYPE_PLAYER, (Vector2){(float)game->world_w/2, (float)game->world_h/2})
-	);
 	for (int i = ENTITY_TYPE_PLAYER+1; i < ENTITY_TYPE_SPAWN_WARP; i++) {
 		Uint32 entity_id = spawn_entity(game, ENTITY_TYPE_SPAWN_WARP, (Vector2){random() * (float)game->world_w, random() * (float)game->world_h});
 		if (entity_id) {
@@ -237,8 +235,9 @@ int main(int argc, char* argv[]) {
 			game->player_state.lives > 0
 			) {
 			game->player = get_entity(game,
-				spawn_entity(game, ENTITY_TYPE_PLAYER, (Vector2){(float)(float)game->world_w/2.0f, (float)(float)game->world_h/2.0f})
+				spawn_entity(game, ENTITY_TYPE_PLAYER, (Vector2){(float)(float)game->world_w/2.0f, (float)(float)game->world_h})
 			);
+			Mix_PlayChannel(-1, game_get_sfx(game, "Player Spawn"), 0);
 			game->player_state.lives--;
 		}
 

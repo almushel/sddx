@@ -88,7 +88,7 @@ void render_draw_circle(SDL_Renderer* renderer, int cx, int cy, int r) {
 	SDL_free(y_used);
 }
 
-// TO-DO: Identify crash related to this.
+// TO-DO: Identify crash related to this. This function is bad.
 void render_draw_circlef(SDL_Renderer* renderer, float cx, float cy, float r) {
 	if (r <= 0) return;
 	SDL_FPoint points[4];
@@ -102,7 +102,8 @@ void render_draw_circlef(SDL_Renderer* renderer, float cx, float cy, float r) {
 
 	for (int x = 0; x <= ri; x++) {
 		float fx = (float)x;
-		float fy = SDL_sqrtf(r_squared - fx*fx);
+		float fy = (x == ri) ? 0 : SDL_sqrtf(r_squared - fx*fx);
+		fy = SDL_clamp(fy, 0, ri);
 
 		points[0] = (SDL_FPoint){cx + fx, cy + fy};
 		points[1] = (SDL_FPoint){cx + fx, cy - fy};
@@ -118,8 +119,9 @@ void render_draw_circlef(SDL_Renderer* renderer, float cx, float cy, float r) {
 	for (int y = 0; y <= ri; y++) {
 		if (y_used[y]) continue;
 		float fy = (float)y;
-		float fx = SDL_sqrtf(r_squared - fy*fy);
-
+		float fx = (y == ri) ? 0 : SDL_sqrtf(r_squared - fy*fy);
+		fy = SDL_clamp(fy, 0, ri);
+		
 		points[0] = (SDL_FPoint){cx + fx, cy + fy};
 		points[1] = (SDL_FPoint){cx + fx, cy - fy};
 		points[2] = (SDL_FPoint){cx - fx, cy + fy};
