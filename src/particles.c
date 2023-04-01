@@ -224,7 +224,7 @@ void explode_sprite(Game_State* game, Game_Sprite* sprite, float x, float y, flo
 
 	Game_Sprite* chunks = divide_sprite(game, sprite, pieces);
 
-	float radius = (chunks[0].rect.w + chunks[0].rect.h) / 2;
+	float radius = (chunks[0].src_rect.w + chunks[0].src_rect.h) / 2;
 	int cHalf = pieces / 2;
 
 	// Create explosion using chunks as particle sprites

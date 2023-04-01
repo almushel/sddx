@@ -67,7 +67,7 @@ void draw_player_lives(Game_State* game) {
 		
 		Game_Sprite player_lives_ship = {
 			.texture_name = "Player Ship",
-			.rotation = 1,
+			.rotation_enabled = 1,
 		};
 
 		Transform2D transform = {

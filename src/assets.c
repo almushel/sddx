@@ -170,8 +170,8 @@ define_game_get_asset(SDL_Texture, textures, texture)
 SDL_Rect get_sprite_rect(Game_State* game, Game_Sprite* sprite) {
 	SDL_Rect result = {0};
 
-	if (sprite->rect.w && sprite->rect.h) {
-		result = sprite->rect;
+	if (sprite->src_rect.w && sprite->src_rect.h) {
+		result = sprite->src_rect;
 	} else {
 		SDL_Texture* texture = 0;
 		if (sprite->texture_name) {
@@ -207,10 +207,11 @@ Game_Sprite* divide_sprite(Game_State* game, Game_Sprite* sprite, int pieces) {
 				Game_Sprite* chunk = result + next_sprite;
 
 				chunk->texture_name = sprite->texture_name;
-				chunk->rect.x  = chunk_width  * i;
-				chunk->rect.y  = chunk_height * e;
-				chunk->rect.w  = chunk_width;
-				chunk->rect.h  = chunk_height;
+				chunk->src_rect.x  = chunk_width  * i;
+				chunk->src_rect.y  = chunk_height * e;
+				chunk->src_rect.w  = chunk_width;
+				chunk->src_rect.h  = chunk_height;
+				chunk->offset.x = chunk->offset.y = 0;
 			
 				next_sprite++;
 			}

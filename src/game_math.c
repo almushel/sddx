@@ -1,4 +1,5 @@
 #include "defs.h"
+#include "game_math.h"
 
 #define SIMPLE_COLLISION_2D_IMPLEMENTATION
 #include "sc2d/src/sc2d.h"
@@ -48,6 +49,16 @@ Vector2 normalize_vector2(Vector2 v) {
 	float magnitude = sqrtf( (v.x*v.x) + (v.y*v.y) );
 	result.x /= magnitude;
 	result.y /= magnitude;
+
+	return result;
+}
+
+Vector2 rotate_vector2(Vector2 v, float degrees) {
+	Vector2 result = v;
+	if (degrees) {
+		result.x = v.x * cos_deg(degrees) - v.y * sin_deg(degrees);
+		result.y = v.x * sin_deg(degrees) + v.y * cos_deg(degrees);
+	}
 
 	return result;
 }

@@ -3,8 +3,13 @@
 
 #include "sc2d/src/sc2d.h"
 
+#define MATH_PI 3.14159265
+#define RAD_TO_DEG(rads) rads * (180/MATH_PI)
+#define DEG_TO_RAD(degs) degs * (MATH_PI/180)
+
 Vector2 normalize_vector2(Vector2 v);
 Vector2 scale_vector2(Vector2 v, float scalar);
+Vector2 rotate_vector2(Vector2 v, float degrees);
 
 Game_Poly2D translate_poly2d(Game_Poly2D polygon, Vector2 translation);
 

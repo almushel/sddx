@@ -4,10 +4,6 @@
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_mixer.h"
 
-#define MATH_PI 3.14159265
-#define RAD_TO_DEG(rads) rads * (180/MATH_PI)
-#define DEG_TO_RAD(degs) degs * (MATH_PI/180)
-
 typedef struct RGB_Color {uint8_t r, g, b;} RGB_Color;
 #define CLEAR_COLOR (RGB_Color){0,10,48}
 #define SD_BLUE (RGB_Color){109, 194, 255}
@@ -16,11 +12,6 @@ typedef struct RGB_Color {uint8_t r, g, b;} RGB_Color;
 
 #define TARGET_FPS 60
 #define TICK_RATE 60
-
-#define PHYSICS_FRICTION 0.02f
-#define PLAYER_FORWARD_THRUST 0.15f
-#define PLAYER_LATERAL_THRUST 0.2f
-#define PLAYER_TURN_SPEED 3.14f
 
 #define STAR_TWINKLE_INTERVAL 180.0f
 
@@ -61,8 +52,9 @@ typedef struct Game_Poly2D {
 
 typedef struct Game_Sprite {
 	char* texture_name;
-	SDL_Rect rect;
-	SDL_bool rotation;
+	SDL_Rect src_rect;
+	Vector2 offset;
+	SDL_bool rotation_enabled;
 } Game_Sprite;
 
 typedef enum Primitive_Shapes {
@@ -72,8 +64,8 @@ typedef enum Primitive_Shapes {
 	PRIMITIVE_SHAPE_COUNT,
 } Primitive_Shapes;
 
-typedef struct Mix_Music_Node 	{ char* name; Mix_Music* data; struct Mix_Music_Node* next; } Mix_Music_Node;
-typedef struct Mix_Chunk_Node 	{ char* name; Mix_Chunk* data; struct Mix_Chunk_Node* next; } Mix_Chunk_Node;
+typedef struct Mix_Music_Node 	{ char* name; Mix_Music* data; 	 struct Mix_Music_Node* next; 	} Mix_Music_Node;
+typedef struct Mix_Chunk_Node 	{ char* name; Mix_Chunk* data; 	 struct Mix_Chunk_Node* next; 	} Mix_Chunk_Node;
 typedef struct SDL_Texture_Node { char* name; SDL_Texture* data; struct SDL_Texture_Node* next; } SDL_Texture_Node;
 
 #include "stb/stb_truetype.h"
@@ -224,9 +216,20 @@ typedef struct Spawn_Warp_Entity_Data {
 	Uint32 spawn_type;
 } Spawn_Warp_Entity_Data;
 
-typedef union {
+typedef enum Turret_State {
+	TURRET_STATE_AIMING,
+	TURRET_STATE_FIRING,
+	TURRET_STATE_RECOVERING,
+} Turret_State;
+
+typedef struct Turret_Entity_Data {
+	Uint32 fire_state;
+} Turret_Entity_Data;
+
+typedef union Entity_Data {
 	Player_Entity_Data player;
 	Tracker_Entity_Data tracker;
+	Turret_Entity_Data turret;
 	Spawn_Warp_Entity_Data spawn_warp;
 } Entity_Data;
 

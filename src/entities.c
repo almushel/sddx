@@ -8,7 +8,11 @@
 #define ENTITY_WARP_RADIUS 20
 #define DEAD_ENTITY_MAX 16 // Maximum number of dead entities garbage collected per frame
 
-#define SPACE_FRICTION 0.02f
+#define PHYSICS_FRICTION 0.02f
+#define PLAYER_FORWARD_THRUST 0.15f
+#define PLAYER_LATERAL_THRUST 0.2f
+#define PLAYER_TURN_SPEED 3.14f
+
 #define THRUST_POWER 0.15f
 #define LATERAL_THRUST 0.2f
 #define TURN_RATE 0.025f
@@ -52,8 +56,8 @@
 #define TURRET_SHOT_LIFE 220
 #define TURRET_AIM_TOLERANCE 15
 #define TURRET_TURN_SPEED 1.2
-#define TURRET_FIRE_ANIM_SPEED 5 //83ms
-#define TURRET_RECOVERY_ANIM_SPEED 60 //500ms
+#define TURRET_FIRE_ANIM_SPEED 5.0f //83ms
+#define TURRET_RECOVERY_ANIM_SPEED 60.0f //500ms
 
 #define GRAPPLER_AIM_TOLERANCE 0.2
 #define GRAPPLER_TURN_SPEED 1.3
@@ -155,11 +159,6 @@ SDL_Texture* generate_item_texture(Game_State* game, SDL_Texture* icon) {
 		
 		SDL_RenderCopyExF(game->renderer, icon, NULL, &dest, 0, 0, SDL_FLIP_NONE);
 	}
-
-//		SDL_SetRenderDrawColor(game->renderer, 255, 255, 0, 255);
-//		SDL_RenderDrawLineF(game->renderer, (float)result_size/2.0f, 0, result_size/2.0f, result_size);
-//		SDL_RenderDrawLineF(game->renderer, 0, (float)result_size/2.0f, result_size, (float)result_size/2.0f);
-	
 		SDL_SetRenderTarget(game->renderer, 0);
 	}
 
@@ -272,7 +271,7 @@ Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 				entity->collision_radius = SHIP_RADIUS;
 				entity->angle = 270;
 				entity->sprites[0].texture_name = "Player Ship";
-				entity->sprites[0].rotation = 1;
+				entity->sprites[0].rotation_enabled = 1;
 				entity->sprite_count = 1;
 
 				entity->data.player.main_thruster  = 	get_new_particle_emitter(&game->particle_system);
@@ -306,7 +305,7 @@ Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 				entity->collision_radius = DRIFT_RADIUS;
 				entity->angle = random() * 360.0f;
 				entity->sprites[0].texture_name = "Enemy Drifter";
-				entity->sprites[0].rotation = 1;
+				entity->sprites[0].rotation_enabled = 1;
 				entity->sprite_count = 1;
 			} break;
 
@@ -320,7 +319,7 @@ Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 			case ENTITY_TYPE_ENEMY_TRACKER: {
 				entity->collision_radius = TRACKER_COLLISION_RADIUS;
 				entity->sprites[0].texture_name = "Enemy Tracker";
-				entity->sprites[0].rotation = 1;
+				entity->sprites[0].rotation_enabled = 1;
 				entity->sprite_count = 1;
 
 				entity->data.tracker.thruster = get_new_particle_emitter(&game->particle_system);
@@ -335,16 +334,16 @@ Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 				entity->collision_radius = TURRET_RADIUS;
 				entity->sprites[0].texture_name = "Enemy Turret Base";
 				entity->sprites[1].texture_name = "Enemy Turret Cannon";
-				entity->sprites[1].rotation = 1;
+				entity->sprites[1].rotation_enabled = 1;
 				entity->sprite_count = 2;
 			} break;
 			
 			case ENTITY_TYPE_ENEMY_GRAPPLER: {
 				entity->collision_radius = TURRET_RADIUS;
 				entity->sprites[0].texture_name = "Enemy Grappler";
-				entity->sprites[0].rotation = 1;
+				entity->sprites[0].rotation_enabled = 1;
 				entity->sprites[1].texture_name = "Grappler Hook";
-				entity->sprites[1].rotation = 1;
+				entity->sprites[1].rotation_enabled = 1;
 				entity->sprite_count = 2;
 			} break;
 
@@ -352,7 +351,7 @@ Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 				entity->team = ENTITY_TEAM_UNDEFINED;
 				entity->collision_radius = ITEM_RADIUS;
 				entity->sprites[0].texture_name = "Item Missile";
-				entity->sprites[0].rotation = 1;
+				entity->sprites[0].rotation_enabled = 1;
 				entity->sprite_count = 1;
 			} break;
 
@@ -360,7 +359,7 @@ Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 				entity->team = ENTITY_TEAM_UNDEFINED;
 				entity->collision_radius = ITEM_RADIUS;
 				entity->sprites[0].texture_name = "Item LifeUp";
-				entity->sprites[0].rotation = 1;
+				entity->sprites[0].rotation_enabled = 1;
 				entity->sprite_count = 1;
 			} break;
 
@@ -368,7 +367,7 @@ Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 				entity->team = ENTITY_TEAM_UNDEFINED;
 				entity->collision_radius = ITEM_RADIUS;
 				entity->sprites[0].texture_name = "Item Laser";
-				entity->sprites[0].rotation = 1;
+				entity->sprites[0].rotation_enabled = 1;
 				entity->sprite_count = 1;
 			}
 
@@ -668,52 +667,75 @@ void update_entities(Game_State* game, float dt) {
 				} break;
 				
 				case ENTITY_TYPE_ENEMY_TURRET:{
-					Entity* target = get_enemy_target(game);
-					if (target) {
-						float delta_x = target->x - entity->x;
-						float delta_y = target->y - entity->y;
+					
+					switch(entity->data.turret.fire_state) {
+						case TURRET_STATE_AIMING: {
+							Entity* target = get_enemy_target(game);
+							if (target) {
+								float delta_x = target->x - entity->x;
+								float delta_y = target->y - entity->y;
 
-						float angle_delta = delta_x * sin_deg(entity->angle) - delta_y * cos_deg(entity->angle);
+								float angle_delta = delta_x * sin_deg(entity->angle) - delta_y * cos_deg(entity->angle);
 
-						if (angle_delta < -TURRET_AIM_TOLERANCE) {
-							entity->angle += TURRET_TURN_SPEED * dt;
-						} else if (angle_delta > TURRET_AIM_TOLERANCE) {
-							entity->angle -= TURRET_TURN_SPEED * dt;
-						} else if (entity->timer <= 0) {
-							Vector2 position = {
-								entity->position.x + cos_deg(entity->angle) * TURRET_RADIUS,
-								entity->position.y + sin_deg(entity->angle) * TURRET_RADIUS
-							};
-							
-							Vector2 velocity = {
-								cos_deg(entity->angle) * TURRET_SHOT_SPEED,
-								sin_deg(entity->angle) * TURRET_SHOT_SPEED
-							};
-							
-							float shot_offset_angle = normalize_degrees(entity->angle - 90.0f);
-							for (int i = 0; i < 2; i++) {
-								Uint32 new_shot_id = spawn_entity(game, ENTITY_TYPE_BULLET, position);
+								if (angle_delta < -TURRET_AIM_TOLERANCE) {
+									entity->angle += TURRET_TURN_SPEED * dt;
+								} else if (angle_delta > TURRET_AIM_TOLERANCE) {
+									entity->angle -= TURRET_TURN_SPEED * dt;
+								} else if (entity->timer <= 0) {
+									Vector2 position = {
+										entity->position.x + cos_deg(entity->angle) * TURRET_RADIUS,
+										entity->position.y + sin_deg(entity->angle) * TURRET_RADIUS
+									};
+									
+									Vector2 velocity = {
+										cos_deg(entity->angle) * TURRET_SHOT_SPEED,
+										sin_deg(entity->angle) * TURRET_SHOT_SPEED
+									};
+									
+									float shot_offset_angle = normalize_degrees(entity->angle - 90.0f);
+									for (int i = 0; i < 2; i++) {
+										Uint32 new_shot_id = spawn_entity(game, ENTITY_TYPE_BULLET, position);
 
-								if (new_shot_id){
-									Entity* new_shot = get_entity(game, new_shot_id);
-									new_shot->x += cos_deg(shot_offset_angle) * TURRET_RADIUS;
-									new_shot->y += sin_deg(shot_offset_angle) * TURRET_RADIUS;
-									new_shot->velocity = velocity;
-									new_shot->collision_radius = TURRET_SHOT_RADIUS;
-									new_shot->timer = TURRET_SHOT_LIFE;
+										if (new_shot_id){
+											Entity* new_shot = get_entity(game, new_shot_id);
+											new_shot->x += cos_deg(shot_offset_angle) * TURRET_RADIUS;
+											new_shot->y += sin_deg(shot_offset_angle) * TURRET_RADIUS;
+											new_shot->velocity = velocity;
+											new_shot->collision_radius = TURRET_SHOT_RADIUS;
+											new_shot->timer = TURRET_SHOT_LIFE;
 
-									shot_offset_angle = normalize_degrees(shot_offset_angle + 180.0f);
+											shot_offset_angle = normalize_degrees(shot_offset_angle + 180.0f);
+										}
+									}
+								
+									entity->timer = TURRET_FIRE_ANIM_SPEED;
+									entity->data.turret.fire_state = TURRET_STATE_FIRING;
 								}
 							}
+						} break;
 
-							
-		
-						
-							entity->timer = TURRET_FIRE_ANIM_SPEED + TURRET_RECOVERY_ANIM_SPEED;
-						}
+						case TURRET_STATE_FIRING : {
+							float t = entity->timer / (float)TURRET_FIRE_ANIM_SPEED;
+							entity->sprites[1].offset.x = 0.0f;
+							entity->sprites[1].offset.x -= (float)TURRET_RADIUS - lerp(0, TURRET_RADIUS, t);
+							if (entity->timer <= 0) {
+								entity->data.turret.fire_state = TURRET_STATE_RECOVERING;
+								entity->timer = TURRET_RECOVERY_ANIM_SPEED;
+							}
+						} break;
+
+						case TURRET_STATE_RECOVERING: {
+							float t = entity->timer / (float)TURRET_RECOVERY_ANIM_SPEED;
+							entity->sprites[1].offset.x = 0;
+							entity->sprites[1].offset.x -= lerp(0, TURRET_RADIUS, t);
+							if (entity->timer <= 0) {
+								entity->sprites[1].offset.x = 0;
+								entity->data.turret.fire_state = TURRET_STATE_AIMING;
+								entity->timer = 0;
+							}
+						} break;
 					}
-
-					// update fire animation
+					
 				} break;
 				
 				case ENTITY_TYPE_ENEMY_GRAPPLER:{

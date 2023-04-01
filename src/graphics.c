@@ -248,6 +248,12 @@ void render_draw_game_sprite(Game_State* game, Game_Sprite* sprite, Transform2D 
 		dest_rect.h = (float)sprite_rect.h;
 
 		if (transform.sx > 0.0f && transform.sy > 0.0f) {
+			float angle = transform.angle * (float)(int)sprite->rotation_enabled;
+			Vector2 offset = rotate_vector2(sprite->offset, angle);
+
+			if (offset.x) dest_rect.x += offset.x * transform.sx;
+			if (offset.y) dest_rect.y += offset.y * transform.sy;
+
 			dest_rect.w *= transform.sx;
 			dest_rect.h *= transform.sy;
 
@@ -256,7 +262,7 @@ void render_draw_game_sprite(Game_State* game, Game_Sprite* sprite, Transform2D 
 				dest_rect.y -= dest_rect.h/2.0f;
 			}
 
-			SDL_RenderCopyExF(game->renderer, texture, &sprite_rect, &dest_rect, transform.angle * (float)(int)sprite->rotation, 0, SDL_FLIP_NONE);
+			SDL_RenderCopyExF(game->renderer, texture, &sprite_rect, &dest_rect, angle, 0, SDL_FLIP_NONE);
 		}
 	}
 }
