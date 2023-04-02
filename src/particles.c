@@ -134,7 +134,7 @@ void randomize_particle(Particle* p, RGB_Color* colors, Uint32 color_count) {
 	p->vy = sin_deg(angle) * (float)PARTICLE_SPEED;
 }
 
-void explode_at_point(Particle_System* ps, float x, float y, float force, RGB_Color* colors, Uint32 num_colors, Game_Sprite* sprite, Primitive_Shapes shape) {
+void explode_at_point(Particle_System* ps, float x, float y, RGB_Color* colors, Uint32 num_colors, Game_Sprite* sprite, Primitive_Shapes shape) {
 //	if (force != 0) {force_circle(x, x, 120, force); }
 	for (int p = 0; p < EXPLOSION_STARTING_PARTICLES; p++) {
 		Uint32 id = spawn_particle(ps, sprite, shape);
@@ -222,6 +222,8 @@ void explode_sprite(Game_State* game, Game_Sprite* sprite, float x, float y, flo
 	float angle_division = 360.0f / (float)pieces;
 	float random_deviation = 0;//angle_division * 1.8;
 
+	Vector2 sprite_offset = rotate_vector2(sprite->offset, angle);
+
 	Game_Sprite* chunks = divide_sprite(game, sprite, pieces);
 
 	float radius = (chunks[0].src_rect.w + chunks[0].src_rect.h) / 2;
@@ -243,8 +245,8 @@ void explode_sprite(Game_State* game, Game_Sprite* sprite, float x, float y, flo
 			particle->collision_radius = radius;
 			particle->timer = PARTICLE_LIFETIME;
 			particle->angle = angle;
-			particle->x = x;
-			particle->y = y;
+			particle->x = x + sprite_offset.x;
+			particle->y = y + sprite_offset.y;
 			particle->vx = vx;
 			particle->vy = vy;
 		}

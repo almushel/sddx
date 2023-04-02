@@ -171,68 +171,6 @@ typedef struct Score_System {
 
 } Score_System;
 
-typedef enum Entity_Types {
-	ENTITY_TYPE_UNDEFINED,
-	ENTITY_TYPE_PLAYER,
-	ENTITY_TYPE_BULLET,
-	ENTITY_TYPE_ENEMY_DRIFTER,
-	ENTITY_TYPE_ENEMY_UFO,
-	ENTITY_TYPE_ENEMY_TRACKER,
-	ENTITY_TYPE_ENEMY_TURRET,
-	ENTITY_TYPE_ENEMY_GRAPPLER,
-	ENTITY_TYPE_ITEM_MISSILE,
-	ENTITY_TYPE_ITEM_LIFEUP,
-	ENTITY_TYPE_ITEM_LASER,
-	ENTITY_TYPE_SPAWN_WARP,
-	ENTITY_TYPE_COUNT
-} Entity_Types;
-
-typedef enum Entity_States {
-	ENTITY_STATE_UNDEFINED,
-	ENTITY_STATE_SPAWNING,
-	ENTITY_STATE_ACTIVE,
-	ENTITY_STATE_DESPAWNING,
-	ENTITY_STATE_DYING,
-	ENTITY_STATE_COUNT,
-} Entity_States;
-
-typedef enum Entity_Teams {
-	ENTITY_TEAM_UNDEFINED = 0,
-	ENTITY_TEAM_PLAYER,
-	ENTITY_TEAM_ENEMY,
-} Entity_Teams;
-
-typedef struct Player_Entity_Data {
-	Uint32 main_thruster;
-	Uint32 left_thruster;
-	Uint32 right_thruster;
-} Player_Entity_Data;
-
-typedef struct Tracker_Entity_Data {
-	Uint32 thruster;
-} Tracker_Entity_Data;
-
-typedef struct Spawn_Warp_Entity_Data {
-	Uint32 spawn_type;
-} Spawn_Warp_Entity_Data;
-
-typedef enum Turret_State {
-	TURRET_STATE_AIMING,
-	TURRET_STATE_FIRING,
-	TURRET_STATE_RECOVERING,
-} Turret_State;
-
-typedef struct Turret_Entity_Data {
-	Uint32 fire_state;
-} Turret_Entity_Data;
-
-typedef union Entity_Data {
-	Player_Entity_Data player;
-	Tracker_Entity_Data tracker;
-	Turret_Entity_Data turret;
-	Spawn_Warp_Entity_Data spawn_warp;
-} Entity_Data;
-
 typedef struct Entity {
 	Transform2D_Union;
 	float z;
@@ -243,13 +181,16 @@ typedef struct Entity {
 
 	Game_Sprite sprites[4];
 	Uint32 sprite_count;
-
-	Entity_Data data;
-	RGB_Color color;
 	Primitive_Shapes shape;
-	Entity_Types type;
-	Entity_States state;
-	Entity_Teams team;
+	RGB_Color color;
+
+	Uint32 particle_emitters[3];
+	Uint8 emitter_count;
+	
+	Uint8 type;
+	Uint8 state;
+	Uint8 team;
+	Uint8 type_data;
 } Entity;
 
 typedef struct Game_State {

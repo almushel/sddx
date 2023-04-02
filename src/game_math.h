@@ -10,6 +10,7 @@
 Vector2 normalize_vector2(Vector2 v);
 Vector2 scale_vector2(Vector2 v, float scalar);
 Vector2 rotate_vector2(Vector2 v, float degrees);
+float dot_product_vector2(Vector2 v1, Vector2 v2);
 
 Game_Poly2D translate_poly2d(Game_Poly2D polygon, Vector2 translation);
 

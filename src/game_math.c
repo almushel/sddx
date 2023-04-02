@@ -63,6 +63,12 @@ Vector2 rotate_vector2(Vector2 v, float degrees) {
 	return result;
 }
 
+float dot_product_vector2(Vector2 v1, Vector2 v2) {
+	float result = v1.x * v2.x + v1.y * v2.y;
+
+	return result;
+}
+
 Game_Poly2D translate_poly2d(Game_Poly2D polygon, Vector2 translation) {
 	Game_Poly2D result = {0};
 	result.vert_count = polygon.vert_count;
