@@ -21,10 +21,8 @@ void update_particles(Particle_System* ps, float dt) {
 	for (int p = 0; p < ps->particle_count; p++) {
 		Particle* particle = ps->particles + p;
 		
-		if (random() * 100 > 50){
+		if (random() * 100 > 50) {
 			particle->timer -= PARTICLE_DECAY * dt;
-			particle->sx = particle->sy = SDL_clamp(particle->timer / PARTICLE_LIFETIME, PARTICLE_MIN_SCALE, 1.0f);
-			if (particle->collision_radius < 0) particle->collision_radius = 0;
 		}
 		
 		if (particle->timer <= 0 && dead_particle_count < array_length(dead_particles)) {
@@ -49,32 +47,37 @@ void draw_particles(Game_State* game, SDL_Renderer* renderer) {
 	for (int p = 0; p < ps->particle_count; p++) {
 		Particle particle = ps->particles[p];
 		if (particle.timer <= 0) continue;
+
+		float scale = SDL_clamp(particle.timer / (float)PARTICLE_LIFETIME, 0.0f, 1.0f);
+
+		particle.sx = scale;
+		particle.sy = scale;
+
 		if (particle.sprite.texture_name) {
 			render_draw_game_sprite(game, &particle.sprite, particle.transform, 1);
 		} else {
-			switch (particle.shape) {
-//				case PRIMITIVE_SHAPE_RECT:
-				default: {
-					SDL_SetRenderDrawColor(renderer, particle.color.r, particle.color.g, particle.color.b, 255);
-					
-					float scaled_radius = particle.collision_radius * (particle.sx + particle.sy) / 2;
-
-					SDL_FRect p_rect;
-					p_rect.x = particle.x - scaled_radius;
-					p_rect.y = particle.y - scaled_radius;
-					p_rect.w = scaled_radius*2.0f;
-					p_rect.h = p_rect.w;
-
-					SDL_RenderFillRectF(renderer, &p_rect);
-				} break;
-			}
+			render_fill_game_shape(renderer, (Vector2){particle.x, particle.y}, scale_game_shape(particle.shape, particle.scale), particle.color);
 		}
 	}
 }
 
-void init_particle(Particle* p) {
+void init_particle(Particle* p, Game_Shape_Types shape) {
 	*p = (Particle) {0};
-	p->collision_radius = PARTICLE_MAX_START_RADIUS,
+	switch(shape) {
+		case SHAPE_TYPE_RECT: 	{
+			p->shape.rectangle.x = -PARTICLE_MAX_START_RADIUS;
+			p->shape.rectangle.y = -PARTICLE_MAX_START_RADIUS;
+			p->shape.rectangle.w = (float)PARTICLE_MAX_START_RADIUS*2.0f;
+			p->shape.rectangle.h = (float)PARTICLE_MAX_START_RADIUS*2.0f;
+		} break;
+		
+		case SHAPE_TYPE_CIRCLE: {
+			p->shape.radius = PARTICLE_MAX_START_RADIUS;
+		} break;
+
+		case SHAPE_TYPE_POLY2D: {} break;
+	}
+	p->shape.type = shape;
 	p->timer = PARTICLE_LIFETIME,
 	p->color = DEFAULT_PARTICLE_COLOR,
 	p->sx = p->sy = 1.0f;
@@ -92,13 +95,12 @@ Uint32 get_new_particle(Particle_System* ps) {
 	return result;
 }
 
-Uint32 spawn_particle(Particle_System* ps, Game_Sprite* sprite, Primitive_Shapes shape) {
+Uint32 spawn_particle(Particle_System* ps, Game_Sprite* sprite, Game_Shape_Types shape) {
 	Uint32 result = get_new_particle(ps);
 	if (result) {
 		Particle* particle = ps->particles + result;
-		init_particle(particle);
+		init_particle(particle, shape);
 		if (sprite) particle->sprite = *sprite;
-		particle->shape = shape;
 	}
 
 	return result;
@@ -128,13 +130,41 @@ static RGB_Color random_color(RGB_Color* colors, Uint32 color_count) {
 
 void randomize_particle(Particle* p, RGB_Color* colors, Uint32 color_count) {
 	float angle = random() * 360.0f;
-	p->collision_radius = random_particle_radius();
+
+	float radius = random_particle_radius();
+	switch(p->shape.type) {
+		case SHAPE_TYPE_CIRCLE: {
+			p->shape.radius = radius;
+		} break;
+		
+		case SHAPE_TYPE_RECT: {
+			p->shape.rectangle.x = -radius;
+			p->shape.rectangle.y = -radius;
+			p->shape.rectangle.w =  radius*2;
+			p->shape.rectangle.h =  radius*2;
+		} break;
+
+		case SHAPE_TYPE_POLY2D: {
+			int vert_count = SDL_clamp(3 + (random() * 5.0f), 3, MAX_POLY2D_VERTS);
+			float angle_increment = 360.0f / (float)vert_count;
+
+			float angle = 0;
+			for (int v = 0; v < vert_count; v++) {
+				p->shape.polygon.vertices[v] = (Vector2) {
+					cos_deg(angle) * random_particle_radius(),
+					sin_deg(angle) * random_particle_radius(),
+				};
+
+				angle += angle_increment;
+			}
+		} break;
+	}
 	p->color = random_color(colors, color_count); 
 	p->vx = cos_deg(angle) * (float)PARTICLE_SPEED;
 	p->vy = sin_deg(angle) * (float)PARTICLE_SPEED;
 }
 
-void explode_at_point(Particle_System* ps, float x, float y, RGB_Color* colors, Uint32 num_colors, Game_Sprite* sprite, Primitive_Shapes shape) {
+void explode_at_point(Particle_System* ps, float x, float y, RGB_Color* colors, Uint32 num_colors, Game_Sprite* sprite, Game_Shape_Types shape) {
 //	if (force != 0) {force_circle(x, x, 120, force); }
 	for (int p = 0; p < EXPLOSION_STARTING_PARTICLES; p++) {
 		Uint32 id = spawn_particle(ps, sprite, shape);
@@ -198,12 +228,11 @@ void update_particle_emitters(Particle_System* ps, float dt) {
 		if (emitter->counter >= 1.0f) {
 			int particles_to_emit = (int)emitter->counter;
 			while (particles_to_emit) {
-				Uint32 id = spawn_particle(ps, 0, 0);
+				Uint32 id = spawn_particle(ps, 0, emitter->shape);
 				if (id) {
 					Particle* p = ps->particles + id;
 					randomize_particle(p, emitter->colors, emitter->color_count);
-					//p->collision_radius *= emitter->scale;
-
+					
 					p->x = emitter->x;
 					p->y = emitter->y;
 
@@ -231,7 +260,7 @@ void explode_sprite(Game_State* game, Game_Sprite* sprite, float x, float y, flo
 
 	// Create explosion using chunks as particle sprites
 	for (int chunk_index = 0; chunk_index < pieces; chunk_index++) {
-		Uint32 particle_id = spawn_particle(&game->particle_system, chunks + chunk_index, 0);
+		Uint32 particle_id = spawn_particle(&game->particle_system, chunks + chunk_index, SHAPE_TYPE_CIRCLE);
 		if (particle_id) {
 			const float random_deviation = 30.0f;
 
@@ -242,7 +271,6 @@ void explode_sprite(Game_State* game, Game_Sprite* sprite, float x, float y, flo
 
 			Particle* particle = game->particle_system.particles + particle_id;
 			randomize_particle(particle, 0, 0);
-			particle->collision_radius = radius;
 			particle->timer = PARTICLE_LIFETIME;
 			particle->angle = angle;
 			particle->x = x + sprite_offset.x;

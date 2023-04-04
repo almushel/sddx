@@ -120,10 +120,15 @@ void force_circle(Entity* entities, Uint32 enitty_count, float x, float y, float
 	float deltaY = 0;
 	float deltaAng = 0;
 
+	Game_Shape force_shape = {
+		.type = SHAPE_TYPE_CIRCLE,
+		.radius = radius,
+	};
 
 	Vector2 overlap;
-	for (int i = 0; i < enitty_count; i++) {
-		if (/*entities[i].mass > 0 && */sc2d_check_circles(x, y, radius, entities[i].x, entities[i].y, entities[i].collision_radius, &overlap.x, &overlap.y)) {
+	for (int i = 1; i < enitty_count; i++) {
+		Entity* entity = entities + i;
+		if (/*entities[i].mass > 0 && */check_shape_collision((Vector2){x, y}, force_shape, entity->position, scale_game_shape(entity->shape, entity->scale), &overlap)) {
 			overlap = normalize_vector2(overlap);
 
 			entities[i].vx += overlap.x * force;
@@ -228,7 +233,7 @@ SDL_Texture* generate_item_texture(Game_State* game, SDL_Texture* icon) {
 	return result;
 }
 
-float get_entity_score_value(Entity_Types type) {
+static inline float get_entity_score_value(Entity_Types type) {
 	float result = 0.0f;
 	switch(type) {
 		case ENTITY_TYPE_ENEMY_DRIFTER: {result = 0.25; } break;
@@ -248,24 +253,29 @@ Vector2 get_clear_spawn(Game_State* game, float radius, SDL_Rect boundary) {
 		.y = (boundary.y + radius) + random() * (boundary.y + boundary.h - radius),
 	};
 
+	Game_Shape spawn_area = {
+		.type = SHAPE_TYPE_CIRCLE,
+		.radius = radius,
+	};
+
 	Vector2 overlap = {0};
 	Entity* entities = game->entities;
-	for (int i = 0; i < game->entity_count; i++) {
-		if (sc2d_check_circles(result.x, result.y, radius,
-			entities[i].x, entities[i].y, entities[i].collision_radius, &overlap.x, &overlap.y)) {
+	for (int i = 1; i < game->entity_count; i++) {
+		Game_Shape entity_shape = scale_game_shape(entities[i].shape, entities[i].scale);
+		if (check_shape_collision(result, spawn_area, entities[i].position, entity_shape, &overlap)) {
 
 			result.x -= overlap.x;
 			result.y -= overlap.y;
 		}
 	}
-
+/*
 	if (game->player) {
-		if (sc2d_check_circles(result.x, result.y, radius, game->player->x, game->player->y, game->player->collision_radius, &overlap.x, &overlap.y)) {
+		if (sc2d_check_circles(result.x, result.y, radius, game->player->x, game->player->y, game->player->radius, &overlap.x, &overlap.y)) {
 			result.x -= overlap.x;
 			result.y -= overlap.y;
 		}
 	}
-
+*/
 	return result;
 }
 
@@ -308,6 +318,7 @@ Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 		entity->type = type;
 		entity->position = position;
 		entity->scale.x = entity->scale.y = 1.0f;
+		entity->shape.type = SHAPE_TYPE_CIRCLE;
 		entity->timer = ENTITY_WARP_DELAY;
 		entity->state = ENTITY_STATE_SPAWNING;
 		entity->team = ENTITY_TEAM_ENEMY;
@@ -315,7 +326,7 @@ Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 		switch(type) {
 			case ENTITY_TYPE_PLAYER: {
 				entity->team = ENTITY_TEAM_PLAYER;
-				entity->collision_radius = SHIP_RADIUS;
+				entity->shape.radius = SHIP_RADIUS;
 				entity->angle = 270;
 				entity->sprites[0].texture_name = "Player Ship";
 				entity->sprites[0].rotation_enabled = 1;
@@ -326,6 +337,7 @@ Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 					entity->particle_emitters[i] = get_new_particle_emitter(&game->particle_system);
 					*get_particle_emitter(&game->particle_system, entity->particle_emitters[i]) =
 						(Particle_Emitter) {
+							.shape = SHAPE_TYPE_RECT,
 							.density = 2.0f,
 							.colors[0] = SD_BLUE,
 							.color_count = 1,
@@ -334,14 +346,13 @@ Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 			} break;
 
 			case ENTITY_TYPE_BULLET: {
-				entity->collision_radius = PLAYER_SHOT_RADIUS;
+				entity->shape.radius = PLAYER_SHOT_RADIUS;
 				entity->state = ENTITY_STATE_ACTIVE;
-				entity->shape = PRIMITIVE_SHAPE_CIRCLE;
 				entity->color = (RGB_Color){255, 150, 50};
 			} break;
 
 			case ENTITY_TYPE_ENEMY_DRIFTER: {
-				entity->collision_radius = DRIFT_RADIUS;
+				entity->shape.radius = DRIFT_RADIUS;
 				entity->angle = random() * 360.0f;
 				entity->sprites[0].texture_name = "Enemy Drifter";
 				entity->sprites[0].rotation_enabled = 1;
@@ -349,14 +360,14 @@ Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 			} break;
 
 			case ENTITY_TYPE_ENEMY_UFO: {
-				entity->collision_radius = UFO_COLLISION_RADIUS;
+				entity->shape.radius = UFO_COLLISION_RADIUS;
 				entity->angle = entity->target_angle = random() * 360.0f;
 				entity->sprites[0].texture_name = "Enemy UFO";
 				entity->sprite_count = 1;
 			} break;
 			
 			case ENTITY_TYPE_ENEMY_TRACKER: {
-				entity->collision_radius = TRACKER_COLLISION_RADIUS;
+				entity->shape.radius = TRACKER_COLLISION_RADIUS;
 				entity->sprites[0].texture_name = "Enemy Tracker";
 				entity->sprites[0].rotation_enabled = 1;
 				entity->sprite_count = 1;
@@ -364,6 +375,7 @@ Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 				entity->particle_emitters[0] = get_new_particle_emitter(&game->particle_system);
 				entity->emitter_count = 1;
 				Particle_Emitter* thruster = get_particle_emitter(&game->particle_system, entity->particle_emitters[0]);
+				thruster->shape= SHAPE_TYPE_RECT,
 				thruster->angle = 180;
 				thruster->density = 1.5f;
 				thruster->colors[0] = (RGB_Color){255, 0, 0};
@@ -371,7 +383,7 @@ Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 			} break;
 
 			case ENTITY_TYPE_ENEMY_TURRET: {
-				entity->collision_radius = TURRET_RADIUS;
+				entity->shape.radius = TURRET_RADIUS;
 				entity->sprites[0].texture_name = "Enemy Turret Base";
 				entity->sprites[1].texture_name = "Enemy Turret Cannon";
 				entity->sprites[1].rotation_enabled = 1;
@@ -379,7 +391,7 @@ Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 			} break;
 			
 			case ENTITY_TYPE_ENEMY_GRAPPLER: {
-				entity->collision_radius = TURRET_RADIUS;
+				entity->shape.radius = TURRET_RADIUS;
 				entity->sprites[0].texture_name = "Enemy Grappler";
 				entity->sprites[0].rotation_enabled = 1;
 				entity->sprites[1].texture_name = "Grappler Hook";
@@ -389,7 +401,7 @@ Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 
 			case ENTITY_TYPE_ITEM_MISSILE: {
 				entity->team = ENTITY_TEAM_UNDEFINED;
-				entity->collision_radius = ITEM_RADIUS;
+				entity->shape.radius = ITEM_RADIUS;
 				entity->sprites[0].texture_name = "Item Missile";
 				entity->sprites[0].rotation_enabled = 1;
 				entity->sprite_count = 1;
@@ -397,7 +409,7 @@ Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 
 			case ENTITY_TYPE_ITEM_LIFEUP: {
 				entity->team = ENTITY_TEAM_UNDEFINED;
-				entity->collision_radius = ITEM_RADIUS;
+				entity->shape.radius = ITEM_RADIUS;
 				entity->sprites[0].texture_name = "Item LifeUp";
 				entity->sprites[0].rotation_enabled = 1;
 				entity->sprite_count = 1;
@@ -405,16 +417,15 @@ Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 
 			case ENTITY_TYPE_ITEM_LASER: {
 				entity->team = ENTITY_TEAM_UNDEFINED;
-				entity->collision_radius = ITEM_RADIUS;
+				entity->shape.radius = ITEM_RADIUS;
 				entity->sprites[0].texture_name = "Item Laser";
 				entity->sprites[0].rotation_enabled = 1;
 				entity->sprite_count = 1;
 			}
 
 			case ENTITY_TYPE_SPAWN_WARP: {
-				entity->collision_radius = ENTITY_WARP_RADIUS;
+				entity->shape.radius = ENTITY_WARP_RADIUS;
 				entity->team = ENTITY_TEAM_UNDEFINED;
-				entity->shape = PRIMITIVE_SHAPE_CIRCLE;
 				entity->color = SD_BLUE;
 			} break;
 		}
@@ -511,7 +522,7 @@ void update_entities(Game_State* game, float dt) {
 
 				entity->y -= (8.0f - lerp(0.0f, 6.0f, t)) * dt;
 				entity->sx = entity->sy = t;
-				entity->collision_radius = ts * SHIP_RADIUS;
+				entity->shape.radius = ts * SHIP_RADIUS;
 
 				force_circle(game->entities, game->entity_count, entity->x, entity->y, entity->sx * SHIP_RADIUS * 3.0f, 0.25);
 
@@ -520,7 +531,7 @@ void update_entities(Game_State* game, float dt) {
 //					transitionHUD(-1);
 					entity->state = ENTITY_STATE_ACTIVE;
 					entity->scale = (Vector2){1.0f, 1.0f};
-					entity->collision_radius = SHIP_RADIUS;// * 2.0f;
+					entity->shape.radius = SHIP_RADIUS;// * 2.0f;
 					entity->velocity = (Vector2){0};
 					entity->timer = 0;
 				}
@@ -687,8 +698,8 @@ void update_entities(Game_State* game, float dt) {
 
 						if (thruster && thruster->state == 1) {
 							thruster->angle = entity->angle + 180;
-							thruster->x = entity->x + cos_deg(thruster->angle);// * (entity->collision_radius + PARTICLE_MAX_START_RADIUS) / 2.0f;
-							thruster->y = entity->y + sin_deg(thruster->angle);// * (entity->collision_radius + PARTICLE_MAX_START_RADIUS) / 2.0f;
+							thruster->x = entity->x + cos_deg(thruster->angle);// * (entity->shape.radius + PARTICLE_MAX_START_RADIUS) / 2.0f;
+							thruster->y = entity->y + sin_deg(thruster->angle);// * (entity->shape.radius + PARTICLE_MAX_START_RADIUS) / 2.0f;
 						}
 
 						entity->vx += cos_deg(entity->angle) * acceleration_speed * dt;
@@ -724,7 +735,8 @@ void update_entities(Game_State* game, float dt) {
 											new_shot->x += cos_deg(shot_offset_angle) * TURRET_RADIUS;
 											new_shot->y += sin_deg(shot_offset_angle) * TURRET_RADIUS;
 											new_shot->velocity = velocity;
-											new_shot->collision_radius = TURRET_SHOT_RADIUS;
+											new_shot->shape.type = SHAPE_TYPE_CIRCLE;
+											new_shot->shape.radius = TURRET_SHOT_RADIUS;
 											new_shot->timer = TURRET_SHOT_LIFE;
 
 											shot_offset_angle = normalize_degrees(shot_offset_angle + 180.0f);
@@ -786,7 +798,7 @@ void update_entities(Game_State* game, float dt) {
 
 							Vector2 overlap = {0};
 							if (target && sc2d_check_circles(hook_position.x, hook_position.y, (float)TURRET_RADIUS / 1.5f,
-												   			 target->x, target->y, target->collision_radius,
+												   			 target->x, target->y, target->shape.radius,
 												   			 &overlap.x, &overlap.y)) {
 									
 									entity->type_data = GRAPPLER_STATE_REELING;
@@ -875,8 +887,8 @@ void update_entities(Game_State* game, float dt) {
 					if (collision_entity->state != ENTITY_STATE_ACTIVE || collision_entity->type == ENTITY_TYPE_SPAWN_WARP) continue;
 					
 					Vector2 overlap = {0};
-					if (sc2d_check_circles(entity->position.x, entity->position.y, entity->collision_radius, 
-											collision_entity->position.x, collision_entity->position.y, collision_entity->collision_radius,
+					if (sc2d_check_circles(entity->position.x, entity->position.y, entity->shape.radius, 
+											collision_entity->position.x, collision_entity->position.y, collision_entity->shape.radius,
 											&overlap.x, &overlap.y)) {
 
 						if (entity_is_item(entity->type) && collision_entity->type == ENTITY_TYPE_PLAYER) {
@@ -899,14 +911,13 @@ void update_entities(Game_State* game, float dt) {
 				}
 			}
 
+			Game_Shape entity_shape = scale_game_shape(entity->shape, entity->scale);
 			for (int particle_index = 0; particle_index < game->particle_system.particle_count; particle_index++) {
 				Particle* particle = game->particle_system.particles + particle_index;
 				Vector2 overlap = {0};
+				Game_Shape particle_shape = scale_game_shape(particle->shape, particle->scale);
 
-				if ((particle->parent != entity_index) && 
-					sc2d_check_circles(	entity->position.x, entity->position.y, entity->collision_radius, 
-										particle->position.x, particle->position.y, particle->collision_radius,
-										&overlap.x, &overlap.y)) {
+				if ( check_shape_collision(particle->position, particle_shape, entity->position, entity_shape, &overlap)) {
 					particle->x += overlap.x;
 					particle->y += overlap.y;
 
@@ -954,7 +965,7 @@ void update_entities(Game_State* game, float dt) {
 			}
 
 			if (dead_entity->team == ENTITY_TEAM_ENEMY) {
-				force_circle(game->entities, game->entity_count, dead_entity->x, dead_entity->y, dead_entity->collision_radius * 5.0f, 1.5f);
+				force_circle(game->entities, game->entity_count, dead_entity->x, dead_entity->y, dead_entity->shape.radius * 5.0f, 1.5f);
 				float value = get_entity_score_value(dead_entity->type);
 				add_score(game, value);
 				//random_item_spawn(game, dead_entity->position, value);
@@ -988,41 +999,19 @@ void draw_entities(Game_State* game) {
 		entity = game->entities + entity_index;
 		if (entity->state <= 0 || entity->state >= ENTITY_STATE_DYING) continue;
 
-		if (entity->shape > PRIMITIVE_SHAPE_UNDEFINED && entity->shape < PRIMITIVE_SHAPE_COUNT) {
-			switch (entity->shape) {
-
-				case PRIMITIVE_SHAPE_CIRCLE: {
-					float scaled_radius = entity->collision_radius * (entity->transform.scale.x + entity->transform.scale.y) / 2.0f;
-					SDL_SetRenderDrawColor(game->renderer, entity->color.r, entity->color.g, entity->color.b, 255);
-					render_fill_circlef(game->renderer, entity->x, entity->y, scaled_radius);
-					//render_fill_circlef_linear_gradient(game->renderer, entity->x, entity->y, scaled_radius, entity->color, CLEAR_COLOR);	
-				} break;
-//				case PRIMITIVE_SHAPE_RECT: {
-				default: {
-					SDL_SetRenderDrawColor(game->renderer, entity->color.r, entity->color.g, entity->color.b, 255);
-
-					float scaled_radius = entity->collision_radius * (entity->transform.scale.x + entity->transform.scale.y) / 2.0f;
-					SDL_FRect p_rect;
-					p_rect.x = entity->x - scaled_radius;
-					p_rect.y = entity->y - scaled_radius;
-					p_rect.w = scaled_radius*2.0f;
-					p_rect.h = p_rect.w;
-
-					SDL_RenderFillRectF(game->renderer, &p_rect);
-				} break;
-			}
-		}
-		
 		if (entity->sprite_count > 0) {
 			for (int sprite_index = 0; sprite_index < entity->sprite_count; sprite_index++) {
 				render_draw_game_sprite(game, &entity->sprites[sprite_index], entity->transform, 1);	
 			}
 		}
+		else if (entity->shape.type > SHAPE_TYPE_UNDEFINED && entity->shape.type < SHAPE_TYPE_COUNT) {
+			render_fill_game_shape(game->renderer, entity->position, scale_game_shape(entity->shape, entity->scale), entity->color);
+		}
 
 #ifdef DEBUG
 		SDL_SetRenderDrawColor(game->renderer, 255, 0, 0, 255);
 		// NOTE: This function really likes to create a seg fault
-		render_draw_circle(game->renderer, entity->x, entity->y, entity->collision_radius);
+		render_draw_game_shape(game->renderer, entity->position, scale_game_shape(entity->shape, entity->scale), (RGB_Color){255, 0, 0});
 #endif
 
 	}

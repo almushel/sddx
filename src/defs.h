@@ -45,8 +45,9 @@ typedef struct Transform2D {
 		struct {Vector2 position, scale; };				\
 	}
 
+#define MAX_POLY2D_VERTS 8
 typedef struct Game_Poly2D {
-	Vector2 vertices[8];
+	Vector2 vertices[MAX_POLY2D_VERTS];
 	Uint32 vert_count;
 } Game_Poly2D;
 
@@ -57,12 +58,22 @@ typedef struct Game_Sprite {
 	SDL_bool rotation_enabled;
 } Game_Sprite;
 
-typedef enum Primitive_Shapes {
-	PRIMITIVE_SHAPE_UNDEFINED,
-	PRIMITIVE_SHAPE_CIRCLE,
-	PRIMITIVE_SHAPE_RECT,
-	PRIMITIVE_SHAPE_COUNT,
-} Primitive_Shapes;
+typedef enum Game_Shape_Types {
+	SHAPE_TYPE_UNDEFINED,
+	SHAPE_TYPE_CIRCLE,
+	SHAPE_TYPE_RECT,
+	SHAPE_TYPE_POLY2D,
+	SHAPE_TYPE_COUNT,
+} Game_Shape_Types;
+
+typedef struct Game_Shape {
+	Game_Shape_Types type;
+	union {
+		Game_Poly2D polygon;
+		SDL_FRect rectangle;
+		struct { float radius;};
+	};
+} Game_Shape;
 
 typedef struct Mix_Music_Node 	{ char* name; Mix_Music* data; 	 struct Mix_Music_Node* next; 	} Mix_Music_Node;
 typedef struct Mix_Chunk_Node 	{ char* name; Mix_Chunk* data; 	 struct Mix_Chunk_Node* next; 	} Mix_Chunk_Node;
@@ -107,13 +118,11 @@ typedef struct Particle {
 	Transform2D_Union;
 	Vec2_Union(velocity, vx, vy);
 	float mass;
-	float collision_radius;
 	float timer;
 
 	Game_Sprite sprite;
-	Primitive_Shapes shape;
+	Game_Shape shape;
 	RGB_Color color;
-	Uint32 parent;
 } Particle;
 
 typedef struct Particle_Emitter {
@@ -126,7 +135,7 @@ typedef struct Particle_Emitter {
 
 	float density;
 //	Game_Sprite sprite;
-	Primitive_Shapes shape;
+	Game_Shape_Types shape;
 	RGB_Color colors[16];
 	Uint32 color_count;
 
@@ -176,13 +185,14 @@ typedef struct Entity {
 	float z;
 	float target_angle;
 	Vec2_Union(velocity, vx, vy);
-	float collision_radius;
 	float timer;
 
 	Game_Sprite sprites[4];
 	Uint32 sprite_count;
-	Primitive_Shapes shape;
+	Game_Shape shape;
+
 	RGB_Color color;
+
 
 	Uint32 particle_emitters[3];
 	Uint8 emitter_count;

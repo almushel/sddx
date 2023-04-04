@@ -16,4 +16,8 @@ void render_fill_polygon(SDL_Renderer* renderer, SDL_FPoint* points, int num_poi
 void render_draw_triangle(SDL_Renderer* renderer, Vector2 v1, Vector2 v2, Vector2 v3);
 void render_fill_triangle(SDL_Renderer* renderer, Vector2 v1, Vector2 v2, Vector2 v3, RGB_Color color);
 
+void render_draw_game_shape(SDL_Renderer* renderer, Vector2 position, Game_Shape shape, RGB_Color color);
+void render_fill_game_shape(SDL_Renderer* renderer, Vector2 position, Game_Shape shape, RGB_Color color);
+
+
 #endif

@@ -342,3 +342,38 @@ void render_fill_triangle(SDL_Renderer* renderer, Vector2 v1, Vector2 v2, Vector
 
 	SDL_RenderGeometry(renderer, NULL, vertices, 3, 0, 0);
 }
+
+void render_draw_game_shape(SDL_Renderer* renderer, Vector2 position, Game_Shape shape, RGB_Color color) {
+	SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, 255);
+	switch(shape.type) {
+		case SHAPE_TYPE_CIRCLE: {
+			render_draw_circlef(renderer, position.x, position.y, shape.radius);
+		} break;
+		case SHAPE_TYPE_RECT: {
+			SDL_RenderDrawRectF(renderer, &shape.rectangle);
+		} break;
+		case SHAPE_TYPE_POLY2D: {
+			render_draw_polygon(renderer, (SDL_FPoint*)shape.polygon.vertices, shape.polygon.vert_count);
+		} break;
+	}
+}
+
+void render_fill_game_shape(SDL_Renderer* renderer, Vector2 position, Game_Shape shape, RGB_Color color) {
+	switch(shape.type) {
+		case SHAPE_TYPE_CIRCLE: {
+			SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, 255);
+			render_fill_circlef(renderer, position.x, position.y, shape.radius);
+		} break;
+
+		case SHAPE_TYPE_RECT: {
+			SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, 255);
+			SDL_FRect rect = translate_rect(shape.rectangle, position);
+			SDL_RenderFillRectF(renderer, &rect);
+		} break;
+
+		case SHAPE_TYPE_POLY2D: {
+			Game_Poly2D polygon = translate_poly2d(shape.polygon, position);
+			render_fill_polygon(renderer, (SDL_FPoint*)polygon.vertices, shape.polygon.vert_count, color);
+		} break;
+	}
+}

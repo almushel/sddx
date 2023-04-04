@@ -160,14 +160,14 @@ int main(int argc, char* argv[]) {
 	
 	get_new_entity(game); // reserve 0
 	for (int i = ENTITY_TYPE_PLAYER+1; i < ENTITY_TYPE_SPAWN_WARP; i++) {
-		Uint32 entity_id = 0;//spawn_entity(game, ENTITY_TYPE_SPAWN_WARP, (Vector2){random() * (float)game->world_w, random() * (float)game->world_h});
+		Uint32 entity_id = spawn_entity(game, ENTITY_TYPE_SPAWN_WARP, (Vector2){random() * (float)game->world_w, random() * (float)game->world_h});
 		if (entity_id) {
 			Entity* entity = get_entity(game, entity_id);
 			entity->type_data = i;
 		}
 	}
 
-	spawn_entity(game, ENTITY_TYPE_ENEMY_GRAPPLER, (Vector2){random() * (float)game->world_w, random() * (float)game->world_h});
+//	spawn_entity(game, ENTITY_TYPE_ENEMY_GRAPPLER, (Vector2){random() * (float)game->world_w, random() * (float)game->world_h});
 
 	game->player_state.current_weapon = PLAYER_WEAPON_MG;
 	game->player_state.lives = 3;
