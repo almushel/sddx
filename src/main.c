@@ -163,7 +163,7 @@ int main(int argc, char* argv[]) {
 		Uint32 entity_id = spawn_entity(game, ENTITY_TYPE_SPAWN_WARP, (Vector2){random() * (float)game->world_w, random() * (float)game->world_h});
 		if (entity_id) {
 			Entity* entity = get_entity(game, entity_id);
-			entity->type_data = i;
+			entity->type_data = ENTITY_TYPE_ENEMY_DRIFTER; //i;
 		}
 	}
 
@@ -240,7 +240,7 @@ int main(int argc, char* argv[]) {
 				spawn_entity(game, ENTITY_TYPE_PLAYER, (Vector2){(float)(float)game->world_w/2.0f, (float)(float)game->world_h})
 			);
 			Mix_PlayChannel(-1, game_get_sfx(game, "Player Spawn"), 0);
-			game->player_state.lives--;
+			//game->player_state.lives--;
 		}
 
 		update_score_timer(&game->score, dt);

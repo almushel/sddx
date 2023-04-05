@@ -34,11 +34,10 @@ float random(void) {
 	return result;
 }
 
-Vector2 scale_vector2(Vector2 v, float scalar) {
-	Vector2 result = v;
+float vector2_length(Vector2 v) {
+	float result = 0;
 
-	result.x *= scalar;
-	result.y *= scalar;
+	result = sqrtf( (v.x * v.x) + (v.y * v.y) );
 
 	return result;
 }
@@ -46,9 +45,18 @@ Vector2 scale_vector2(Vector2 v, float scalar) {
 Vector2 normalize_vector2(Vector2 v) {
 	Vector2 result = v;
 
-	float magnitude = sqrtf( (v.x*v.x) + (v.y*v.y) );
+	float magnitude = vector2_length(v);
 	result.x /= magnitude;
 	result.y /= magnitude;
+
+	return result;
+}
+
+Vector2 scale_vector2(Vector2 v, float scalar) {
+	Vector2 result = v;
+
+	result.x *= scalar;
+	result.y *= scalar;
 
 	return result;
 }
@@ -167,6 +175,7 @@ bool check_shape_collision(Vector2 p1, Game_Shape s1, Vector2 p2, Game_Shape s2,
 					shapes[i]->rectangle.x,
 					shapes[i]->rectangle.y + shapes[i]->rectangle.h,
 				};
+				colliders[i].vert_count = 4;
 
 			} break;
 

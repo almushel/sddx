@@ -26,6 +26,7 @@
 #define declare_game_get_asset(type, table_name, func_suffix) type* game_get_##func_suffix##(Game_State* game, const char* name)
 #define define_game_get_asset(type, table_name, func_suffix) type* game_get_##func_suffix##(Game_State* game, const char* name) { \
 	type* result = 0;\
+	if (name == 0) return result;\
 	type##_Node* node = &game->assets.##table_name##[get_hash_index(name, game->assets.##table_name)];\
 	while (node) { \
 		if (node->name && (*node->name == *name) && SDL_strcmp(node->name, name) == 0) {\

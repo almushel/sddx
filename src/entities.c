@@ -36,6 +36,7 @@
 
 #define DRIFT_RATE 1
 #define DRIFT_RADIUS 40
+#define DRIFTER_GREY (RGB_Color){105, 105, 105}
 
 #define UFO_SPEED 1.9
 #define UFO_DIR_CHANGE_DELAY 120.0f
@@ -163,6 +164,20 @@ Entity* get_entity(Game_State* game, Uint32 entity_id) {
 	}
 
 	return result;
+}
+
+static void generate_drifter_verts(Game_Shape* shape, float radius) {
+	Uint32 vert_count = SDL_clamp(5 + (int)(random() * 3.0f), 4, MAX_POLY2D_VERTS);
+
+	shape->type = SHAPE_TYPE_POLY2D;
+	for (int i = 0; i < vert_count; i++) {
+		float point_dist = radius / 2.0f + random() * radius / 2.0f;
+		float new_angle = 360.0f / (float)vert_count * (float)i;
+		
+		shape->polygon.vertices[i].x = cos_deg(new_angle) * point_dist;
+		shape->polygon.vertices[i].y = sin_deg(new_angle) * point_dist;
+	}
+	shape->polygon.vert_count = vert_count;
 }
 
 SDL_Texture* generate_drifter_texture(Game_State* game) {
@@ -352,11 +367,12 @@ Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 			} break;
 
 			case ENTITY_TYPE_ENEMY_DRIFTER: {
-				entity->shape.radius = DRIFT_RADIUS;
+				generate_drifter_verts(&entity->shape, DRIFT_RADIUS);
+				entity->color = DRIFTER_GREY;
+//				entity->shape.radius = DRIFT_RADIUS;
 				entity->angle = random() * 360.0f;
-				entity->sprites[0].texture_name = "Enemy Drifter";
-				entity->sprites[0].rotation_enabled = 1;
-				entity->sprite_count = 1;
+//				entity->sprites[0].texture_name = "Enemy Drifter";
+//				entity->sprites[0].rotation_enabled = 1;
 			} break;
 
 			case ENTITY_TYPE_ENEMY_UFO: {
@@ -563,6 +579,7 @@ void update_entities(Game_State* game, float dt) {
 		} else if (entity->state == ENTITY_STATE_ACTIVE) {
 			entity->timer -= dt * (float)(int)(entity->timer > 0);
 			switch(entity->type) {
+				
 				case ENTITY_TYPE_PLAYER: {
 					if (game->player_controller.turn_left.held)  entity->angle -= PLAYER_TURN_SPEED * dt;
 					if (game->player_controller.turn_right.held) entity->angle += PLAYER_TURN_SPEED * dt;
@@ -592,8 +609,8 @@ void update_entities(Game_State* game, float dt) {
 
 						if (thruster->state == EMITTER_STATE_ACTIVE) {
 							thruster->angle = entity->angle + angle_offset + 180;
-							thruster->y = entity->y + sin_deg(thruster->angle);// * (SHIP_RADIUS + PARTICLE_MAX_START_RADIUS);
-							thruster->x = entity->x + cos_deg(thruster->angle);// * (SHIP_RADIUS + PARTICLE_MAX_START_RADIUS);
+							thruster->y = entity->y + sin_deg(thruster->angle) * (float)SHIP_RADIUS;
+							thruster->x = entity->x + cos_deg(thruster->angle) * (float)SHIP_RADIUS;
 						}
 
 						angle_offset -= 90.0f * (float)(i+1);
@@ -708,8 +725,7 @@ void update_entities(Game_State* game, float dt) {
 
 				} break;
 				
-				case ENTITY_TYPE_ENEMY_TURRET:{
-					
+				case ENTITY_TYPE_ENEMY_TURRET: {
 					switch(entity->type_data) {
 						case TURRET_STATE_AIMING: {
 							Entity* target = get_enemy_target(game);
@@ -867,6 +883,7 @@ void update_entities(Game_State* game, float dt) {
 
 				case ENTITY_TYPE_SPAWN_WARP: {
 					spawn_entity(game, entity->type_data, entity->position);
+					entity->timer = ENTITY_WARP_DELAY;
 					entity->state = ENTITY_STATE_DESPAWNING;
 				} break;
 			}
@@ -887,10 +904,9 @@ void update_entities(Game_State* game, float dt) {
 					if (collision_entity->state != ENTITY_STATE_ACTIVE || collision_entity->type == ENTITY_TYPE_SPAWN_WARP) continue;
 					
 					Vector2 overlap = {0};
-					if (sc2d_check_circles(entity->position.x, entity->position.y, entity->shape.radius, 
-											collision_entity->position.x, collision_entity->position.y, collision_entity->shape.radius,
-											&overlap.x, &overlap.y)) {
-
+					
+					
+					if (check_shape_collision(entity->position, entity->shape, collision_entity->position, collision_entity->shape, &overlap)) {
 						if (entity_is_item(entity->type) && collision_entity->type == ENTITY_TYPE_PLAYER) {
 							entity->state = ENTITY_STATE_DESPAWNING;
 							entity->timer = ENTITY_WARP_DELAY/2.0f;
@@ -918,8 +934,8 @@ void update_entities(Game_State* game, float dt) {
 				Game_Shape particle_shape = scale_game_shape(particle->shape, particle->scale);
 
 				if ( check_shape_collision(particle->position, particle_shape, entity->position, entity_shape, &overlap)) {
-					particle->x += overlap.x;
-					particle->y += overlap.y;
+					particle->x -= overlap.x;
+					particle->y -= overlap.y;
 
 					float magnitude = sqrtf( (particle->vx*particle->vx) + (particle->vy*particle->vy) );
 
@@ -957,6 +973,35 @@ void update_entities(Game_State* game, float dt) {
 					game->player_state.weapon_heat = 0;
 
 					end_score_combo(&game->score);
+				} break;
+
+				case ENTITY_TYPE_ENEMY_DRIFTER: {
+					float v_max = 0;
+					for (int i = 0; i < dead_entity->shape.polygon.vert_count; i++) {
+						v_max = SDL_max(dead_entity->shape.polygon.vertices[i].x, v_max);
+						v_max = SDL_max(dead_entity->shape.polygon.vertices[i].y, v_max);
+					}
+
+					if (v_max > DRIFT_RADIUS/2) {
+						float angle = random() * 360.0f;
+						for (int i = 0; i < 3; i++) {
+							Vector2 position = dead_entity->position;
+							position.x += cos_deg(angle) * (float)DRIFT_RADIUS/2.0f;
+							position.y += sin_deg(angle) * (float)DRIFT_RADIUS/2.0f;
+
+							Uint32 id = spawn_entity(game, ENTITY_TYPE_ENEMY_DRIFTER, position);
+							Entity* drifter_child = game->entities + id;
+							generate_drifter_verts(&drifter_child->shape, (float)DRIFT_RADIUS/2.0f);
+							drifter_child->angle = angle;
+							//drifter_child->vx = cos_deg(angle) * (float)DRIFT_RATE;
+							//drifter_child->vy = sin_deg(angle) * (float)DRIFT_RATE;
+							drifter_child->state = ENTITY_STATE_ACTIVE;
+
+							angle += 360.0f / 3.0f;
+						}
+					}
+
+
 				} break;
 
 				case ENTITY_TYPE_ITEM_LIFEUP: {
@@ -1001,7 +1046,7 @@ void draw_entities(Game_State* game) {
 
 		if (entity->sprite_count > 0) {
 			for (int sprite_index = 0; sprite_index < entity->sprite_count; sprite_index++) {
-				render_draw_game_sprite(game, &entity->sprites[sprite_index], entity->transform, 1);	
+				if (entity->sprites[sprite_index].texture_name != 0) render_draw_game_sprite(game, &entity->sprites[sprite_index], entity->transform, 1);	
 			}
 		}
 		else if (entity->shape.type > SHAPE_TYPE_UNDEFINED && entity->shape.type < SHAPE_TYPE_COUNT) {
@@ -1010,7 +1055,6 @@ void draw_entities(Game_State* game) {
 
 #ifdef DEBUG
 		SDL_SetRenderDrawColor(game->renderer, 255, 0, 0, 255);
-		// NOTE: This function really likes to create a seg fault
 		render_draw_game_shape(game->renderer, entity->position, scale_game_shape(entity->shape, entity->scale), (RGB_Color){255, 0, 0});
 #endif
 

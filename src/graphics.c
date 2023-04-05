@@ -347,13 +347,15 @@ void render_draw_game_shape(SDL_Renderer* renderer, Vector2 position, Game_Shape
 	SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, 255);
 	switch(shape.type) {
 		case SHAPE_TYPE_CIRCLE: {
-			render_draw_circlef(renderer, position.x, position.y, shape.radius);
+			render_draw_circle(renderer, position.x, position.y, shape.radius);
 		} break;
 		case SHAPE_TYPE_RECT: {
-			SDL_RenderDrawRectF(renderer, &shape.rectangle);
+			SDL_FRect rect = translate_rect(shape.rectangle, position);
+			SDL_RenderDrawRectF(renderer, &rect);
 		} break;
 		case SHAPE_TYPE_POLY2D: {
-			render_draw_polygon(renderer, (SDL_FPoint*)shape.polygon.vertices, shape.polygon.vert_count);
+			Game_Poly2D polygon = translate_poly2d(shape.polygon, position);
+			render_draw_polygon(renderer, (SDL_FPoint*)polygon.vertices, shape.polygon.vert_count);
 		} break;
 	}
 }

@@ -12,6 +12,7 @@ float cos_deg  (float degrees);
 float atan2_deg(float y, float x);
 float normalize_degrees(float degrees);
 
+float vector2_length(Vector2 v);
 Vector2 normalize_vector2(Vector2 v);
 Vector2 scale_vector2(Vector2 v, float scalar);
 Vector2 rotate_vector2(Vector2 v, float degrees);
