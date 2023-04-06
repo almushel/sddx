@@ -130,10 +130,11 @@ void force_circle(Entity* entities, Uint32 enitty_count, float x, float y, float
 	for (int i = 1; i < enitty_count; i++) {
 		Entity* entity = entities + i;
 		if (/*entities[i].mass > 0 && */check_shape_collision((Vector2){x, y}, force_shape, entity->position, scale_game_shape(entity->shape, entity->scale), &overlap)) {
-			overlap = normalize_vector2(overlap);
-
-			entities[i].vx += overlap.x * force;
-			entities[i].vy += overlap.y * force;
+			Vector2 impulse = subtract_vector2(entity->position, (Vector2){x,y});
+					impulse = normalize_vector2(impulse);
+					impulse = scale_vector2(impulse, force);
+				
+			entity->velocity = add_vector2(entity->velocity, impulse);
 		}
 	}
 }
@@ -167,50 +168,9 @@ Entity* get_entity(Game_State* game, Uint32 entity_id) {
 }
 
 static void generate_drifter_verts(Game_Shape* shape, float radius) {
-	Uint32 vert_count = SDL_clamp(5 + (int)(random() * 3.0f), 4, MAX_POLY2D_VERTS);
-
+	int vert_count = SDL_clamp(5 + (int)(random() * 3.0f), 4, MAX_POLY2D_VERTS);
+	shape->polygon = generate_poly2D(vert_count, radius / 2.0f, radius);
 	shape->type = SHAPE_TYPE_POLY2D;
-	for (int i = 0; i < vert_count; i++) {
-		float point_dist = radius / 2.0f + random() * radius / 2.0f;
-		float new_angle = 360.0f / (float)vert_count * (float)i;
-		
-		shape->polygon.vertices[i].x = cos_deg(new_angle) * point_dist;
-		shape->polygon.vertices[i].y = sin_deg(new_angle) * point_dist;
-	}
-	shape->polygon.vert_count = vert_count;
-}
-
-SDL_Texture* generate_drifter_texture(Game_State* game) {
-	SDL_Texture* result = 0;
-
-	result = SDL_CreateTexture(game->renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, DRIFT_RADIUS*2, DRIFT_RADIUS*2);
-	if (result) {
-		SDL_SetTextureBlendMode(result, SDL_BLENDMODE_BLEND);
-
-		int vert_count = 5 + SDL_floor(random() * 4);
-		SDL_FPoint* vertices = SDL_malloc(sizeof(SDL_FPoint) * vert_count);
-		for (int i = 0; i < vert_count; i++) {
-			float point_dist = DRIFT_RADIUS / 2.0f + random() * DRIFT_RADIUS / 2.0f;
-			float new_angle = 360.0f / (float)vert_count * (float)i;
-			
-			vertices[i].x = DRIFT_RADIUS + cos_deg(new_angle) * point_dist;
-			vertices[i].y = DRIFT_RADIUS + sin_deg(new_angle) * point_dist;
-		}
-
-		SDL_Texture* original_render_target = SDL_GetRenderTarget(game->renderer);
-		SDL_SetRenderTarget(game->renderer, result);
-		
-		SDL_SetRenderDrawColor(game->renderer, 0, 0, 0, 0);
-		SDL_RenderClear(game->renderer);
-		
-		SDL_SetRenderDrawColor(game->renderer, 255, 255, 255, 255);
-		render_fill_polygon(game->renderer, vertices, vert_count, (RGB_Color){105, 105, 105});
-		
-		SDL_SetRenderTarget(game->renderer, original_render_target);
-		SDL_free(vertices);
-	}
-
-	return result;
 }
 
 SDL_Texture* generate_item_texture(Game_State* game, SDL_Texture* icon) {
@@ -283,22 +243,24 @@ Vector2 get_clear_spawn(Game_State* game, float radius, SDL_Rect boundary) {
 			result.y -= overlap.y;
 		}
 	}
-/*
-	if (game->player) {
-		if (sc2d_check_circles(result.x, result.y, radius, game->player->x, game->player->y, game->player->radius, &overlap.x, &overlap.y)) {
-			result.x -= overlap.x;
-			result.y -= overlap.y;
-		}
-	}
-*/
+
 	return result;
 }
 
-static inline SDL_bool entity_is_item(Entity_Types type) {
+static inline bool entity_is_item(Entity_Types type) {
 	return (
 		type >= ENTITY_TYPE_ITEM_MISSILE &&
 		type <= ENTITY_TYPE_ITEM_LASER
 	);
+}
+
+static inline bool entity_type_explodes(Entity_Types type) {
+	bool result = (
+		type == ENTITY_TYPE_PLAYER ||
+		(type >= ENTITY_TYPE_ENEMY_DRIFTER && type <= ENTITY_TYPE_ENEMY_GRAPPLER)
+	);
+
+	return result;
 }
 
 static inline Entity* get_enemy_target(Game_State* game) {
@@ -369,10 +331,9 @@ Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 			case ENTITY_TYPE_ENEMY_DRIFTER: {
 				generate_drifter_verts(&entity->shape, DRIFT_RADIUS);
 				entity->color = DRIFTER_GREY;
-//				entity->shape.radius = DRIFT_RADIUS;
 				entity->angle = random() * 360.0f;
-//				entity->sprites[0].texture_name = "Enemy Drifter";
-//				entity->sprites[0].rotation_enabled = 1;
+				entity->velocity.x = cos_deg(entity->angle) * DRIFT_RATE;
+				entity->velocity.y = sin_deg(entity->angle) * DRIFT_RATE;
 			} break;
 
 			case ENTITY_TYPE_ENEMY_UFO: {
@@ -536,11 +497,10 @@ void update_entities(Game_State* game, float dt) {
 				thrusters[2]->position = entity->position;
 				thrusters[2]->angle = normalize_degrees(entity->angle + 45);
 
+				force_circle(game->entities, game->entity_count, entity->x, entity->y, entity->sx * SHIP_RADIUS * 3.0f, 1.5f);
 				entity->y -= (8.0f - lerp(0.0f, 6.0f, t)) * dt;
 				entity->sx = entity->sy = t;
 				entity->shape.radius = ts * SHIP_RADIUS;
-
-				force_circle(game->entities, game->entity_count, entity->x, entity->y, entity->sx * SHIP_RADIUS * 3.0f, 0.25);
 
 				if (entity->y <= game->world_h/2.0f) {
 //					startTransition(-1);
@@ -665,9 +625,14 @@ void update_entities(Game_State* game, float dt) {
 					entity->vy *= 1.0f + PHYSICS_FRICTION;
 				} break;
 
-				case ENTITY_TYPE_ENEMY_DRIFTER:{ 
-					entity->vx = cos_deg(entity->angle) * DRIFT_RATE;
-					entity->vy = sin_deg(entity->angle) * DRIFT_RATE;
+				case ENTITY_TYPE_ENEMY_DRIFTER: {
+					entity->velocity = scale_vector2(
+						normalize_vector2(entity->velocity),
+						DRIFT_RATE
+					);
+
+//					entity->vx = cos_deg(entity->angle) * DRIFT_RATE;
+//					entity->vy = sin_deg(entity->angle) * DRIFT_RATE;
 				} break;
 				
 				case ENTITY_TYPE_ENEMY_UFO: { 
@@ -916,13 +881,14 @@ void update_entities(Game_State* game, float dt) {
 						} if (entity->team && collision_entity->team && entity->team != collision_entity->team) {
 							entity->state  = ENTITY_STATE_DYING;
 							collision_entity->state = ENTITY_STATE_DYING;
-						}
+						} else {
+							overlap = normalize_vector2(overlap);
 
-						// NOTE: Do we need any kind of physics response here?
-						// entity ->vx -= overlap.x/2.0f;
-						// entity ->vy -= overlap.y/2.0f;
-						// collision_entity->vx += overlap.x/2.0f;
-						// collision_entity->vy += overlap.y/2.0f;
+							entity ->vx -= overlap.x/2.0f;
+							entity ->vy -= overlap.y/2.0f;
+							collision_entity->vx += overlap.x/2.0f;
+							collision_entity->vy += overlap.y/2.0f;
+						}
 					}
 				}
 			}
@@ -937,19 +903,16 @@ void update_entities(Game_State* game, float dt) {
 					particle->x -= overlap.x;
 					particle->y -= overlap.y;
 
-					float magnitude = sqrtf( (particle->vx*particle->vx) + (particle->vy*particle->vy) );
+					float magnitude = vector2_length(particle->velocity);
 
-					Vector2 new_v = {
-						particle->vx + overlap.x,
-						particle->vy + overlap.y
-					};
+					particle->velocity = normalize_vector2(particle->velocity);
 
-					new_v = normalize_vector2(new_v);
-					new_v.x *= magnitude;
-					new_v.y *= magnitude;
-
-					particle->vx = new_v.x;
-					particle->vy = new_v.y;
+					Vector2 new_v = {-overlap.x, -overlap.y};//subtract_vector2(particle->position, entity->position);
+							new_v = normalize_vector2(new_v);
+							new_v = add_vector2(new_v, particle->velocity);
+							new_v = normalize_vector2(new_v);
+					
+					particle->velocity = scale_vector2(new_v, magnitude / 2.0f);
 				}
 			}
 		} // end of if (entity->state == ENTITY_STATE_ACTIVE)
@@ -993,15 +956,13 @@ void update_entities(Game_State* game, float dt) {
 							Entity* drifter_child = game->entities + id;
 							generate_drifter_verts(&drifter_child->shape, (float)DRIFT_RADIUS/2.0f);
 							drifter_child->angle = angle;
-							//drifter_child->vx = cos_deg(angle) * (float)DRIFT_RATE;
-							//drifter_child->vy = sin_deg(angle) * (float)DRIFT_RATE;
+							drifter_child->vx = cos_deg(angle) * (float)DRIFT_RATE;
+							drifter_child->vy = sin_deg(angle) * (float)DRIFT_RATE;
 							drifter_child->state = ENTITY_STATE_ACTIVE;
 
 							angle += 360.0f / 3.0f;
 						}
 					}
-
-
 				} break;
 
 				case ENTITY_TYPE_ITEM_LIFEUP: {
@@ -1016,8 +977,14 @@ void update_entities(Game_State* game, float dt) {
 				//random_item_spawn(game, dead_entity->position, value);
 			}
 
-			for (int sprite_index = 0; sprite_index < dead_entity->sprite_count; sprite_index++) {
-				explode_sprite(game, dead_entity->sprites+sprite_index, dead_entity->x, dead_entity->y, dead_entity->angle, 6);
+			if (entity_type_explodes(dead_entity->type)) {
+				RGB_Color entity_color = (dead_entity->color.r || dead_entity->color.g || dead_entity->color.b) ? dead_entity->color : (RGB_Color){255, 255, 255};
+				RGB_Color colors[] = {entity_color, {255, 255, 255}};
+
+				explode_at_point(&game->particle_system, dead_entity->x, dead_entity->y, colors, array_length(colors), 0, dead_entity->shape.type);
+				for (int sprite_index = 0; sprite_index < dead_entity->sprite_count; sprite_index++) {
+					explode_sprite(game, dead_entity->sprites+sprite_index, dead_entity->x, dead_entity->y, dead_entity->angle, 6);
+				}
 			}
 			
 			if (dead_entity_index < game->entity_count-1) {

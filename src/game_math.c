@@ -71,6 +71,25 @@ Vector2 rotate_vector2(Vector2 v, float degrees) {
 	return result;
 }
 
+Vector2 add_vector2(Vector2 v1, Vector2 v2) {
+	Vector2 result = {
+		v1.x + v2.x,
+		v1.y + v2.y
+	};
+
+	return result;
+}
+
+// Sbutracts v2 from v1
+Vector2 subtract_vector2(Vector2 v1, Vector2 v2) {
+	Vector2 result = {
+		v1.x - v2.x,
+		v1.y - v2.y
+	};
+
+	return result;
+}
+
 float dot_product_vector2(Vector2 v1, Vector2 v2) {
 	float result = v1.x * v2.x + v1.y * v2.y;
 
@@ -82,6 +101,22 @@ SDL_FRect translate_rect(SDL_FRect rect, Vector2 translation) {
 
 	result.x += translation.x;
 	result.y += translation.y;
+
+	return result;
+}
+
+Game_Poly2D generate_poly2D(int vert_count, float r_min, float r_max) {
+	Game_Poly2D result = {
+		.vert_count = vert_count,
+	};
+	
+	for (int i = 0; i < vert_count; i++) {
+		float point_dist = r_min + random() * (r_max - r_min);
+		float new_angle = 360.0f / (float)vert_count * (float)i;
+		
+		result.vertices[i].x = cos_deg(new_angle) * point_dist;
+		result.vertices[i].y = sin_deg(new_angle) * point_dist;
+	}
 
 	return result;
 }

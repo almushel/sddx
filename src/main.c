@@ -43,7 +43,6 @@ void load_game_assets(Game_State* game) {
 	game_load_texture(game, "assets/images/hud_mg.png", "HUD MG");
 
 	//Generative textures
-	game_store_texture(game, generate_drifter_texture(game), "Enemy Drifter");
 	game_store_texture(game, generate_item_texture(game, game_get_texture(game, "Projectile Missile")), "Item Missile");
 	game_store_texture(game, generate_item_texture(game, game_get_texture(game, "Player Ship")), "Item LifeUp");
 	game_store_texture(game, generate_item_texture(game, 0), "Item Laser");

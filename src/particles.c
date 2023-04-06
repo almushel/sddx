@@ -75,7 +75,10 @@ void init_particle(Particle* p, Game_Shape_Types shape) {
 			p->shape.radius = PARTICLE_MAX_START_RADIUS;
 		} break;
 
-		case SHAPE_TYPE_POLY2D: {} break;
+		case SHAPE_TYPE_POLY2D: {
+			p->shape.type = SHAPE_TYPE_POLY2D;
+			p->shape.polygon = generate_poly2D(5, PARTICLE_MAX_START_RADIUS, PARTICLE_MAX_START_RADIUS/2);
+		} break;
 	}
 	p->shape.type = shape;
 	p->timer = PARTICLE_LIFETIME,
@@ -124,7 +127,7 @@ static RGB_Color random_color(RGB_Color* colors, Uint32 color_count) {
 		colors = &default_color;
 	}
 
-	result = colors[ (Uint32)(random() * (color_count-1)) ]; 
+	result = colors[ (Uint32)(random() * (color_count)) ]; 
 	return result;
 }
 

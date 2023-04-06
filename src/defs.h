@@ -193,7 +193,6 @@ typedef struct Entity {
 
 	RGB_Color color;
 
-
 	Uint32 particle_emitters[3];
 	Uint8 emitter_count;
 	
