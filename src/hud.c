@@ -200,27 +200,48 @@ void draw_active_weapon(Game_State* game) {
 	int screen_w, screen_h;
 	SDL_GetWindowSizeInPixels(game->window, &screen_w, &screen_h);
 
-	SDL_Texture* hud_weapon = game_get_texture(game, "HUD Missile"); //getWeaponHUD(p1.activeWeapon),
+	char* weapon_label = "Machine Gun";
+	SDL_Texture* hud_weapon = game_get_texture(game, "HUD MG");;
+	if (game->player) {
+		switch (game->player->type_data) {
+			case PLAYER_WEAPON_MISSILE: {
+				weapon_label = "Missile";
+				hud_weapon = game_get_texture(game, "HUD Missile");
+			} break;
+
+			case PLAYER_WEAPON_LASER: {
+				weapon_label = "Laser";
+				hud_weapon = game_get_texture(game, "HUD Laser");
+			} break;
+		}
+	}
+
 	//wAmmo = p1.activeWeapon != "Machine Gun" ? p1.ammo : INFINITY_SYMBOL;
 	int hw_width, hw_height;
 	SDL_QueryTexture(hud_weapon, 0, 0, &hw_width, &hw_height);
 	
+	// Ammo label
 	float text_size = 14;
 	Vector2 text_pos = {screen_w - 160, screen_h - hw_height};
 	SDL_SetRenderDrawColor(game->renderer, 255, 255, 255, 255);
-	text_pos.x -= measure_text(game->font, 14, "Ammo")/2.0f;
-	render_text(game->renderer, game->font, 14, text_pos.x, text_pos.y, "Ammo");
+	text_pos.x -= measure_text(game->font, text_size, "Ammo")/2.0f;
+	render_text(game->renderer, game->font, text_size, text_pos.x, text_pos.y, "Ammo");
 	
+	// Ammo count
 	char ammo_str[8];
 	itoa(game->player_state.ammo, ammo_str, 10);
 	text_pos.x = (screen_w - 160) - measure_text(game->font, 34, ammo_str)/2.0f;
 	text_pos.y = screen_h - 16;
 	render_text(game->renderer, game->font, 34, text_pos.x, text_pos.y, ammo_str);
 
-	text_pos.x = (screen_w - hw_width / 2) - measure_text(game->font, 14, "Missiles")/2.0f;
-	text_pos.y = screen_h - hw_height;
-	render_text(game->renderer, game->font, 14, text_pos.x, text_pos.y, "Missiles"); // Active weapon name
-	
+	// Active weapon label
+	if (weapon_label) {
+		text_pos.x = (screen_w - hw_width / 2) - measure_text(game->font, text_size, weapon_label)/2.0f;
+		text_pos.y = screen_h - hw_height;
+		render_text(game->renderer, game->font, text_size, text_pos.x, text_pos.y, weapon_label); // Active weapon name
+	}
+		
+	// Active weapon icon
 	render_draw_texture(game->renderer, hud_weapon, screen_w - hw_width, screen_h - hw_height, 0, 0);
 }
 

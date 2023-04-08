@@ -180,6 +180,12 @@ typedef struct Score_System {
 
 } Score_System;
 
+typedef enum Player_Weapons {
+	PLAYER_WEAPON_MG,
+	PLAYER_WEAPON_MISSILE,
+	PLAYER_WEAPON_LASER,
+} Player_Weapons;
+
 typedef struct Entity {
 	Transform2D_Union;
 	float z;
@@ -225,12 +231,6 @@ typedef struct Game_State {
 	Game_Controller_State player_controller;
 	Entity* player;
 	struct {
-		enum Player_Weapon {
-			PLAYER_WEAPON_MG,
-			PLAYER_WEAPON_MISSILE,
-			PLAYER_WEAPON_LASER,
-		} current_weapon;
-		
 		int lives;
 		int ammo;
 		float weapon_heat;

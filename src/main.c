@@ -30,14 +30,20 @@ void process_key_event(SDL_KeyboardEvent* event, Game_Controller_State* input) {
 
 void load_game_assets(Game_State* game) {
 	game_load_texture(game, "assets/images/player.png", "Player Ship");
+
+	// Projectiles
+	game_load_texture(game, "assets/images/missile.png", "Projectile Missile");
+
+	// Enemies
 	game_load_texture(game, "assets/images/grappler_hook.png", "Grappler Hook");
 	game_load_texture(game, "assets/images/grappler.png", "Enemy Grappler");
-	game_load_texture(game, "assets/images/missile.png", "Projectile Missile");
 	game_load_texture(game, "assets/images/ufo.png", "Enemy UFO");
 	SDL_SetTextureAlphaMod(game_get_texture(game, "Enemy UFO"), (Uint8)(255.0f * 0.7f));
 	game_load_texture(game, "assets/images/tracker.png", "Enemy Tracker");
 	game_load_texture(game, "assets/images/turret_base.png", "Enemy Turret Base");
 	game_load_texture(game, "assets/images/turret_cannon.png", "Enemy Turret Cannon");
+
+	// HUD
 	game_load_texture(game, "assets/images/hud_missile.png", "HUD Missile");
 	game_load_texture(game, "assets/images/hud_laser.png", "HUD Laser");
 	game_load_texture(game, "assets/images/hud_mg.png", "HUD MG");
@@ -52,9 +58,9 @@ void load_game_assets(Game_State* game) {
 		game_load_music(game, "assets/audio/WrappingAction.mp3", "Wrapping Action");
 		game_load_sfx(game, "assets/audio/PlayerShot.mp3", "Player Shot");
 		game_load_sfx(game, "assets/audio/PlayerSpawn.mp3", "Player Spawn");
-//		game_load_sfx(game, "assets/audio/WeaponPickup.mp3", "Weapon Pickup");
-//		game_load_sfx(game, "assets/audio/PlayerLaser.mp3", "Player Laser");
-//		game_load_sfx(game, "assets/audio/PlayerMissile.mp3", "Player Missile");
+		game_load_sfx(game, "assets/audio/WeaponPickup.mp3", "Weapon Pickup");
+		game_load_sfx(game, "assets/audio/PlayerLaser.mp3", "Player Laser");
+		game_load_sfx(game, "assets/audio/PlayerMissile.mp3", "Player Missile");
 	} else {
 		SDL_Log(SDL_GetError());
 		exit(1);
@@ -89,7 +95,7 @@ int main(int argc, char* argv[]) {
 	Game_State* game = SDL_malloc(sizeof(Game_State));
 	SDL_memset(game, 0, sizeof(Game_State));
 
-	game->entities_size = 512;
+	game->entities_size = 256;
 	game->entities = SDL_malloc(sizeof(Entity) * game->entities_size);
 	SDL_memset(game->entities, 0, sizeof(Entity) * game->entities_size);
 
@@ -162,13 +168,11 @@ int main(int argc, char* argv[]) {
 		Uint32 entity_id = spawn_entity(game, ENTITY_TYPE_SPAWN_WARP, (Vector2){random() * (float)game->world_w, random() * (float)game->world_h});
 		if (entity_id) {
 			Entity* entity = get_entity(game, entity_id);
-			entity->type_data = ENTITY_TYPE_ENEMY_DRIFTER; //i;
+			entity->type_data = i;
 		}
 	}
 
-//	spawn_entity(game, ENTITY_TYPE_ENEMY_GRAPPLER, (Vector2){random() * (float)game->world_w, random() * (float)game->world_h});
-
-	game->player_state.current_weapon = PLAYER_WEAPON_MG;
+//	game->player_state.current_weapon = PLAYER_WEAPON_MG;
 	game->player_state.lives = 3;
 	game->player_state.ammo = 0;
 	game->player_state.weapon_heat = 0;
@@ -238,6 +242,7 @@ int main(int argc, char* argv[]) {
 			game->player = get_entity(game,
 				spawn_entity(game, ENTITY_TYPE_PLAYER, (Vector2){(float)(float)game->world_w/2.0f, (float)(float)game->world_h})
 			);
+			game->player->type_data = 1;
 			Mix_PlayChannel(-1, game_get_sfx(game, "Player Spawn"), 0);
 			//game->player_state.lives--;
 		}

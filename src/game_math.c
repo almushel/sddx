@@ -37,7 +37,9 @@ float random(void) {
 float vector2_length(Vector2 v) {
 	float result = 0;
 
-	result = sqrtf( (v.x * v.x) + (v.y * v.y) );
+	if (v.x || v.y) {
+		result = sqrtf( (v.x * v.x) + (v.y * v.y) );
+	}
 
 	return result;
 }
@@ -45,9 +47,11 @@ float vector2_length(Vector2 v) {
 Vector2 normalize_vector2(Vector2 v) {
 	Vector2 result = v;
 
-	float magnitude = vector2_length(v);
-	result.x /= magnitude;
-	result.y /= magnitude;
+	if (v.x || v.y) {
+		float magnitude = vector2_length(v);
+		result.x /= magnitude;
+		result.y /= magnitude;
+	}
 
 	return result;
 }
@@ -105,6 +109,20 @@ SDL_FRect translate_rect(SDL_FRect rect, Vector2 translation) {
 	return result;
 }
 
+Game_Poly2D rect_to_poly2D(SDL_FRect rect) {
+	Game_Poly2D result = {
+		.vert_count = 4,
+		.vertices = {
+			{rect.x, rect.y},
+			{rect.x + rect.w, rect.y},
+			{rect.x + rect.w, rect.y + rect.h},
+			{rect.x, rect.y + rect.h},
+		},
+	};
+
+	return result;
+}
+
 Game_Poly2D generate_poly2D(int vert_count, float r_min, float r_max) {
 	Game_Poly2D result = {
 		.vert_count = vert_count,
@@ -128,6 +146,16 @@ Game_Poly2D translate_poly2d(Game_Poly2D polygon, Vector2 translation) {
 	for (int i = 0; i < polygon.vert_count; i++) {
 		result.vertices[i].x = polygon.vertices[i].x + translation.x;
 		result.vertices[i].y = polygon.vertices[i].y + translation.y;
+	}
+
+	return result;
+}
+
+Game_Poly2D rotate_poly2d(Game_Poly2D p, float degrees) {
+	Game_Poly2D result = p;
+
+	for (int i = 0; i < p.vert_count; i++) {
+		result.vertices[i] = rotate_vector2(p.vertices[i], degrees);
 	}
 
 	return result;
@@ -177,13 +205,33 @@ Game_Shape scale_game_shape(Game_Shape shape, Vector2 scale) {
 		}
 	}
 
+	return result;
+}
+
+Game_Shape rotate_game_shape(Game_Shape shape, float degrees) {
+	Game_Shape result = shape;
+
+	if (degrees) {
+		switch(result.type) {
+			case SHAPE_TYPE_RECT: 	{
+				result.type = SHAPE_TYPE_POLY2D;
+				result.polygon = rect_to_poly2D(shape.rectangle);
+				rotate_poly2d(result.polygon, degrees);
+			} break;
+
+			case SHAPE_TYPE_POLY2D: {
+				result.polygon = rotate_poly2d(shape.polygon, degrees);
+			} break;
+		}
+	}
 
 	return result;
 }
 
-bool check_shape_collision(Vector2 p1, Game_Shape s1, Vector2 p2, Game_Shape s2, Vector2* overlap) {
+bool check_shape_collision(Transform2D t1, Game_Shape s1, Transform2D t2, Game_Shape s2, Vector2* overlap) {
 	bool result = false;
 
+	Transform2D* transforms[] = {&t1, &t2};
 	Game_Shape* shapes[2] = {&s1, &s2};
 	Game_Poly2D colliders[2];
 
@@ -194,6 +242,8 @@ bool check_shape_collision(Vector2 p1, Game_Shape s1, Vector2 p2, Game_Shape s2,
 			} break;
 
 			case SHAPE_TYPE_RECT: {
+				if (shapes[i]->rectangle.w == 0 || shapes[i]->rectangle.h == 0) return result;
+
 				colliders[i].vertices[0] = (Vector2) {
 					shapes[i]->rectangle.x,
 					shapes[i]->rectangle.y,
@@ -211,10 +261,11 @@ bool check_shape_collision(Vector2 p1, Game_Shape s1, Vector2 p2, Game_Shape s2,
 					shapes[i]->rectangle.y + shapes[i]->rectangle.h,
 				};
 				colliders[i].vert_count = 4;
-
 			} break;
 
 			case SHAPE_TYPE_CIRCLE: {
+				if (shapes[i]->radius == 0) return result;
+
 				float angle = 0;
 				float angle_increment = 360.0f / (float)MAX_POLY2D_VERTS;
 				for (int circle_vert = 0; circle_vert < MAX_POLY2D_VERTS; circle_vert++) {
@@ -225,14 +276,19 @@ bool check_shape_collision(Vector2 p1, Game_Shape s1, Vector2 p2, Game_Shape s2,
 				}
 				colliders[i].vert_count = MAX_POLY2D_VERTS;
 			} break;
-		}	
+		}
+		
+		colliders[i] = scale_poly2d(colliders[i], transforms[i]->scale);
+		colliders[i] = rotate_poly2d(colliders[i], transforms[i]->angle);
 	}
 
 	result = sc2d_check_poly2d(
-		p1.x, p1.y, (float*)colliders[0].vertices, colliders[0].vert_count,
-		p2.x, p2.y, (float*)colliders[1].vertices, colliders[1].vert_count,
+		t1.x, t1.y, (float*)colliders[0].vertices, colliders[0].vert_count,
+		t2.x, t2.y, (float*)colliders[1].vertices, colliders[1].vert_count,
 		&overlap->x, &overlap->y
 	);
+
+//	if (result) SDL_Log("Shape Collision Overlap X: %f, Y: %f", overlap->x, overlap->y);
 
 	return result;
 }
