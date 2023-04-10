@@ -1,32 +1,12 @@
 #define DEBUG 1
 #include "defs.h"
+#include "game_input.c"
 #include "graphics.c"
 #include "assets.c"
 #include "particles.c"
 #include "entities.c"
 #include "hud.c"
 #include "score.c"
-
-void process_key_event(SDL_KeyboardEvent* event, Game_Controller_State* input) {
-	if (event->repeat == 0) {
-		switch (event->keysym.scancode) {
-			case SDL_SCANCODE_ESCAPE: {
-				SDL_Event quit_event;
-				quit_event.type = SDL_QUIT;
-				SDL_PushEvent(&quit_event);
-			} return;
-		}
-
-		Game_Button_State* button;
-		for (int i = 0; i < array_length(input->list); i++) {
-			button = input->list + i;
-			if (button->scan_code == event->keysym.scancode) {
-				button->pressed = event->state == SDL_PRESSED;
-				button->released = event->state == SDL_RELEASED;
-			}
-		}
-	}
-}
 
 void load_game_assets(Game_State* game) {
 	game_load_texture(game, "assets/images/player.png", "Player Ship");
@@ -150,18 +130,16 @@ int main(int argc, char* argv[]) {
 			next_position.x = 0.0f;
 			next_position.y += star_offset.y;
 		}
-
 	}
-	game->player_controller = (Game_Controller_State){
-		.thrust.scan_code = SDL_SCANCODE_W,
-		.thrust_left.scan_code = SDL_SCANCODE_E,
-		.thrust_right.scan_code = SDL_SCANCODE_Q,
-		.turn_left.scan_code = SDL_SCANCODE_A,
-		.turn_right.scan_code = SDL_SCANCODE_D,
-		.fire.scan_code = SDL_SCANCODE_SPACE,
-	};
 
-	Game_Controller_State new_player_controller = {0};
+	game->player_controller = (Game_Controller) {
+		.thrust = SDL_SCANCODE_W,
+		.thrust_left = SDL_SCANCODE_E,
+		.thrust_right = SDL_SCANCODE_Q,
+		.turn_left = SDL_SCANCODE_A,
+		.turn_right = SDL_SCANCODE_D,
+		.fire = SDL_SCANCODE_SPACE,
+	};
 	
 	get_new_entity(game); // reserve 0
 	for (int i = ENTITY_TYPE_PLAYER+1; i < ENTITY_TYPE_SPAWN_WARP; i++) {
@@ -183,62 +161,46 @@ int main(int argc, char* argv[]) {
 	Uint64 last_count = SDL_GetPerformanceCounter();
 	Uint64 current_count = last_count;
 
-	SDL_bool running = SDL_TRUE;
+	bool running = true;
 	while (running) {
 		double dt = (double)(current_count - last_count) / (double)SDL_GetPerformanceFrequency();
 		dt = dt/(1.0 / (double)TICK_RATE);
-
-		new_player_controller = (Game_Controller_State) {
-			.thrust.scan_code 		= 	game->player_controller.thrust.scan_code,
-			.thrust_left.scan_code 	= 	game->player_controller.thrust_left.scan_code,
-			.thrust_right.scan_code = 	game->player_controller.thrust_right.scan_code,
-			.turn_left.scan_code 	= 	game->player_controller.turn_left.scan_code,
-			.turn_right.scan_code 	= 	game->player_controller.turn_right.scan_code,
-			.fire.scan_code 		= 	game->player_controller.fire.scan_code,
-		};
 	
+		poll_input(&game->input);
+
 		SDL_Event event;
 		while(SDL_PollEvent(&event)) {
 			switch(event.type) {
 				case SDL_KEYUP: {
-#if DEBUG					
-					if (event.key.keysym.scancode == SDL_SCANCODE_EQUALS) {
-						game->DEBUG_fit_world_to_screen = !game->DEBUG_fit_world_to_screen;
-					}
-					else if (event.key.keysym.scancode == SDL_SCANCODE_GRAVE) {
-						SDL_Log("Break");
-					}
-					else
-#endif
-					process_key_event(&event.key, &new_player_controller);
+					process_key_event(&event.key, &game->input);
 				} break;
 				case SDL_KEYDOWN: {
-					process_key_event(&event.key, &new_player_controller);
+					process_key_event(&event.key, &game->input);
 				} break;
 
 				case SDL_QUIT: {
-					running = SDL_FALSE;
+					running = false;
 				} break;
 			}
-		}
-		if (!running) break;
-
-		Game_Button_State* current_button,* new_button;
-		for (int i = 0; i < array_length(new_player_controller.list); i++) {
-			new_button = new_player_controller.list + i;
-			current_button = game->player_controller.list + i;
-
-			current_button->pressed = (!current_button->held && new_button->pressed);
-			current_button->released = (current_button->held && new_button->released);
-
-			if (new_button->pressed) current_button->held = SDL_TRUE;
-			else if (new_button->released) current_button->held = SDL_FALSE;
+			if (!running) break;
 		}
 
-		if (!game->player 						&& 
-			game->player_controller.fire.held	&&
-			game->player_state.lives > 0
-			) {
+#if DEBUG
+		if (is_key_released(&game->input, SDL_SCANCODE_EQUALS)) {
+			game->DEBUG_fit_world_to_screen = !game->DEBUG_fit_world_to_screen;
+		}
+		
+		if (is_key_released(&game->input, SDL_SCANCODE_GRAVE)) {
+			SDL_Log("Break");
+		}
+#endif
+		if (is_key_pressed(&game->input, SDL_SCANCODE_ESCAPE)) {
+			SDL_Event quit_event;
+			quit_event.type = SDL_QUIT;
+			SDL_PushEvent(&quit_event);
+		}
+
+		if (!game->player && is_key_held(&game->input, game->player_controller.fire) && game->player_state.lives > 0) {
 			game->player = get_entity(game,
 				spawn_entity(game, ENTITY_TYPE_PLAYER, (Vector2){(float)(float)game->world_w/2.0f, (float)(float)game->world_h})
 			);

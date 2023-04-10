@@ -3,6 +3,7 @@
 
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_mixer.h"
+#include "game_input.h"
 
 typedef struct RGB_Color {uint8_t r, g, b;} RGB_Color;
 #define CLEAR_COLOR (RGB_Color){0,10,48}
@@ -96,23 +97,6 @@ typedef struct Game_Assets {
 	Mix_Chunk_Node sfx[16];
 	SDL_Texture_Node textures[16];
 } Game_Assets;
-
-typedef struct Game_Button_State {
-	SDL_Scancode scan_code;
-	SDL_bool pressed, held, released;
-} Game_Button_State;
-
-typedef union Game_Controller_State {
-	struct {
-		Game_Button_State thrust;
-		Game_Button_State turn_left;
-		Game_Button_State turn_right;
-		Game_Button_State thrust_left;
-		Game_Button_State thrust_right;
-		Game_Button_State fire;
-	};
-	Game_Button_State list[6];
-} Game_Controller_State;
 
 typedef struct Particle {
 	Transform2D_Union;
@@ -213,6 +197,7 @@ typedef struct Game_State {
 	SDL_Renderer* renderer;
 	STBTTF_Font* font;
 	Game_Assets assets;
+	Game_Input input;
 
 	SDL_Texture* world_buffer;
 	int world_w, world_h;
@@ -228,7 +213,7 @@ typedef struct Game_State {
 	Particle_System particle_system;
 	Score_System score;
 
-	Game_Controller_State player_controller;
+	Game_Controller player_controller;
 	Entity* player;
 	struct {
 		int lives;
