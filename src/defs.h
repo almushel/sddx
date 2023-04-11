@@ -213,7 +213,7 @@ typedef struct Game_State {
 	Particle_System particle_system;
 	Score_System score;
 
-	Game_Controller player_controller;
+	Game_Player_Controller player_controller;
 	Entity* player;
 	struct {
 		int lives;

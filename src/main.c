@@ -93,6 +93,8 @@ int main(int argc, char* argv[]) {
 		exit(1);
 	}
 
+	SDL_GameControllerEventState(SDL_ENABLE);
+
 	game->world_w = 800;
 	game->world_h = 600;
 	game->world_buffer = SDL_CreateTexture(game->renderer, SDL_PIXELFORMAT_ARGB32, SDL_TEXTUREACCESS_TARGET, game->world_w, game->world_h);
@@ -132,10 +134,10 @@ int main(int argc, char* argv[]) {
 		}
 	}
 
-	game->player_controller = (Game_Controller) {
+	game->player_controller = (Game_Player_Controller) {
 		.thrust = SDL_SCANCODE_W,
-		.thrust_left = SDL_SCANCODE_E,
-		.thrust_right = SDL_SCANCODE_Q,
+		.thrust_left = SDL_SCANCODE_Q,
+		.thrust_right = SDL_SCANCODE_E,
 		.turn_left = SDL_SCANCODE_A,
 		.turn_right = SDL_SCANCODE_D,
 		.fire = SDL_SCANCODE_SPACE,
@@ -171,11 +173,25 @@ int main(int argc, char* argv[]) {
 		SDL_Event event;
 		while(SDL_PollEvent(&event)) {
 			switch(event.type) {
-				case SDL_KEYUP: {
-					process_key_event(&event.key, &game->input);
-				} break;
+				case SDL_KEYUP:
 				case SDL_KEYDOWN: {
-					process_key_event(&event.key, &game->input);
+					process_key_event(&game->input, &event.key);
+				} break;
+
+				case SDL_CONTROLLERBUTTONDOWN:
+				case SDL_CONTROLLERBUTTONUP: 	 	{
+					process_controller_button_event(&game->input, &event.cbutton);
+				} break; 
+
+				case SDL_CONTROLLERAXISMOTION:		{
+					process_controller_axis_event(&game->input, &event.caxis);
+				} break;
+
+				case SDL_CONTROLLERDEVICEADDED: {
+					SDL_GameControllerOpen(event.cdevice.which);
+				} break;
+				
+				case SDL_CONTROLLERDEVICEREMOVED:	{
 				} break;
 
 				case SDL_QUIT: {

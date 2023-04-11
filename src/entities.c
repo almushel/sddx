@@ -583,15 +583,17 @@ void update_entities(Game_State* game, float dt) {
 			switch(entity->type) {
 				
 				case ENTITY_TYPE_PLAYER: {
-					Game_Controller controller = game->player_controller;
+					Game_Player_Controller controller = game->player_controller;
 
-					if (is_key_held(&game->input, controller.turn_left))  entity->angle -= PLAYER_TURN_SPEED * dt;
-					if (is_key_held(&game->input, controller.turn_right)) entity->angle += PLAYER_TURN_SPEED * dt;
+					if (is_key_held(&game->input, controller.turn_left) || is_controller_button_held(&game->input, SDL_CONTROLLER_BUTTON_DPAD_LEFT))  
+						entity->angle -= PLAYER_TURN_SPEED * dt;
+					if (is_key_held(&game->input, controller.turn_right) || is_controller_button_held(&game->input, SDL_CONTROLLER_BUTTON_DPAD_RIGHT)) 
+						entity->angle += PLAYER_TURN_SPEED * dt;
 					
 					SDL_bool thrust_inputs[] = {
-						is_key_held(&game->input, controller.thrust),
-						is_key_held(&game->input, controller.thrust_right),
-						is_key_held(&game->input, controller.thrust_left),
+						is_key_held(&game->input, controller.thrust) || is_controller_button_held(&game->input, SDL_CONTROLLER_BUTTON_DPAD_UP),
+						is_key_held(&game->input, controller.thrust_left) || is_controller_button_held(&game->input, SDL_CONTROLLER_BUTTON_LEFTSHOULDER),
+						is_key_held(&game->input, controller.thrust_right) || is_controller_button_held(&game->input, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER),
 					};
 
 					SDL_bool thrusting = 0;
@@ -621,7 +623,7 @@ void update_entities(Game_State* game, float dt) {
 					}
 					game->player_state.thrust_energy = SDL_clamp(game->player_state.thrust_energy + (float)(int)(!thrusting) * dt, 0, THRUST_MAX);
 
-					if (is_key_held(&game->input, controller.fire)) {	
+					if (is_key_held(&game->input, controller.fire) || is_controller_button_held(&game->input, SDL_CONTROLLER_BUTTON_A)) {	
 						if (game->player_state.weapon_heat < HEAT_MAX) {
 							game->player_state.weapon_heat -= dt;
 						
