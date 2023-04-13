@@ -1,6 +1,7 @@
 
 #include "defs.h"
 #include "game_math.h"
+#include "assets.h"
 #include "graphics.h"
 #include "score.h"
 
@@ -1149,25 +1150,98 @@ void update_entities(Game_State* game, float dt) {
 	}
 }
 
+SDL_FRect get_entity_bounding_box(Game_State* game, Entity* entity) {
+	SDL_FRect result = {0};
+
+	if (entity->sprite_count > 0) {
+		SDL_Rect rect = get_sprite_rect(game, &entity->sprites[0]);
+		result = (SDL_FRect){rect.x, rect.y, rect.w, rect.h};
+		result.x -= result.w/2.0f;
+		result.y -= result.h/2.0f;
+	} else {
+		switch(entity->shape.type) {
+			case SHAPE_TYPE_CIRCLE: {
+				result.x = result.y = -entity->shape.radius;
+				result.w = result.h = entity->shape.radius*2.0f;
+			} break;
+
+			case SHAPE_TYPE_RECT: {
+				// TO-DO: Handle rotation
+				result = entity->shape.rectangle;
+			} break;
+			
+			case SHAPE_TYPE_POLY2D: {
+				for (int i = 0; i < entity->shape.polygon.vert_count; i++) {
+					result.x = SDL_min(result.x, entity->shape.polygon.vertices[i].x);
+					result.y = SDL_min(result.y, entity->shape.polygon.vertices[i].y);
+					
+					result.w = SDL_max(result.w, entity->shape.polygon.vertices[i].x);
+					result.h = SDL_max(result.h, entity->shape.polygon.vertices[i].y);
+				}
+				result.w -= result.x;
+				result.h -= result.y;
+			} break;
+		}
+	}
+
+	return result;
+}
+
 void draw_entities(Game_State* game) {
 	Entity* entity = 0;
+	Transform2D transforms[4] = {0};
+	int transform_count = 0;
+
 	for (int entity_index = 0; entity_index < game->entity_count; entity_index++) {
 		entity = game->entities + entity_index;
 		if (entity->state <= 0 || entity->state >= ENTITY_STATE_DYING) continue;
 
-		if (entity->sprite_count > 0) {
-			for (int sprite_index = 0; sprite_index < entity->sprite_count; sprite_index++) {
-				if (entity->sprites[sprite_index].texture_name != 0) render_draw_game_sprite(game, &entity->sprites[sprite_index], entity->transform, 1);	
-			}
+		transforms[0] = transforms[1] = transforms[2]= transforms[3] = entity->transform;
+		transform_count = 1;
+		SDL_FRect bounding_box = get_entity_bounding_box(game, entity);
+
+		int wrap_x = (int)(entity->x + bounding_box.x < 0) - (int)(entity->x + bounding_box.w > game->world_w);
+		int wrap_y = (int)(entity->y + bounding_box.y < 0) - (int)(entity->y + bounding_box.h > game->world_h);
+
+		if (wrap_x) {
+			transforms[transform_count].x += game->world_w * (float)wrap_x;
+			transform_count++;
+		} 
+		
+		if (wrap_y) {
+			transforms[transform_count].y += game->world_h * (float)wrap_y;
+			transform_count++;
 		}
-		else if (entity->shape.type > SHAPE_TYPE_UNDEFINED && entity->shape.type < SHAPE_TYPE_COUNT) {
-			Game_Shape  shape = scale_game_shape(entity->shape, entity->scale);
-						shape = rotate_game_shape(shape, entity->angle);
-			render_fill_game_shape(game->renderer, entity->position, shape, entity->color);
+
+		if (wrap_x && wrap_y) {
+			transforms[transform_count].x += game->world_w * (float)wrap_x;
+			transforms[transform_count].y += game->world_h * (float)wrap_y;
+			transform_count++;
+		} 
+
+		for (int i = 0; i < transform_count; i++) {
+			if (entity->sprite_count > 0) {
+				for (int sprite_index = 0; sprite_index < entity->sprite_count; sprite_index++) {
+					if (entity->sprites[sprite_index].texture_name != 0) render_draw_game_sprite(game, &entity->sprites[sprite_index], transforms[i], true);	
+				}
+			}
+			else if (entity->shape.type > SHAPE_TYPE_UNDEFINED && entity->shape.type < SHAPE_TYPE_COUNT) {
+				Game_Shape  shape = scale_game_shape(entity->shape, transforms[i].scale);
+							shape = rotate_game_shape(shape, transforms[i].angle);
+				render_fill_game_shape(game->renderer, transforms[i].position, shape, entity->color);
+			}
+
+#if DEBUG		
+			SDL_FRect test = bounding_box;
+			test.x += transforms[i].x;
+			test.y += transforms[i].y;
+			
+			SDL_SetRenderDrawColor(game->renderer, 255, 255, 0, 255);
+			SDL_RenderDrawRectF(game->renderer, &test);
+#endif
 		}
 
 #ifdef DEBUG
-			
 		Game_Shape  shape = scale_game_shape(entity->shape, entity->scale);
 					shape = rotate_game_shape(shape, entity->angle);
 		SDL_SetRenderDrawColor(game->renderer, 255, 0, 0, 255);

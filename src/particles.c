@@ -187,9 +187,6 @@ Uint32 get_new_particle_emitter(Particle_System* ps) {
 		result = ps->dead_emitters[0];
 		ps->dead_emitters[0] = ps->dead_emitters[ps->dead_emitter_count-1];
 		ps->dead_emitter_count--;
-#if DEBUG
-		SDL_Log("New Emitter from dead list: %i", result);
-#endif
 	} else if (ps->emitter_count < array_length(ps->emitters)) {
 		result = ps->emitter_count++;
 	} else {
@@ -216,9 +213,6 @@ void remove_particle_emitter(Particle_System* ps, Uint32 index) {
 		ps->dead_emitters[ps->dead_emitter_count] = index;
 		ps->dead_emitter_count++;
 	}
-#if DEBUG
-	SDL_Log("Dead Emitter Count: %i", ps->dead_emitter_count);
-#endif
 }
 
 void update_particle_emitters(Particle_System* ps, float dt) {
