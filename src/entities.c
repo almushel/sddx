@@ -4,6 +4,7 @@
 #include "assets.h"
 #include "graphics.h"
 #include "score.h"
+#include "entities.h"
 
 #define ENTITY_WARP_DELAY 26.0f
 #define ENTITY_WARP_RADIUS 20
@@ -95,24 +96,6 @@ typedef enum Entity_Teams {
 	ENTITY_TEAM_PLAYER,
 	ENTITY_TEAM_ENEMY,
 } Entity_Teams;
-
-typedef enum Entity_Types {
-	ENTITY_TYPE_UNDEFINED,
-	ENTITY_TYPE_PLAYER,
-	ENTITY_TYPE_BULLET,
-	ENTITY_TYPE_MISSILE,
-	ENTITY_TYPE_LASER,
-	ENTITY_TYPE_ENEMY_DRIFTER,
-	ENTITY_TYPE_ENEMY_UFO,
-	ENTITY_TYPE_ENEMY_TRACKER,
-	ENTITY_TYPE_ENEMY_TURRET,
-	ENTITY_TYPE_ENEMY_GRAPPLER,
-	ENTITY_TYPE_ITEM_MISSILE,
-	ENTITY_TYPE_ITEM_LIFEUP,
-	ENTITY_TYPE_ITEM_LASER,
-	ENTITY_TYPE_SPAWN_WARP,
-	ENTITY_TYPE_COUNT
-} Entity_Types;
 
 typedef enum Turret_State {
 	TURRET_STATE_AIMING,
@@ -586,15 +569,15 @@ void update_entities(Game_State* game, float dt) {
 				case ENTITY_TYPE_PLAYER: {
 					Game_Player_Controller controller = game->player_controller;
 
-					if (is_key_held(&game->input, controller.turn_left) || is_controller_button_held(&game->input, SDL_CONTROLLER_BUTTON_DPAD_LEFT))  
+					if (is_game_control_held(&game->input, &controller.turn_left))  
 						entity->angle -= PLAYER_TURN_SPEED * dt;
-					if (is_key_held(&game->input, controller.turn_right) || is_controller_button_held(&game->input, SDL_CONTROLLER_BUTTON_DPAD_RIGHT)) 
+					if (is_game_control_held(&game->input, &controller.turn_right)) 
 						entity->angle += PLAYER_TURN_SPEED * dt;
 					
 					SDL_bool thrust_inputs[] = {
-						is_key_held(&game->input, controller.thrust) || is_controller_button_held(&game->input, SDL_CONTROLLER_BUTTON_DPAD_UP),
-						is_key_held(&game->input, controller.thrust_left) || is_controller_button_held(&game->input, SDL_CONTROLLER_BUTTON_LEFTSHOULDER),
-						is_key_held(&game->input, controller.thrust_right) || is_controller_button_held(&game->input, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER),
+						is_game_control_held(&game->input, &controller.thrust),
+						is_game_control_held(&game->input, &controller.thrust_left),
+						is_game_control_held(&game->input, &controller.thrust_right),
 					};
 
 					SDL_bool thrusting = 0;
@@ -624,7 +607,7 @@ void update_entities(Game_State* game, float dt) {
 					}
 					game->player_state.thrust_energy = SDL_clamp(game->player_state.thrust_energy + (float)(int)(!thrusting) * dt, 0, THRUST_MAX);
 
-					if (is_key_held(&game->input, controller.fire) || is_controller_button_held(&game->input, SDL_CONTROLLER_BUTTON_A)) {	
+					if (is_game_control_held(&game->input, &controller.fire)) {	
 						if (game->player_state.weapon_heat < HEAT_MAX) {
 							game->player_state.weapon_heat -= dt;
 						

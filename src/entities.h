@@ -3,7 +3,24 @@
 
 #include "defs.h"
 
-Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position);
+typedef enum Entity_Types {
+	ENTITY_TYPE_UNDEFINED,
+	ENTITY_TYPE_PLAYER,
+	ENTITY_TYPE_BULLET,
+	ENTITY_TYPE_MISSILE,
+	ENTITY_TYPE_LASER,
+	ENTITY_TYPE_ENEMY_DRIFTER,
+	ENTITY_TYPE_ENEMY_UFO,
+	ENTITY_TYPE_ENEMY_TRACKER,
+	ENTITY_TYPE_ENEMY_TURRET,
+	ENTITY_TYPE_ENEMY_GRAPPLER,
+	ENTITY_TYPE_ITEM_MISSILE,
+	ENTITY_TYPE_ITEM_LIFEUP,
+	ENTITY_TYPE_ITEM_LASER,
+	ENTITY_TYPE_SPAWN_WARP,
+	ENTITY_TYPE_COUNT
+} Entity_Types;
 
+Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position);
 
 #endif

@@ -38,19 +38,19 @@
 	return result; \
 }
 
-SDL_bool game_load_texture(Game_State* game, const char* file, const char* name);
-SDL_bool game_load_music(Game_State* game, const char* file, const char* name);
-SDL_bool game_load_sfx(Game_State* game, const char* file, const char* name);
+SDL_bool game_load_texture	(Game_State* game, const char* file, const char* name);
+SDL_bool game_load_music	(Game_State* game, const char* file, const char* name);
+SDL_bool game_load_sfx		(Game_State* game, const char* file, const char* name);
 
-declare_game_get_asset(Mix_Music, music, music);
-declare_game_get_asset(Mix_Chunk, sfx, sfx);
-declare_game_get_asset(SDL_Texture, textures, texture);
+declare_game_get_asset		(Mix_Music, music, music);
+declare_game_get_asset		(Mix_Chunk, sfx, sfx);
+declare_game_get_asset		(SDL_Texture, textures, texture);
 
-declare_game_store_asset(Mix_Music, music, music);
-declare_game_store_asset(Mix_Chunk, sfx, sfx);
-declare_game_store_asset(SDL_Texture, textures, texture);
+declare_game_store_asset	(Mix_Music, music, music);
+declare_game_store_asset	(Mix_Chunk, sfx, sfx);
+declare_game_store_asset	(SDL_Texture, textures, texture);
 
-SDL_Rect get_sprite_rect(Game_State* game, Game_Sprite* sprite);
-Game_Sprite* divide_sprite(Game_State* game, Game_Sprite* sprite, int pieces);
+SDL_Rect get_sprite_rect	(Game_State* game, Game_Sprite* sprite);
+Game_Sprite* divide_sprite	(Game_State* game, Game_Sprite* sprite, int pieces);
 
 #endif

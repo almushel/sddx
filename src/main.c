@@ -135,12 +135,35 @@ int main(int argc, char* argv[]) {
 	}
 
 	game->player_controller = (Game_Player_Controller) {
-		.thrust = SDL_SCANCODE_W,
-		.thrust_left = SDL_SCANCODE_Q,
-		.thrust_right = SDL_SCANCODE_E,
-		.turn_left = SDL_SCANCODE_A,
-		.turn_right = SDL_SCANCODE_D,
-		.fire = SDL_SCANCODE_SPACE,
+		.thrust = {
+			.key = SDL_SCANCODE_W,
+			.button = SDL_CONTROLLER_BUTTON_DPAD_UP,
+		},
+
+		.thrust_left = {
+			.key = SDL_SCANCODE_Q,
+			.button = SDL_CONTROLLER_BUTTON_LEFTSHOULDER,
+		},
+		
+		.thrust_right= {
+			.key = SDL_SCANCODE_E,
+			.button = SDL_CONTROLLER_BUTTON_RIGHTSHOULDER,
+		},
+		
+		.turn_left = {
+			.key = SDL_SCANCODE_A,
+			.button = SDL_CONTROLLER_BUTTON_DPAD_LEFT,
+		},
+
+		.turn_right = {
+			.key = SDL_SCANCODE_D,
+			.button = SDL_CONTROLLER_BUTTON_DPAD_RIGHT,
+		},
+
+		.fire = {
+			.key = SDL_SCANCODE_SPACE,
+			.button = SDL_CONTROLLER_BUTTON_A,
+		},
 	};
 	
 	get_new_entity(game); // reserve 0
@@ -178,20 +201,12 @@ int main(int argc, char* argv[]) {
 					process_key_event(&game->input, &event.key);
 				} break;
 
+				case SDL_CONTROLLERDEVICEADDED:
+				case SDL_CONTROLLERDEVICEREMOVED:
 				case SDL_CONTROLLERBUTTONDOWN:
-				case SDL_CONTROLLERBUTTONUP: 	 	{
-					process_controller_button_event(&game->input, &event.cbutton);
-				} break; 
-
-				case SDL_CONTROLLERAXISMOTION:		{
-					process_controller_axis_event(&game->input, &event.caxis);
-				} break;
-
-				case SDL_CONTROLLERDEVICEADDED: {
-					SDL_GameControllerOpen(event.cdevice.which);
-				} break;
-				
-				case SDL_CONTROLLERDEVICEREMOVED:	{
+				case SDL_CONTROLLERBUTTONUP:
+				case SDL_CONTROLLERAXISMOTION: {
+					process_controller_event(&game->input, &event);
 				} break;
 
 				case SDL_QUIT: {
@@ -216,7 +231,7 @@ int main(int argc, char* argv[]) {
 			SDL_PushEvent(&quit_event);
 		}
 
-		if (!game->player && is_key_held(&game->input, game->player_controller.fire) && game->player_state.lives > 0) {
+		if (!game->player && is_game_control_held(&game->input, &game->player_controller.fire) && game->player_state.lives > 0) {
 			game->player = get_entity(game,
 				spawn_entity(game, ENTITY_TYPE_PLAYER, (Vector2){(float)(float)game->world_w/2.0f, (float)(float)game->world_h})
 			);

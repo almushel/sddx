@@ -27,91 +27,162 @@ void poll_input(Game_Input* input) {
 		}
 	}
 
-	for (int c = 0; c < GAME_MAX_CONTROLLERS; c++) {
+//	for (int c = 0; c < GAME_MAX_CONTROLLERS; c++) {
 		for (int b = 0; b < SDL_CONTROLLER_BUTTON_MAX; b++) {
-			switch(input->controllers[c].buttons[b]) {
+			switch(input->controller.buttons[b]) {
 				case GAME_INPUT_PRESSED: {
-					input->controllers[c].buttons[b] = GAME_INPUT_HELD;
+					input->controller.buttons[b] = GAME_INPUT_HELD;
 				} break;
 
 				case GAME_INPUT_RELEASED: {
-					input->controllers[c].buttons[b] = GAME_INPUT_NULL;
+					input->controller.buttons[b] = GAME_INPUT_NULL;
 				} break;
 			}
 		}
-	}
+//	}
 }
 
 bool is_key_pressed(Game_Input* input, SDL_Scancode key) {
-	bool result = false;
-
-	result = (input->keys[key] == GAME_INPUT_PRESSED);
+	bool result = ( 
+		valid_scancode(key) &&
+		input->keys[key] == GAME_INPUT_PRESSED
+	);
 
 	return result;
 }
 
 bool is_key_held(Game_Input* input, SDL_Scancode key) {
-	bool result = false;
-
-	result = (input->keys[key] == GAME_INPUT_PRESSED) || (input->keys[key] == GAME_INPUT_HELD);
+	bool result = (
+		valid_scancode(key) &&
+		input->keys[key] == GAME_INPUT_PRESSED) || (input->keys[key] == GAME_INPUT_HELD
+	);
 
 	return result;
 }
 
 bool is_key_released(Game_Input* input,  SDL_Scancode key) {
-	bool result = false;
-
-	result = (input->keys[key] == GAME_INPUT_RELEASED);
+	bool result = (
+		valid_scancode(key) &&
+		input->keys[key] == GAME_INPUT_RELEASED
+	);
 
 	return result;
 }
 
-void process_controller_button_event(Game_Input* input, SDL_ControllerButtonEvent* event) {
-	// NOTE: Unique id is created every time a controller is connected and they are never reused.
-	// Static array of controllers is probably not idea here.
-	SDL_JoystickID id = event->which;
+// NOTE: Currently all connect controllers will update the same input.controller state, because this is a single-player game
+
+void process_controller_event(Game_Input* input, SDL_Event* event) {
 	switch(event->type) {
+		case SDL_CONTROLLERDEVICEADDED: {
+			int controller_count = SDL_NumJoysticks();
+			for (int i = 0; i < controller_count; i++) {
+				SDL_Log("Controller connected: %i", i);
+				SDL_GameController* controller = SDL_GameControllerOpen(i);
+				if (controller == NULL) {
+					SDL_Log("%s", SDL_GetError());
+				}
+			}
+		} break;
+
+		case SDL_CONTROLLERDEVICEREMOVED: {
+			SDL_Log("Controller disconnected: %i", event->cdevice.which);
+			SDL_GameController* controller = SDL_GameControllerFromInstanceID(event->cdevice.which);
+			SDL_GameControllerClose(controller);
+		} break;
+		
 		case SDL_CONTROLLERBUTTONDOWN: 	{
-			input->controllers[id].buttons[event->button] = GAME_INPUT_PRESSED;
+			input->controller.buttons[event->cbutton.button] = GAME_INPUT_PRESSED;
 		} break;
 		
 		case SDL_CONTROLLERBUTTONUP:	{
-			input->controllers[id].buttons[event->button] = GAME_INPUT_RELEASED;
+			input->controller.buttons[event->cbutton.button] = GAME_INPUT_RELEASED;
 		} break;
-	}
-}
 
-void process_controller_axis_event(Game_Input* input, SDL_ControllerAxisEvent* event) {
-	SDL_JoystickID id = event->which;
-	if (id < GAME_MAX_CONTROLLERS) {
-		// Convert axis value to floating point value between -1 and 1
-		input->controllers[id].axes[event->axis] = 
-			(event->value >= 0) 				? 
-			(float)(event->value / INT16_MAX) 	:
-			(float)(event->value / INT16_MIN)	;
+		case SDL_CONTROLLERAXISMOTION:	{
+			input->controller.axes[event->caxis.axis] = 
+				(event->caxis.value >= 0) 				? 
+				(float)(event->caxis.value / INT16_MAX) 	:
+				(float)(event->caxis.value / INT16_MIN)	;
+		}
 	}
 }
 
 bool is_controller_button_pressed(Game_Input* input, SDL_GameControllerButton button) {
-	bool result = false;
-
-	result = (input->controllers[0].buttons[button] == GAME_INPUT_PRESSED);
+	bool result = (
+		valid_controller_button(button) &&
+		(input->controller.buttons[button] == GAME_INPUT_PRESSED)
+	);
 
 	return result;
 }
 
 bool is_controller_button_held(Game_Input* input, SDL_GameControllerButton button) {
-	bool result = false;
-
-	result = (input->controllers[0].buttons[button] == GAME_INPUT_PRESSED) || (input->controllers[0].buttons[button] == GAME_INPUT_HELD);
+	bool result = (	
+		valid_controller_button(button) &&
+		(input->controller.buttons[button] == GAME_INPUT_PRESSED) || (input->controller.buttons[button] == GAME_INPUT_HELD)
+	);
 
 	return result;
 }
 
 bool is_controller_button_released(Game_Input* input, SDL_GameControllerButton button) {
-	bool result = false;
-
-	result = (input->controllers[0].buttons[button] == GAME_INPUT_RELEASED);
+	bool result = (	
+		valid_controller_button(button) &&
+		input->controller.buttons[button] == GAME_INPUT_RELEASED
+	);
 
 	return result;
+}
+
+float get_controller_axis(Game_Input* input, int axis) {
+	float result = 0;
+
+	if (valid_controller_axis(axis)) {
+		result = input->controller.axes[axis];
+	}
+
+	return result;
+}
+
+bool is_game_control_pressed(Game_Input* input, Game_Control* control){
+	bool result = (
+		is_key_pressed(input, control->key) ||
+		is_controller_button_pressed(input, control->button)
+	);
+
+	return result;
+}
+bool is_game_control_held(Game_Input* input, Game_Control* control) {
+	bool result = (
+		is_key_held(input, control->key) ||
+		is_controller_button_held(input, control->button)
+	);
+
+	return result;
+}
+
+bool is_game_control_released(Game_Input* input, Game_Control* control) {
+	bool result = (
+		is_key_released(input, control->key) ||
+		is_controller_button_released(input, control->button)
+	);
+
+	return result;
+}
+
+float get_game_control_axis(Game_Input* input, Game_Control* control) {
+	float result = 0;
+
+	if (valid_scancode(control->axis_key_minus) && valid_scancode(control->axis_key_plus)) {
+		result = (float)( (int)is_key_held(input, control->axis_key_plus) - (int)is_key_held(input, control->axis_key_minus) );
+	}
+	else if (valid_controller_button(control->axis_button_minus) && valid_controller_button(control->axis_button_plus)) {
+		result = (float)( (int)is_controller_button_held(input, control->axis_button_plus) - (int)is_controller_button_held(input, control->axis_button_minus) );
+	} 
+	else {
+		result = get_controller_axis(input, control->axis_id);
+	}
+
+	return result;
+
 }
