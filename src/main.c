@@ -8,6 +8,180 @@
 #include "hud.c"
 #include "score.c"
 
+static SDL_Window *	 	window = 0;
+static SDL_Renderer * 	renderer = 0;
+static SDL_Texture * 	world_buffer = 0;
+
+Vector2 platform_get_window_size(void) {
+	Vector2 result = {0};
+
+	if (window) {
+		int w, h;
+		SDL_GetWindowSizeInPixels(window, &w, &h);
+		result.x = (float)w;
+		result.y = (float)h;
+	}
+
+	return result;
+}
+
+SDL_Texture* platform_create_texture(Uint32 format, int access, int w, int h) {
+	SDL_Texture* result = 0;
+	
+	if (renderer) {
+		result = SDL_CreateTexture(renderer, format, access, w, h);
+	} else {
+		SDL_SetError("platform_create_texture(): renderer does not exist.");
+	}
+
+	return result;
+}
+
+SDL_Texture* platform_create_texture_from_surface(SDL_Surface* surface) {
+	SDL_Texture*  result = 0;
+	
+	if (renderer) {
+		result = SDL_CreateTextureFromSurface(renderer, surface);
+	} else {
+		SDL_SetError("platform_create_texture_from_surface(): renderer does not exist.");
+	}
+
+	return result;
+}
+
+int platform_set_render_target(SDL_Texture *texture) {
+	int result = -1;
+
+	if (renderer) {
+		result = SDL_SetRenderTarget(renderer, texture);
+	} else {
+		SDL_SetError("platform_set_render_target(): renderer does not exist.");
+	}
+
+	return result;
+}
+
+int platform_render_clear(void) {
+	int result = -1;
+
+	if (renderer) {
+		result = SDL_RenderClear(renderer);
+	} else {
+		SDL_SetError("platform_render_clear(): renderer does not exist.");
+	}
+
+	return result;
+}
+
+Vector2 platform_get_texture_dimensions(SDL_Texture* texture) {
+	Vector2 result = {0};
+
+	int w, h;
+
+	if (SDL_QueryTexture(texture, NULL, NULL, &w, &h) != -1) {
+		result.x = w;
+		result.y = h;
+	}
+
+	return result;
+}
+
+RGBA_Color platform_get_render_draw_color(void) {
+	RGBA_Color result;
+	if (renderer) {
+		SDL_GetRenderDrawColor(renderer, &result.r, &result.g, &result.b, &result.a);
+	}
+	return result;
+}
+
+int platform_set_render_draw_color(RGBA_Color color) {
+	int result = -1;
+	
+	if (renderer) {
+		result = SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+	} else {
+		SDL_SetError("platform_render_set_draw_color(): renderer does not exist.");
+	}
+	
+	return result;
+}
+
+int platform_render_copy(SDL_Texture *texture, const SDL_Rect *src_rect, const SDL_FRect *dst_rect, const double angle, const SDL_FPoint *center, const SDL_RendererFlip flip) {
+	int result = -1;
+
+	if (renderer) {
+		if (angle || center || flip) {
+			result = SDL_RenderCopyExF(renderer, texture, src_rect, dst_rect, angle, center, flip);
+		} else {
+			result = SDL_RenderCopyF(renderer, texture, src_rect, dst_rect);
+		}
+	} else {
+		SDL_SetError("platform_render_copy(): renderer does not exist.");
+	}
+
+	return result;
+}
+
+int platform_render_draw_points (Vector2* points, int count) {
+	int result = -1;
+	if (renderer) {
+		result = SDL_RenderDrawPointsF(renderer, (SDL_FPoint*)points, count);
+	} else {
+		SDL_SetError("platform_render_draw_points(): renderer does not exist.");
+	}
+
+	return result;
+}
+
+int platform_render_draw_rect(SDL_FRect rect) {
+	int result = -1;
+
+	if (renderer) {	
+		result = SDL_RenderDrawRectF(renderer, &rect);
+	} else {
+		SDL_SetError("platform_render_draw_rect(): renderer does not exist.");
+	}
+
+	return result;
+}
+
+int platform_render_draw_lines(const Vector2 *points, int count) {
+	int result = -1;
+	if (renderer) {
+		if (count == 2) {
+			SDL_RenderDrawLineF(renderer, points[0].x, points[0].y, points[1].x, points[1].y);
+		} else {
+			SDL_RenderDrawLinesF(renderer, (const SDL_FPoint*)points, count);
+		}
+	} else {
+		SDL_SetError("platform_render_draw_points(): renderer does not exist.");
+	}
+
+	return result;
+}
+
+int platform_render_fill_rect(SDL_FRect rect) {
+	int result = -1;
+
+	if (renderer) {	
+		result = SDL_RenderFillRectF(renderer, &rect);
+	} else {
+		SDL_SetError("platform_render_fill_rect(): renderer does not exist.");
+	}
+
+	return result;
+}
+
+int platform_render_geometry(SDL_Texture *texture, const SDL_Vertex* vertices, int num_vertices, const int *indices, int num_indices) {
+	int result = -1;
+	
+	if (renderer) {
+		result = SDL_RenderGeometry(renderer, texture, vertices, num_vertices, indices, num_indices);
+	}
+
+	return result;
+}
+
 void load_game_assets(Game_State* game) {
 	game_load_texture(game, "assets/images/player.png", "Player Ship");
 
@@ -79,16 +253,16 @@ int main(int argc, char* argv[]) {
 	game->entities = SDL_malloc(sizeof(Entity) * game->entities_size);
 	SDL_memset(game->entities, 0, sizeof(Entity) * game->entities_size);
 
-	game->window = SDL_CreateWindow("Space Drifter DX", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, screen_w, screen_h, SDL_WINDOW_RESIZABLE);
-	if (game->window == NULL) {
+	window = SDL_CreateWindow("Space Drifter DX", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, screen_w, screen_h, SDL_WINDOW_RESIZABLE);
+	if (window == NULL) {
 		SDL_LogError(0, SDL_GetError());
 		exit(1);
 	}
 
 	SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
 
-	game->renderer = SDL_CreateRenderer(game->window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC); 
-	if (game->renderer == NULL) {
+	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC); 
+	if (renderer == NULL) {
 		SDL_LogError(0, SDL_GetError());
 		exit(1);
 	}
@@ -97,14 +271,14 @@ int main(int argc, char* argv[]) {
 
 	game->world_w = 800;
 	game->world_h = 600;
-	game->world_buffer = SDL_CreateTexture(game->renderer, SDL_PIXELFORMAT_ARGB32, SDL_TEXTUREACCESS_TARGET, game->world_w, game->world_h);
-	if (!game->world_buffer) {
+	world_buffer = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB32, SDL_TEXTUREACCESS_TARGET, game->world_w, game->world_h);
+	if (!world_buffer) {
 		SDL_Log("Creating world buffer failed. %s", SDL_GetError());
 	}
 	game->DEBUG_fit_world_to_screen = 1;
 
 	load_game_assets(game);
-	game->font = load_stbtt_font(game->renderer, "c:/windows/fonts/times.ttf", 32);
+	game->font = load_stbtt_font(renderer, "c:/windows/fonts/times.ttf", 32);
 //	Mix_PlayMusic(game_get_music(game, "Wrapping Action"), -1);
 
 	{ // Generate star field
@@ -175,7 +349,6 @@ int main(int argc, char* argv[]) {
 		}
 	}
 
-//	game->player_state.current_weapon = PLAYER_WEAPON_MG;
 	game->player_state.lives = 3;
 	game->player_state.ammo = 0;
 	game->player_state.weapon_heat = 0;
@@ -245,14 +418,14 @@ int main(int argc, char* argv[]) {
 		update_particle_emitters(&game->particle_system, dt);
 		update_particles(&game->particle_system, dt);
 
-		SDL_SetRenderDrawColor(game->renderer,0,0,0,0);
-		SDL_RenderClear(game->renderer);
+		SDL_SetRenderDrawColor(renderer,0,0,0,0);
+		SDL_RenderClear(renderer);
 
 		// Start world draw
-		SDL_SetRenderTarget(game->renderer, game->world_buffer);
-		SDL_SetRenderDrawColor(game->renderer,CLEAR_COLOR.r,CLEAR_COLOR.g,CLEAR_COLOR.b,255);
-		SDL_RenderClear(game->renderer);
-		SDL_SetRenderDrawBlendMode(game->renderer, SDL_BLENDMODE_BLEND);
+		SDL_SetRenderTarget(renderer, world_buffer);
+		SDL_SetRenderDrawColor(renderer,CLEAR_COLOR.r,CLEAR_COLOR.g,CLEAR_COLOR.b,255);
+		SDL_RenderClear(renderer);
+		SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 		for (int star_index = 0; star_index < STARFIELD_STAR_COUNT; star_index++) {
 			game->starfield.timers[star_index] += dt * (float)(1 - (2 * (int)game->starfield.twinkle_direction[star_index]));
 			
@@ -261,28 +434,28 @@ int main(int argc, char* argv[]) {
 
 			float alpha = SDL_clamp(255.0f * (game->starfield.timers[star_index] / STAR_TWINKLE_INTERVAL), 0.0f, 255.0f);
 
-			SDL_SetRenderDrawColor(game->renderer, 
+			SDL_SetRenderDrawColor(renderer, 
 				game->starfield.colors[star_index].r,
 				game->starfield.colors[star_index].g, 
 				game->starfield.colors[star_index].b, 
 				(Uint8)alpha
 			);
-			SDL_RenderDrawPointF(game->renderer, game->starfield.positions[star_index].x, game->starfield.positions[star_index].y);
+			SDL_RenderDrawPointF(renderer, game->starfield.positions[star_index].x, game->starfield.positions[star_index].y);
 		}
-		SDL_SetRenderDrawBlendMode(game->renderer, SDL_BLENDMODE_NONE);
-		draw_particles(game, game->renderer);
+		SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+		draw_particles(game);
 		draw_entities(game);
 		// End of world draw
 
-		SDL_SetRenderTarget(game->renderer, 0);
-		SDL_GetWindowSizeInPixels(game->window, &screen_w, &screen_h);
+		SDL_SetRenderTarget(renderer, 0);
+		SDL_GetWindowSizeInPixels(window, &screen_w, &screen_h);
 
 		float world_scale = 1;
 		int world_offset_x = 1, world_offset_y = 1;
 
 #if DEBUG
 		if (game->DEBUG_fit_world_to_screen) {
-			SDL_SetTextureScaleMode(game->world_buffer, SDL_ScaleModeBest);
+			SDL_SetTextureScaleMode(world_buffer, SDL_ScaleModeBest);
 			if (screen_h < screen_w) {
 				world_scale = (float)screen_h / (float)game->world_h;
 				world_offset_y = 0;
@@ -291,7 +464,7 @@ int main(int argc, char* argv[]) {
 				world_offset_x = 0;
 			}
 		} else {
-			SDL_SetTextureScaleMode(game->world_buffer, SDL_ScaleModeNearest);
+			SDL_SetTextureScaleMode(world_buffer, SDL_ScaleModeNearest);
 		}
 #endif
 		int scaled_world_w = (int)((float)game->world_w * world_scale);
@@ -304,7 +477,7 @@ int main(int argc, char* argv[]) {
 			scaled_world_w, scaled_world_h,
 		};
 		
-		SDL_RenderCopy(game->renderer, game->world_buffer, 0, &world_draw_rect);
+		SDL_RenderCopy(renderer, world_buffer, 0, &world_draw_rect);
 		draw_HUD(game);
 
 		Uint64 frequency = SDL_GetPerformanceFrequency();
@@ -314,7 +487,7 @@ int main(int argc, char* argv[]) {
 
 		last_count = current_count;
 		current_count = SDL_GetPerformanceCounter();
-		SDL_RenderPresent(game->renderer);
+		SDL_RenderPresent(renderer);
 
 //		double frame_time = (double)(current_count - last_count) / (double)frequency * 1000.0;
 //		SDL_Log("Frame time: %.4fms", frame_time);

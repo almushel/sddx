@@ -5,9 +5,9 @@
 #include "SDL2/SDL_mixer.h"
 #include "game_input.h"
 
-typedef struct RGB_Color {uint8_t r, g, b;} RGB_Color;
-#define CLEAR_COLOR (RGB_Color){0,10,48}
-#define SD_BLUE (RGB_Color){109, 194, 255}
+typedef struct RGBA_Color {uint8_t r, g, b, a;} RGBA_Color;
+#define CLEAR_COLOR (RGBA_Color){0, 10, 48 , 255}
+#define SD_BLUE (RGBA_Color){109, 194, 255, 255}
 
 #define array_length(array) ( sizeof(array) / sizeof(array[0]) )
 
@@ -106,7 +106,7 @@ typedef struct Particle {
 
 	Game_Sprite sprite;
 	Game_Shape shape;
-	RGB_Color color;
+	RGBA_Color color;
 } Particle;
 
 typedef struct Particle_Emitter {
@@ -120,7 +120,7 @@ typedef struct Particle_Emitter {
 	float density;
 //	Game_Sprite sprite;
 	Game_Shape_Types shape;
-	RGB_Color colors[16];
+	RGBA_Color colors[16];
 	Uint32 color_count;
 
 	float counter;
@@ -148,7 +148,7 @@ typedef struct Particle_System {
 typedef struct Game_Starfield {
 	Vector2 positions[STARFIELD_STAR_COUNT];
 	float timers[STARFIELD_STAR_COUNT];
-	RGB_Color colors[STARFIELD_STAR_COUNT];
+	RGBA_Color colors[STARFIELD_STAR_COUNT];
 	SDL_bool twinkle_direction[STARFIELD_STAR_COUNT];
 } Game_Starfield;
 
@@ -181,7 +181,7 @@ typedef struct Entity {
 	Uint32 sprite_count;
 	Game_Shape shape;
 
-	RGB_Color color;
+	RGBA_Color color;
 
 	Uint32 particle_emitters[3];
 	Uint8 emitter_count;
@@ -193,13 +193,10 @@ typedef struct Entity {
 } Entity;
 
 typedef struct Game_State {
-	SDL_Window* window;
-	SDL_Renderer* renderer;
 	STBTTF_Font* font;
 	Game_Assets assets;
 	Game_Input input;
 
-	SDL_Texture* world_buffer;
 	int world_w, world_h;
 #if DEBUG
 	SDL_bool DEBUG_fit_world_to_screen;

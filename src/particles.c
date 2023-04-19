@@ -11,7 +11,7 @@
 #define PARTICLE_SPEED 6
 #define PARTICLE_DECAY 0.75f
 #define EXPLOSION_STARTING_PARTICLES 12
-#define DEFAULT_PARTICLE_COLOR (RGB_Color){255, 255, 255}
+#define DEFAULT_PARTICLE_COLOR (RGBA_Color){255, 255, 255, 255}
 #define DEAD_PARTICLE_MAX 16
 
 void update_particles(Particle_System* ps, float dt) {
@@ -42,7 +42,7 @@ void update_particles(Particle_System* ps, float dt) {
 	}
 }
 
-void draw_particles(Game_State* game, SDL_Renderer* renderer) {
+void draw_particles(Game_State* game) {
 	Particle_System* ps = &game->particle_system;
 	for (int p = 0; p < ps->particle_count; p++) {
 		Particle particle = ps->particles[p];
@@ -56,7 +56,7 @@ void draw_particles(Game_State* game, SDL_Renderer* renderer) {
 		if (particle.sprite.texture_name) {
 			render_draw_game_sprite(game, &particle.sprite, particle.transform, 1);
 		} else {
-			render_fill_game_shape(renderer, (Vector2){particle.x, particle.y}, scale_game_shape(particle.shape, particle.scale), particle.color);
+			render_fill_game_shape((Vector2){particle.x, particle.y}, scale_game_shape(particle.shape, particle.scale), particle.color);
 		}
 	}
 }
@@ -115,14 +115,10 @@ static float random_particle_radius() {
 	return result;
 }
 
-static RGB_Color random_color(RGB_Color* colors, Uint32 color_count) {
-	RGB_Color result = {0};
+static RGBA_Color random_color(RGBA_Color* colors, Uint32 color_count) {
+	RGBA_Color result = {0};
 	if (colors == 0 || color_count == 0) {
-		RGB_Color default_color = {
-			.r = 255,
-			.g = 255,
-			.b = 255,
-		};
+		RGBA_Color default_color = DEFAULT_PARTICLE_COLOR;
 		color_count = 1;
 		colors = &default_color;
 	}
@@ -131,7 +127,7 @@ static RGB_Color random_color(RGB_Color* colors, Uint32 color_count) {
 	return result;
 }
 
-void randomize_particle(Particle* p, RGB_Color* colors, Uint32 color_count) {
+void randomize_particle(Particle* p, RGBA_Color* colors, Uint32 color_count) {
 	float angle = random() * 360.0f;
 
 	float radius = random_particle_radius();
@@ -167,7 +163,7 @@ void randomize_particle(Particle* p, RGB_Color* colors, Uint32 color_count) {
 	p->vy = sin_deg(angle) * (float)PARTICLE_SPEED;
 }
 
-void explode_at_point(Particle_System* ps, float x, float y, RGB_Color* colors, Uint32 num_colors, Game_Sprite* sprite, Game_Shape_Types shape) {
+void explode_at_point(Particle_System* ps, float x, float y, RGBA_Color* colors, Uint32 num_colors, Game_Sprite* sprite, Game_Shape_Types shape) {
 //	if (force != 0) {force_circle(x, x, 120, force); }
 	for (int p = 0; p < EXPLOSION_STARTING_PARTICLES; p++) {
 		Uint32 id = spawn_particle(ps, sprite, shape);

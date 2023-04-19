@@ -1,16 +1,15 @@
 #include "SDL2/SDL.h"
-#include "assets.h"
-#include "stdio.h"
-
 #include "stb/stb_truetype.h"
+
+#include "assets.h"
+#include "platform.h"
 
 #include "game_math.h"
 
-void render_text(SDL_Renderer* renderer, STBTTF_Font* font, float size, float x, float y, const char* text) {
-	Uint8 r, g, b, a;
-	SDL_GetRenderDrawColor(renderer, &r, &g, &b, &a);
-	SDL_SetTextureColorMod(font->atlas, r, g, b);
-	SDL_SetTextureAlphaMod(font->atlas, a);
+void render_text(STBTTF_Font* font, float size, float x, float y, const char* text) {
+	RGBA_Color color = platform_get_render_draw_color();
+	SDL_SetTextureColorMod(font->atlas, color.r, color.g, color.b);
+	SDL_SetTextureAlphaMod(font->atlas, color.a);
 
 	float scale = size / font->size;
 
@@ -27,8 +26,7 @@ void render_text(SDL_Renderer* renderer, STBTTF_Font* font, float size, float x,
 				(info->y1 - info->y0) * scale 
 			};
 
-			SDL_RenderCopyF(renderer, font->atlas, &src_rect, &dst_rect);
-			//SDL_RenderCopy(renderer, font->atlas, &src_rect, &dst_rect);
+			platform_render_copy(font->atlas, &src_rect, &dst_rect, 0, 0, 0);
 			x += info->xadvance * scale;
 		}
 	}
@@ -48,9 +46,9 @@ float measure_text(STBTTF_Font* font, float size, const char* text) {
 	return result;
 }
 
-void render_draw_circle(SDL_Renderer* renderer, int cx, int cy, int r) {
+void render_draw_circle(int cx, int cy, int r) {
 	if (r <= 0) return;
-	SDL_Point points[4];
+	Vector2 points[4];
 	float r_squared = (float)r * (float)r;
 
 	uint8_t* y_used = SDL_malloc(sizeof(uint8_t) * r);
@@ -61,12 +59,12 @@ void render_draw_circle(SDL_Renderer* renderer, int cx, int cy, int r) {
 	for (int x = 0; x <= r; x++) {
 		int y = (int)SDL_roundf(SDL_sqrtf(r_squared - (float)x*(float)x));
 
-		points[0] = (SDL_Point){cx + x, cy + y};
-		points[1] = (SDL_Point){cx + x, cy - y};
-		points[2] = (SDL_Point){cx - x, cy + y};
-		points[3] = (SDL_Point){cx - x, cy - y};
+		points[0] = (Vector2){cx + x, cy + y};
+		points[1] = (Vector2){cx + x, cy - y};
+		points[2] = (Vector2){cx - x, cy + y};
+		points[3] = (Vector2){cx - x, cy - y};
 	
-		SDL_RenderDrawPoints(renderer, points, 4);
+		platform_render_draw_points(points, 4);
 
 		x_used[x] = 1;
 		y_used[y] = 1;
@@ -76,12 +74,12 @@ void render_draw_circle(SDL_Renderer* renderer, int cx, int cy, int r) {
 		if (y_used[y]) continue;
 		int x = (int)SDL_roundf(SDL_sqrtf(r_squared - (float)y*(float)y));
 
-		points[0] = (SDL_Point){cx + x, cy + y};
-		points[1] = (SDL_Point){cx + x, cy - y};
-		points[2] = (SDL_Point){cx - x, cy + y};
-		points[3] = (SDL_Point){cx - x, cy - y};
+		points[0] = (Vector2){cx + x, cy + y};
+		points[1] = (Vector2){cx + x, cy - y};
+		points[2] = (Vector2){cx - x, cy + y};
+		points[3] = (Vector2){cx - x, cy - y};
 	
-		SDL_RenderDrawPoints(renderer, points, 4);
+		platform_render_draw_points(points, 4);
 	}
 
 	SDL_free(x_used);
@@ -89,9 +87,9 @@ void render_draw_circle(SDL_Renderer* renderer, int cx, int cy, int r) {
 }
 
 // TO-DO: Identify crash related to this. This function is bad.
-void render_draw_circlef(SDL_Renderer* renderer, float cx, float cy, float r) {
+void render_draw_circlef(float cx, float cy, float r) {
 	if (r <= 0) return;
-	SDL_FPoint points[4];
+	Vector2 points[4];
 	float r_squared = r * r;
 	int ri = (int)SDL_ceilf(r);
 	
@@ -105,12 +103,12 @@ void render_draw_circlef(SDL_Renderer* renderer, float cx, float cy, float r) {
 		float fy = (x == ri) ? 0 : SDL_sqrtf(r_squared - fx*fx);
 		fy = SDL_clamp(fy, 0, ri);
 
-		points[0] = (SDL_FPoint){cx + fx, cy + fy};
-		points[1] = (SDL_FPoint){cx + fx, cy - fy};
-		points[2] = (SDL_FPoint){cx - fx, cy + fy};
-		points[3] = (SDL_FPoint){cx - fx, cy - fy};
+		points[0] = (Vector2){cx + fx, cy + fy};
+		points[1] = (Vector2){cx + fx, cy - fy};
+		points[2] = (Vector2){cx - fx, cy + fy};
+		points[3] = (Vector2){cx - fx, cy - fy};
 	
-		SDL_RenderDrawPointsF(renderer, points, 4);
+		platform_render_draw_points(points, 4);
 
 		x_used[x] = 1;
 		y_used[(int)fy] = 1;
@@ -122,42 +120,42 @@ void render_draw_circlef(SDL_Renderer* renderer, float cx, float cy, float r) {
 		float fx = (y == ri) ? 0 : SDL_sqrtf(r_squared - fy*fy);
 		fy = SDL_clamp(fy, 0, ri);
 		
-		points[0] = (SDL_FPoint){cx + fx, cy + fy};
-		points[1] = (SDL_FPoint){cx + fx, cy - fy};
-		points[2] = (SDL_FPoint){cx - fx, cy + fy};
-		points[3] = (SDL_FPoint){cx - fx, cy - fy};
+		points[0] = (Vector2){cx + fx, cy + fy};
+		points[1] = (Vector2){cx + fx, cy - fy};
+		points[2] = (Vector2){cx - fx, cy + fy};
+		points[3] = (Vector2){cx - fx, cy - fy};
 	
-		SDL_RenderDrawPointsF(renderer, points, 4);
+		platform_render_draw_points(points, 4);
 	}
 
 	SDL_free(x_used);
 	SDL_free(y_used);
 }
 
-void render_fill_circle(SDL_Renderer* renderer, int cx, int cy, int r) {
+void render_fill_circle(int cx, int cy, int r) {
 	if (r <= 0) return;
-	SDL_Point points[4];
+	Vector2 points[4];
 	int radius = (int)r;
 	int r_squared = radius*radius;
 
 	for (int y = 0; y <= radius; y++) {
 		for (int x = 0; x <= radius; x++) {
 			if(x*x + y*y <= r_squared + r) {
-				points[0] = (SDL_Point){cx + x, cy + y};
-				points[1] = (SDL_Point){cx + x, cy - y};
-				points[2] = (SDL_Point){cx - x, cy + y};
-				points[3] = (SDL_Point){cx - x, cy - y};
+				points[0] = (Vector2){cx + x, cy + y};
+				points[1] = (Vector2){cx + x, cy - y};
+				points[2] = (Vector2){cx - x, cy + y};
+				points[3] = (Vector2){cx - x, cy - y};
 
-				SDL_RenderDrawPoints(renderer, points, 4);
+				platform_render_draw_points(points, 4);
 			}
 		}
 	}
 }
 
 // TO-DO: Figure out why sub-pixel rendering doesn't seem to be working here. Very clear pixel jitter on moving objects.
-void render_fill_circlef(SDL_Renderer* renderer, float cx, float cy, float r) {
+void render_fill_circlef(float cx, float cy, float r) {
 	if (r <= 0) return;
-	SDL_FPoint points[4];
+	Vector2 points[4];
 	int radius = (int)SDL_roundf(r);
 	float r_squared = r*r;
 
@@ -167,20 +165,20 @@ void render_fill_circlef(SDL_Renderer* renderer, float cx, float cy, float r) {
 			float fy = (float)y;
 
 			if(fx*fx + fy*fy <= r_squared + r) {
-				points[0] = (SDL_FPoint){cx + fx, cy + fy};
-				points[1] = (SDL_FPoint){cx + fx, cy - fy};
-				points[2] = (SDL_FPoint){cx - fx, cy + fy};
-				points[3] = (SDL_FPoint){cx - fx, cy - fy};
+				points[0] = (Vector2){cx + fx, cy + fy};
+				points[1] = (Vector2){cx + fx, cy - fy};
+				points[2] = (Vector2){cx - fx, cy + fy};
+				points[3] = (Vector2){cx - fx, cy - fy};
 
-				SDL_RenderDrawPointsF(renderer, points, 4);
+				platform_render_draw_points(points, 4);
 			}
 		}
 	}
 }
 
-void render_fill_circlef_linear_gradient(SDL_Renderer* renderer, float cx, float cy, float r, RGB_Color start_color, RGB_Color end_color) {
+void render_fill_circlef_linear_gradient(float cx, float cy, float r, RGBA_Color start_color, RGBA_Color end_color) {
 	if (r <= 0) return;
-	SDL_FPoint points[4];
+	Vector2 points[4];
 	int radius = (int)SDL_roundf(r);
 	float r_squared = r*r;
 
@@ -192,44 +190,42 @@ void render_fill_circlef_linear_gradient(SDL_Renderer* renderer, float cx, float
 			float t = (fx*fx + fy*fy) / (r_squared + r);
 
 			if (t <= 1.0f) {
-				SDL_SetRenderDrawColor(renderer, 
-					(Uint8)lerp(start_color.r, end_color.r, t),
-					(Uint8)lerp(start_color.g, end_color.g, t),
-					(Uint8)lerp(start_color.b, end_color.b, t),
-					255
+				platform_set_render_draw_color( 
+					(RGBA_Color) {
+						lerp(start_color.r, end_color.r, t),
+						lerp(start_color.g, end_color.g, t),
+						lerp(start_color.b, end_color.b, t),
+						lerp(start_color.a, end_color.a, t),
+					}
 				);
 
-				points[0] = (SDL_FPoint){cx + fx, cy + fy};
-				points[1] = (SDL_FPoint){cx + fx, cy - fy};
-				points[2] = (SDL_FPoint){cx - fx, cy + fy};
-				points[3] = (SDL_FPoint){cx - fx, cy - fy};
+				points[0] = (Vector2){cx + fx, cy + fy};
+				points[1] = (Vector2){cx + fx, cy - fy};
+				points[2] = (Vector2){cx - fx, cy + fy};
+				points[3] = (Vector2){cx - fx, cy - fy};
 
-				SDL_RenderDrawPointsF(renderer, points, 4);
+				platform_render_draw_points(points, 4);
 			}
 		}
 	}
 }
 
-void render_draw_texture(SDL_Renderer* renderer, SDL_Texture* texture, float x, float y, float angle, SDL_bool centered) {
+void render_draw_texture(SDL_Texture* texture, float x, float y, float angle, SDL_bool centered) {
 	if (texture) {
-		int dest_w, dest_h;
-
-		if (SDL_QueryTexture(texture, NULL, NULL, &dest_w, &dest_h) != 0) {
-			SDL_Log("render_draw_texture: QueryTexture failed.");
-		}
+		Vector2 dim = platform_get_texture_dimensions(texture);
 
 		SDL_FRect dest_rect;
 		dest_rect.x = x;
 		dest_rect.y = y;
-		dest_rect.w = (float)dest_w;
-		dest_rect.h = (float)dest_h;
+		dest_rect.w = dim.x;
+		dest_rect.h = dim.y;
 
 		if (centered == SDL_TRUE) {
 			dest_rect.x -= dest_rect.w/2.0f;
 			dest_rect.y -= dest_rect.h/2.0f;
 		}
 
-		if (SDL_RenderCopyExF(renderer, texture, NULL, &dest_rect, angle, 0, SDL_FLIP_NONE) == -1) {
+		if (platform_render_copy(texture, NULL, &dest_rect, angle, 0, SDL_FLIP_NONE) == -1) {
 			SDL_Log("render_draw_texture: RenderCopy failed. %s", SDL_GetError());
 		};
 	}
@@ -262,12 +258,12 @@ void render_draw_game_sprite(Game_State* game, Game_Sprite* sprite, Transform2D 
 				dest_rect.y -= dest_rect.h/2.0f;
 			}
 
-			SDL_RenderCopyExF(game->renderer, texture, &sprite_rect, &dest_rect, angle, 0, SDL_FLIP_NONE);
+			platform_render_copy(texture, &sprite_rect, &dest_rect, angle, 0, 0);
 		}
 	}
 }
 
-SDL_Vertex* pack_sdl_vertices(Vector2* positions, Vector2* tex_coords, RGB_Color color, int vert_count) {
+SDL_Vertex* pack_sdl_vertices(Vector2* positions, Vector2* tex_coords, RGBA_Color color, int vert_count) {
 	SDL_Vertex* result = SDL_malloc(sizeof(SDL_Vertex) * vert_count);
 
 	for (int i = 0; i < vert_count; i++) {
@@ -277,25 +273,30 @@ SDL_Vertex* pack_sdl_vertices(Vector2* positions, Vector2* tex_coords, RGB_Color
 		if (tex_coords)
 			result[i].tex_coord = (SDL_FPoint){tex_coords[i].x, tex_coords[i].y};
 		
-		result[i].color = (SDL_Color){color.r, color.g, color.b, 255};
+		result[i].color = (SDL_Color){color.r,color.g,color.b,color.a};
 	}
 
 	return result;
 }
 
-void render_draw_polygon(SDL_Renderer* renderer, SDL_FPoint* points, int num_points) {
-	SDL_RenderDrawLinesF(renderer, points, num_points);
-	SDL_RenderDrawLineF(renderer, points[num_points-1].x, points[num_points-1].y, points[0].x, points[0].y);
+void render_draw_polygon(Vector2* points, int num_points) {
+	Vector2 connection[2] = {
+		{points[num_points-1].x, points[num_points-1].y}, 
+		{points[0].x, points[0].y},
+	};
+	
+	platform_render_draw_lines(points, num_points);
+	platform_render_draw_lines(connection, 2);
 }
 
-void render_fill_polygon(SDL_Renderer* renderer, SDL_FPoint* points, int num_points, RGB_Color color) {
+void render_fill_polygon(Vector2* points, int num_points, RGBA_Color color) {
 	int num_verts = num_points;
 	SDL_Vertex* vertices = SDL_malloc(sizeof(SDL_Vertex) * num_points);
 	
 	for (int i = 0; i < num_verts; i++) {
-		vertices[i].position  	= points[i];
+		vertices[i].position  	= (SDL_FPoint) {points[i].x, points[i].y};
 		vertices[i].tex_coord 	= (SDL_FPoint) {1.0f,1.0f};
-		vertices[i].color 		= (SDL_Color){color.r, color.g, color.b, 255};
+		vertices[i].color 		= (SDL_Color){color.r, color.g, color.b, color.a};
 	}
 
 	// Number of triangles in a polygon = number of verticles - 2;
@@ -311,71 +312,62 @@ void render_fill_polygon(SDL_Renderer* renderer, SDL_FPoint* points, int num_poi
 		indices[i + 2] 	= next_index;
 	}
 
-	SDL_RenderGeometry(renderer, NULL, vertices, num_verts, indices, num_indices);
+	platform_render_geometry(NULL, vertices, num_verts, indices, num_indices);
 
 	SDL_free(indices);
 	SDL_free(vertices);
 }
 
-void render_draw_triangle(SDL_Renderer* renderer, Vector2 v1, Vector2 v2, Vector2 v3) {
-	SDL_FPoint points[4];
-	points[0] = (SDL_FPoint){v1.x, v1.y};
-	points[1] = (SDL_FPoint){v2.x, v2.y};
-	points[2] = (SDL_FPoint){v3.x, v3.y};
-	points[3] = (SDL_FPoint){v1.x, v1.y};
-
-	SDL_RenderDrawLinesF(renderer, points, 4);
+void render_draw_triangle(Vector2 v1, Vector2 v2, Vector2 v3) {
+	Vector2 points[4] = {v1, v2, v3, v1};
+	platform_render_draw_lines(points, 4);
 }
 
-void render_fill_triangle(SDL_Renderer* renderer, Vector2 v1, Vector2 v2, Vector2 v3, RGB_Color color) {
-	SDL_Vertex vertex_1 = { {v1.x, v1.y}, {color.r, color.g, color.b, 255}, {1, 1}};
-	SDL_Vertex vertex_2 = { {v2.x, v2.y}, {color.r, color.g, color.b, 255}, {1, 1}};
-	SDL_Vertex vertex_3 = { {v3.x, v3.y}, {color.r, color.g, color.b, 255}, {1, 1}};
+void render_fill_triangle(Vector2 v1, Vector2 v2, Vector2 v3, RGBA_Color color) {
+	SDL_Vertex vertex_1 = { {v1.x, v1.y}, {color.r, color.g, color.b, color.a}, {1, 1}};
+	SDL_Vertex vertex_2 = { {v2.x, v2.y}, {color.r, color.g, color.b, color.a}, {1, 1}};
+	SDL_Vertex vertex_3 = { {v3.x, v3.y}, {color.r, color.g, color.b, color.a}, {1, 1}};
 
 	// Put them into array
 
-	SDL_Vertex vertices[] = {
-		vertex_1,
-		vertex_2,
-		vertex_3
-	};
+	SDL_Vertex vertices[] = { vertex_1, vertex_2, vertex_3 };
 
-	SDL_RenderGeometry(renderer, NULL, vertices, 3, 0, 0);
+	platform_render_geometry(NULL, vertices, 3, 0, 0);
 }
 
-void render_draw_game_shape(SDL_Renderer* renderer, Vector2 position, Game_Shape shape, RGB_Color color) {
-	SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, 255);
+void render_draw_game_shape(Vector2 position, Game_Shape shape, RGBA_Color color) {
+	platform_set_render_draw_color(color);
 	switch(shape.type) {
 		case SHAPE_TYPE_CIRCLE: {
-			render_draw_circle(renderer, position.x, position.y, shape.radius);
+			render_draw_circle(position.x, position.y, shape.radius);
 		} break;
 		case SHAPE_TYPE_RECT: {
 			SDL_FRect rect = translate_rect(shape.rectangle, position);
-			SDL_RenderDrawRectF(renderer, &rect);
+			platform_render_draw_rect(rect);
 		} break;
 		case SHAPE_TYPE_POLY2D: {
 			Game_Poly2D polygon = translate_poly2d(shape.polygon, position);
-			render_draw_polygon(renderer, (SDL_FPoint*)polygon.vertices, shape.polygon.vert_count);
+			render_draw_polygon(polygon.vertices, shape.polygon.vert_count);
 		} break;
 	}
 }
 
-void render_fill_game_shape(SDL_Renderer* renderer, Vector2 position, Game_Shape shape, RGB_Color color) {
+void render_fill_game_shape(Vector2 position, Game_Shape shape, RGBA_Color color) {
 	switch(shape.type) {
 		case SHAPE_TYPE_CIRCLE: {
-			SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, 255);
-			render_fill_circlef(renderer, position.x, position.y, shape.radius);
+			platform_set_render_draw_color(color);
+			render_fill_circlef(position.x, position.y, shape.radius);
 		} break;
 
 		case SHAPE_TYPE_RECT: {
-			SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, 255);
+			platform_set_render_draw_color(color);
 			SDL_FRect rect = translate_rect(shape.rectangle, position);
-			SDL_RenderFillRectF(renderer, &rect);
+			platform_render_fill_rect(rect);
 		} break;
 
 		case SHAPE_TYPE_POLY2D: {
 			Game_Poly2D polygon = translate_poly2d(shape.polygon, position);
-			render_fill_polygon(renderer, (SDL_FPoint*)polygon.vertices, shape.polygon.vert_count, color);
+			render_fill_polygon(polygon.vertices, shape.polygon.vert_count, color);
 		} break;
 	}
 }

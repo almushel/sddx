@@ -46,7 +46,7 @@
 
 #define DRIFTER_SPEED 1
 #define DRIFTER_RADIUS 40
-#define DRIFTER_GREY (RGB_Color){105, 105, 105}
+#define DRIFTER_GREY (RGBA_Color){105, 105, 105, 255}
 
 #define UFO_SPEED 1.9
 #define UFO_DIR_CHANGE_DELAY 120.0f
@@ -177,31 +177,30 @@ SDL_Texture* generate_item_texture(Game_State* game, SDL_Texture* icon) {
 	
 	int result_size = ITEM_RADIUS*2 + 4;
 
-	result = SDL_CreateTexture(game->renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, result_size, result_size);
+	result = platform_create_texture(SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, result_size, result_size);
 	if (result) {
 		SDL_SetTextureBlendMode(result, SDL_BLENDMODE_BLEND);
 		
-		SDL_SetRenderTarget(game->renderer, result);
+		platform_set_render_target(result);
 
-		SDL_SetRenderDrawColor(game->renderer, 0, 0, 0, 0);
-		SDL_RenderClear(game->renderer);
-		render_fill_circlef_linear_gradient(game->renderer, (float)result_size/2.0f, (float)result_size/2.0f, ITEM_RADIUS, CLEAR_COLOR, SD_BLUE);
+		platform_set_render_draw_color((RGBA_Color){0});
+		platform_render_clear();
+		render_fill_circlef_linear_gradient((float)result_size/2.0f, (float)result_size/2.0f, ITEM_RADIUS, CLEAR_COLOR, SD_BLUE);
 		
 	if (icon) {
-		int w, h;
-		SDL_QueryTexture(icon, NULL, NULL, &w, &h);
-		float dim = w > h ? w : h;
-		float ratio = ((float)ITEM_RADIUS * 1.7f)/dim;
+		Vector2 dim = platform_get_texture_dimensions(icon);
+		float larger_dim = (dim.x > dim.y) ? dim.x : dim.y;
+		float ratio = ((float)ITEM_RADIUS * 1.7f)/larger_dim;
 		
 		SDL_FRect dest = {0};
-		dest.w = (float)w * ratio;
-		dest.h = (float)h * ratio;
+		dest.w = dim.x * ratio;
+		dest.h = dim.y * ratio;
 		dest.x = ((float)result_size-dest.w) / 2.0f;
 		dest.y = ((float)result_size-dest.h) / 2.0f;
 		
-		SDL_RenderCopyExF(game->renderer, icon, NULL, &dest, 0, 0, SDL_FLIP_NONE);
+		platform_render_copy(icon, NULL, &dest, 0, 0, SDL_FLIP_NONE);
 	}
-		SDL_SetRenderTarget(game->renderer, 0);
+		platform_set_render_target(0);
 	}
 
 	return result;
@@ -324,7 +323,7 @@ Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 			case ENTITY_TYPE_BULLET: {
 				entity->shape.radius = PLAYER_SHOT_RADIUS;
 				entity->state = ENTITY_STATE_ACTIVE;
-				entity->color = (RGB_Color){255, 150, 50};
+				entity->color = (RGBA_Color){255, 150, 50, 255};
 			} break;
 
 			case ENTITY_TYPE_MISSILE: {
@@ -374,7 +373,7 @@ Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 				thruster->shape= SHAPE_TYPE_RECT,
 				thruster->angle = 180;
 				thruster->density = 1.5f;
-				thruster->colors[0] = (RGB_Color){255, 0, 0};
+				thruster->colors[0] = (RGBA_Color){255, 0, 0};
 				thruster->color_count = 1;
 			} break;
 
@@ -1106,8 +1105,8 @@ void update_entities(Game_State* game, float dt) {
 			}
 
 			if (entity_type_explodes(dead_entity->type)) {
-				RGB_Color entity_color = (dead_entity->color.r || dead_entity->color.g || dead_entity->color.b) ? dead_entity->color : (RGB_Color){255, 255, 255};
-				RGB_Color colors[] = {entity_color, {255, 255, 255}};
+				RGBA_Color entity_color = (dead_entity->color.r || dead_entity->color.g || dead_entity->color.b) ? dead_entity->color : (RGBA_Color){255, 255, 255, 255};
+				RGBA_Color colors[] = {entity_color, {255, 255, 255, 255}};
 
 				explode_at_point(&game->particle_system, dead_entity->x, dead_entity->y, colors, array_length(colors), 0, dead_entity->shape.type);
 				for (int sprite_index = 0; sprite_index < dead_entity->sprite_count; sprite_index++) {
@@ -1211,7 +1210,7 @@ void draw_entities(Game_State* game) {
 			else if (entity->shape.type > SHAPE_TYPE_UNDEFINED && entity->shape.type < SHAPE_TYPE_COUNT) {
 				Game_Shape  shape = scale_game_shape(entity->shape, transforms[i].scale);
 							shape = rotate_game_shape(shape, transforms[i].angle);
-				render_fill_game_shape(game->renderer, transforms[i].position, shape, entity->color);
+				render_fill_game_shape(transforms[i].position, shape, entity->color);
 			}
 
 #if DEBUG		
@@ -1219,16 +1218,17 @@ void draw_entities(Game_State* game) {
 			test.x += transforms[i].x;
 			test.y += transforms[i].y;
 			
-			SDL_SetRenderDrawColor(game->renderer, 255, 255, 0, 255);
-			SDL_RenderDrawRectF(game->renderer, &test);
+			platform_set_render_draw_color((RGBA_Color){255, 255, 0, 255});
+			platform_render_draw_rect(test);
 #endif
 		}
 
 #ifdef DEBUG
 		Game_Shape  shape = scale_game_shape(entity->shape, entity->scale);
 					shape = rotate_game_shape(shape, entity->angle);
-		SDL_SetRenderDrawColor(game->renderer, 255, 0, 0, 255);
-		render_draw_game_shape(game->renderer, entity->position, shape, (RGB_Color){255, 0, 0});
+
+		platform_set_render_draw_color((RGBA_Color){255, 0, 0, 255});
+		render_draw_game_shape(entity->position, shape, (RGBA_Color){255, 0, 0, 255});
 #endif
 	}
 }

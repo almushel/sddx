@@ -1,3 +1,4 @@
+#include "platform.h"
 #include "defs.h"
 #include "assets.h"
 
@@ -93,7 +94,7 @@ Uint64 str_hash(unsigned char* str) {
 
 #define get_hash_index(name, table) str_hash((unsigned char*)name) % array_length(table)
 
-static SDL_Texture* load_texture(SDL_Renderer* renderer, const char* file) {
+static SDL_Texture* load_texture(const char* file) {
 	int image_width, image_height, image_components;
 	SDL_Texture* result = 0;
 
@@ -108,7 +109,7 @@ static SDL_Texture* load_texture(SDL_Renderer* renderer, const char* file) {
 	}
 
 	if (image_surface) {
-		result = SDL_CreateTextureFromSurface(renderer, image_surface);
+		result = platform_create_texture_from_surface(image_surface);
 	} else {
 		SDL_Log("SDL failed to create surface from loaded image");
 	}
@@ -130,7 +131,7 @@ define_game_store_asset(Mix_Chunk, sfx, sfx)
 SDL_bool game_load_texture(Game_State* game, const char* file, const char* name) {
 	SDL_bool result = 0;
 	
-	SDL_Texture* texture = load_texture(game->renderer, file);
+	SDL_Texture* texture = load_texture(file);
 	if (texture) {
 		const char* label = (name && SDL_strlen(name)) ? name : file;
 		game_store_texture(game, texture, label);
