@@ -1,6 +1,9 @@
 #ifndef PLATFORM_H
 #define PLATFORM_H
 
+#include "SDL2/SDL_surface.h"
+#include "defs.h"
+
 Vector2 platform_get_window_size(void);
 int platform_set_render_target(SDL_Texture *texture);
 

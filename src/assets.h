@@ -53,4 +53,6 @@ declare_game_store_asset	(SDL_Texture, textures, texture);
 SDL_Rect get_sprite_rect	(Game_State* game, Game_Sprite* sprite);
 Game_Sprite* divide_sprite	(Game_State* game, Game_Sprite* sprite, int pieces);
 
+STBTTF_Font* load_stbtt_font(const char* file_name, float font_size);
+
 #endif

@@ -11,7 +11,7 @@
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb/stb_truetype.h"
 
-STBTTF_Font* load_stbtt_font(SDL_Renderer* renderer, const char* file_name, float font_size) {
+STBTTF_Font* load_stbtt_font(const char* file_name, float font_size) {
 	STBTTF_Font* result = 0;
 
 	SDL_RWops *file = SDL_RWFromFile(file_name, "rb");
@@ -56,7 +56,7 @@ STBTTF_Font* load_stbtt_font(SDL_Renderer* renderer, const char* file_name, floa
 			}
 		}
 
-		result->atlas = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC, result->texture_size, result->texture_size);
+		result->atlas = platform_create_texture(SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC, result->texture_size, result->texture_size);
 		SDL_SetTextureBlendMode(result->atlas, SDL_BLENDMODE_BLEND);
 
 		Uint32* pixels = malloc(result->texture_size * result->texture_size * sizeof(Uint32));

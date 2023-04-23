@@ -198,9 +198,6 @@ typedef struct Game_State {
 	Game_Input input;
 
 	int world_w, world_h;
-#if DEBUG
-	SDL_bool DEBUG_fit_world_to_screen;
-#endif
 
 	Entity* entities;
 	Uint32 entity_count;
