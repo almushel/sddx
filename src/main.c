@@ -330,7 +330,7 @@ int main(int argc, char* argv[]) {
 		};
 		
 		SDL_RenderCopy(renderer, world_buffer, 0, &world_draw_rect);
-		draw_HUD(game);
+		draw_game_ui(game);
 
 		Uint64 frequency = SDL_GetPerformanceFrequency();
 

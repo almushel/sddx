@@ -6,6 +6,21 @@
 
 #include "game_math.h"
 
+float measure_text(STBTTF_Font* font, float size, const char* text) {
+	float result = 0; // width
+	float scale = size / font->size;
+	for (int i = 0; text[i]; i++) {
+		if (text[i] > 32 && text[i] < 128) {
+			stbtt_packedchar* info = &font->chars[text[i] - 32];
+			result += info->xadvance * scale;
+		}
+	}
+
+	return result;
+}
+
+void render_fill_circle(int cx, int cy, int r);
+
 void render_text(STBTTF_Font* font, float size, float x, float y, const char* text) {
 	RGBA_Color color = platform_get_render_draw_color();
 	SDL_SetTextureColorMod(font->atlas, color.r, color.g, color.b);
@@ -30,20 +45,24 @@ void render_text(STBTTF_Font* font, float size, float x, float y, const char* te
 			x += info->xadvance * scale;
 		}
 	}
+
 }
 
-float measure_text(STBTTF_Font* font, float size, const char* text) {
-	float result = 0; // width
-	float scale = size / font->size;
-	for (int i = 0; text[i]; i++) {
-		if (text[i] > 32 && text[i] < 128) {
-			stbtt_packedchar* info = &font->chars[text[i] - 32];
-			
-			result += info->xadvance * scale;
+void render_text_aligned(STBTTF_Font* font, float size, float x, float y, const char* text, const char* alignment) {
+	float offset_x = x;
+	float offset_y = y;
+
+	if (alignment) {
+		float text_width = measure_text(font, size, text);
+		if (SDL_strcmp(alignment, "center") == 0) {
+			offset_x -= text_width / 2.0f;
+		}
+		else if (SDL_strcmp(alignment, "right") == 0) {
+			offset_x -= text_width;	
 		}
 	}
 
-	return result;
+	render_text(font, size, offset_x, offset_y, text);
 }
 
 void render_draw_circle(int cx, int cy, int r) {

@@ -47,7 +47,7 @@ void init_game(Game_State* game) {
 	game->world_w = 800;
 	game->world_h = 600;
 
-	game->font = load_stbtt_font("c:/windows/fonts/times.ttf", 32);
+	game->font = load_stbtt_font("c:/windows/fonts/times.ttf", 64);
 	load_game_assets(game);
 //	Mix_PlayMusic(game_get_music(game, "Wrapping Action"), -1);
 
@@ -126,14 +126,28 @@ void init_game(Game_State* game) {
 }
 
 void update_game(Game_State* game, float dt) {
-	if (!game->player && is_game_control_held(&game->input, &game->player_controller.fire) && game->player_state.lives > 0) {
-		game->player = get_entity(game,
-			spawn_entity(game, ENTITY_TYPE_PLAYER, (Vector2){(float)(float)game->world_w/2.0f, (float)(float)game->world_h})
-		);
-//		game->player->type_data = 1;
-		Mix_PlayChannel(-1, game_get_sfx(game, "Player Spawn"), 0);
-		//game->player_state.lives--;
-		game->player_state.ammo = 0;
+	switch(game->scene) {
+		case GAME_SCENE_MAIN_MENU: {
+			if (is_game_control_pressed(&game->input, &game->player_controller.fire)) {
+				game->scene = GAME_SCENE_GAMEPLAY;
+			}
+		} break;
+		
+		case GAME_SCENE_GAMEPLAY: {
+			if (!game->player && is_game_control_held(&game->input, &game->player_controller.fire) && game->player_state.lives > 0) {
+				game->player = get_entity(game,
+					spawn_entity(game, ENTITY_TYPE_PLAYER, (Vector2){(float)(float)game->world_w/2.0f, (float)(float)game->world_h})
+				);
+		//		game->player->type_data = 1;
+				Mix_PlayChannel(-1, game_get_sfx(game, "Player Spawn"), 0);
+				//game->player_state.lives--;
+				game->player_state.ammo = 0;
+			}
+		} break;
+		
+		case GAME_SCENE_GAME_OVER: {} break;
+		
+		case GAME_SCENE_HIGH_SCORES: {} break;
 	}
 
 	for (int star_index = 0; star_index < STARFIELD_STAR_COUNT; star_index++) {
@@ -166,4 +180,75 @@ void draw_game_world(Game_State* game) {
 
 	draw_particles(game);
 	draw_entities(game);
+}
+
+void draw_main_menu(Game_State* game) {
+	Vector2 offset = platform_get_window_size();
+	offset.x /= 2.0f;
+	offset.y /= 2.5f;
+
+	bool controller_enabled = (SDL_NumJoysticks() > 0);
+
+//		ctx.shadowBlur = 10;
+//		ctx.shadowColor = 'black';
+	platform_set_render_draw_color(SD_BLUE);
+	render_text_aligned(game->font, 64, offset.x, offset.y, "Space Drifter", "center");
+//		ctx.shadowBlur = 10;
+//		ctx.shadowColor = 'red';
+	char* press_start_str = controller_enabled ? "Press ENTER to begin!" : "Press START to begin!";
+	platform_set_render_draw_color((RGBA_Color){255, 165, 0, 255});
+	render_text_aligned(game->font, 20, offset.x, offset.y + 50, press_start_str, "center");
+
+	platform_set_render_draw_color((RGBA_Color){105, 105, 105, 128});
+	platform_render_fill_rect((SDL_FRect){offset.x - 130, offset.y + 75, 260, 145});
+
+//		ctx.font = '15px Orbitron';
+	platform_set_render_draw_color((RGBA_Color){255,255,255,255});
+
+	offset.x -= 110;
+	render_text(game->font, 15, offset.x, offset.y + 100, "<");
+	render_text(game->font, 15, offset.x, offset.y + 120, ">");
+	render_text(game->font, 15, offset.x, offset.y + 140, "^");
+
+	if (controller_enabled) {
+		render_text(game->font, 15, offset.x, offset.y + 160,"A" );
+		render_text(game->font, 15, offset.x, offset.y + 180,"LB");
+		render_text(game->font, 15, offset.x, offset.y + 200,"RB");
+	} else {
+		render_text(game->font, 15, offset.x, offset.y + 160, "Spacebar");
+		render_text(game->font, 15, offset.x, offset.y + 180, "Q");
+		render_text(game->font, 15, offset.x, offset.y + 200, "E");
+	}
+
+//		ctx.textAlign = "right";
+	offset.x += 220;
+	render_text_aligned(game->font, 15, offset.x, offset.y + 100,	"Rotate Left"	, "right");
+	render_text_aligned(game->font, 15, offset.x, offset.y + 120,	"Rotate Right"	, "right");
+	render_text_aligned(game->font, 15, offset.x, offset.y + 140,	"Accelerate"	, "right");
+	render_text_aligned(game->font, 15, offset.x, offset.y + 160,	"Fire"			, "right");
+	render_text_aligned(game->font, 15, offset.x, offset.y + 180,	"Thrust Left"	, "right");
+	render_text_aligned(game->font, 15, offset.x, offset.y + 200,	"Thrust Right"	, "right");
+
+	if (controller_enabled) {
+		platform_set_render_draw_color((RGBA_Color){255, 0, 0, 255});
+		render_text(game->font, 15, 8, platform_get_window_size().y - 8.0f, "Gamepad Enabled");
+	}
+}
+
+void draw_game_ui(Game_State* game) {
+	
+	switch(game->scene) {
+		case GAME_SCENE_MAIN_MENU: {
+			draw_main_menu(game);
+		} break;
+		case GAME_SCENE_GAMEPLAY: {
+			draw_HUD(game);
+		} break;
+		case GAME_SCENE_GAME_OVER: {} break;
+		case GAME_SCENE_HIGH_SCORES: {} break;
+		default: { 
+			draw_HUD(game);
+		}
+	}
+
 }

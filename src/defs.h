@@ -192,12 +192,21 @@ typedef struct Entity {
 	Uint8 type_data;
 } Entity;
 
+typedef enum Game_Scene {
+	GAME_SCENE_MAIN_MENU,
+	GAME_SCENE_GAMEPLAY,
+	GAME_SCENE_GAME_OVER,
+	GAME_SCENE_HIGH_SCORES,
+} Game_Scene;
+
 typedef struct Game_State {
 	STBTTF_Font* font;
 	Game_Assets assets;
 	Game_Input input;
 
 	int world_w, world_h;
+
+	Game_Scene scene;
 
 	Entity* entities;
 	Uint32 entity_count;
@@ -214,7 +223,6 @@ typedef struct Game_State {
 		int ammo;
 		float weapon_heat;
 		float thrust_energy;
-		
 	} player_state;
 } Game_State;
 
