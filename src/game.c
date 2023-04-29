@@ -200,7 +200,7 @@ void draw_main_menu(Game_State* game) {
 	render_text_aligned(game->font, 20, offset.x, offset.y + 50, press_start_str, "center");
 
 	platform_set_render_draw_color((RGBA_Color){105, 105, 105, 128});
-	platform_render_fill_rect((SDL_FRect){offset.x - 130, offset.y + 75, 260, 145});
+	platform_render_fill_rect((Rectangle){offset.x - 130, offset.y + 75, 260, 145});
 
 //		ctx.font = '15px Orbitron';
 	platform_set_render_draw_color((RGBA_Color){255,255,255,255});

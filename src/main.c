@@ -1,5 +1,3 @@
-#define DEBUG 1
-
 #include "SDL2/SDL.h"
 #include "game.h"
 #include "game_input.h"
@@ -102,14 +100,14 @@ int platform_set_render_draw_color(RGBA_Color color) {
 	return result;
 }
 
-int platform_render_copy(SDL_Texture *texture, const SDL_Rect *src_rect, const SDL_FRect *dst_rect, const double angle, const SDL_FPoint *center, const SDL_RendererFlip flip) {
+int platform_render_copy(SDL_Texture *texture, const SDL_Rect *src_rect, const Rectangle *dst_rect, const double angle, const SDL_FPoint *center, const SDL_RendererFlip flip) {
 	int result = -1;
 
 	if (renderer) {
 		if (angle || center || flip) {
-			result = SDL_RenderCopyExF(renderer, texture, src_rect, dst_rect, angle, center, flip);
+			result = SDL_RenderCopyExF(renderer, texture, src_rect, (SDL_FRect*)dst_rect, angle, center, flip);
 		} else {
-			result = SDL_RenderCopyF(renderer, texture, src_rect, dst_rect);
+			result = SDL_RenderCopyF(renderer, texture, src_rect, (SDL_FRect*)dst_rect);
 		}
 	} else {
 		SDL_SetError("platform_render_copy(): renderer does not exist.");
@@ -129,11 +127,11 @@ int platform_render_draw_points (Vector2* points, int count) {
 	return result;
 }
 
-int platform_render_draw_rect(SDL_FRect rect) {
+int platform_render_draw_rect(Rectangle rect) {
 	int result = -1;
 
 	if (renderer) {	
-		result = SDL_RenderDrawRectF(renderer, &rect);
+		result = SDL_RenderDrawRectF(renderer, (SDL_FRect*)&rect);
 	} else {
 		SDL_SetError("platform_render_draw_rect(): renderer does not exist.");
 	}
@@ -156,11 +154,11 @@ int platform_render_draw_lines(const Vector2 *points, int count) {
 	return result;
 }
 
-int platform_render_fill_rect(SDL_FRect rect) {
+int platform_render_fill_rect(Rectangle rect) {
 	int result = -1;
 
 	if (renderer) {	
-		result = SDL_RenderFillRectF(renderer, &rect);
+		result = SDL_RenderFillRectF(renderer, (SDL_FRect*)&rect);
 	} else {
 		SDL_SetError("platform_render_fill_rect(): renderer does not exist.");
 	}

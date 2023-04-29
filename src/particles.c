@@ -177,6 +177,8 @@ void explode_at_point(Particle_System* ps, float x, float y, RGBA_Color* colors,
 	}
 }
 
+// TO-DO: Fix broken particle emitters
+// Maybe need to reserve zero index?
 Uint32 get_new_particle_emitter(Particle_System* ps) {
 	Uint32 result = 0;
 	if (ps->dead_emitter_count > 0) {

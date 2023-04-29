@@ -100,8 +100,8 @@ float dot_product_vector2(Vector2 v1, Vector2 v2) {
 	return result;
 }
 
-SDL_FRect translate_rect(SDL_FRect rect, Vector2 translation) {
-	SDL_FRect result = rect;
+Rectangle translate_rect(Rectangle rect, Vector2 translation) {
+	Rectangle result = rect;
 
 	result.x += translation.x;
 	result.y += translation.y;
@@ -109,7 +109,7 @@ SDL_FRect translate_rect(SDL_FRect rect, Vector2 translation) {
 	return result;
 }
 
-Game_Poly2D rect_to_poly2D(SDL_FRect rect) {
+Game_Poly2D rect_to_poly2D(Rectangle rect) {
 	Game_Poly2D result = {
 		.vert_count = 4,
 		.vertices = {

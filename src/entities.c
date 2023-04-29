@@ -40,7 +40,7 @@
 
 #define MISSILE_LIFETIME 120.0f
 #define MISSILE_ACCEL 0.2f
-#define MISSILE_TURN_RATE 180.0f/45.0f
+#define MISSILE_TURN_RATE 3.0f
 
 #define ENEMY_EXPLOSION_RADIUS 100.0f
 
@@ -192,7 +192,7 @@ SDL_Texture* generate_item_texture(Game_State* game, SDL_Texture* icon) {
 		float larger_dim = (dim.x > dim.y) ? dim.x : dim.y;
 		float ratio = ((float)ITEM_RADIUS * 1.7f)/larger_dim;
 		
-		SDL_FRect dest = {0};
+		Rectangle dest = {0};
 		dest.w = dim.x * ratio;
 		dest.h = dim.y * ratio;
 		dest.x = ((float)result_size-dest.w) / 2.0f;
@@ -333,15 +333,21 @@ Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 				};
 				entity->sprite_count = 1;
 				entity->shape.type = SHAPE_TYPE_POLY2D;
-				SDL_FRect rect = {.x = -15, .y = -5, .w = 30, .h = 10,};
+				Rectangle rect = {.x = -15, .y = -5, .w = 30, .h = 10,};
 				entity->shape.polygon = rect_to_poly2D(rect);
 				entity->color = SD_BLUE;
+
+				entity->particle_emitters[0] = get_new_particle_emitter(&game->particle_system);
+				entity->emitter_count = 1;
+				Particle_Emitter* thruster = get_particle_emitter(&game->particle_system, entity->particle_emitters[0]);
+				thruster->shape= SHAPE_TYPE_RECT,
+				thruster->density = 1.0f;
 
 			} break;
 			
 			case ENTITY_TYPE_LASER: {
 				entity->shape.type = SHAPE_TYPE_POLY2D;
-				SDL_FRect rect = {.x = -15, .w = 30, .y = -5, .h = 10,};
+				Rectangle rect = {.x = -15, .w = 30, .y = -5, .h = 10,};
 				entity->shape.polygon = rect_to_poly2D(rect);
 				entity->color = SD_BLUE;
 			} break;
@@ -732,7 +738,63 @@ void update_entities(Game_State* game, float dt) {
 
 				case ENTITY_TYPE_MISSILE: {
 					if (entity->timer <= 0) { entity->state = ENTITY_STATE_DYING; }
-					Vector2 acceleration= scale_vector2((Vector2){cos_deg(entity->angle), sin_deg(entity->angle)}, MISSILE_ACCEL * dt);
+					
+					Particle_Emitter* thruster = get_particle_emitter(&game->particle_system, entity->particle_emitters[0]);
+					thruster->state = 1;
+					thruster->position = entity->position;
+					thruster->angle = entity->angle + 180.0f;
+
+					Vector2 missile_direction = {
+						cos_deg(entity->angle), sin_deg(entity->angle)
+					};
+
+					Entity* target = 0;
+					{ // Acquire target
+						int32_t nearest = 1.0;
+
+						Entity* potential_target = 0;
+						for (int i = 0; i < game->entity_count; i++) {
+							potential_target = game->entities + i;
+							if (potential_target == entity || 
+								potential_target->team == ENTITY_TEAM_UNDEFINED || 
+								potential_target->team == entity->team) {
+								continue;
+							}
+
+							Vector2 delta = {
+								potential_target->x - entity->x,
+								potential_target->y - entity->y,
+							};
+							delta = normalize_vector2(delta);
+							
+							float dot = dot_product_vector2(missile_direction, delta);
+
+							// Ignore targets behind the missile
+							if (dot > 0.0f) {
+								if (dot < nearest) {
+									nearest = dot;
+									target = potential_target;
+								}
+							}
+						}
+					}
+
+					Vector2 delta = {0};
+
+					if (target) {
+						delta.x = (target->x + target->vx * dt) - entity->x;
+						delta.y = (target->y + target->vy * dt) - entity->y;
+						delta = normalize_vector2(delta);
+
+						float aim_offset = get_aim_offset(entity->position, target->position, entity->angle, 0.0);
+						entity->angle += aim_offset * MISSILE_TURN_RATE * dt;
+					}
+
+					Vector2 acceleration = {
+						cos_deg(entity->angle) + delta.x,
+						sin_deg(entity->angle) + delta.y
+					};
+					acceleration = scale_vector2(normalize_vector2(acceleration), MISSILE_ACCEL * dt);
 					entity->velocity = add_vector2(entity->velocity, acceleration);
 				} break;
 
@@ -996,13 +1058,15 @@ void update_entities(Game_State* game, float dt) {
 						
 							switch (item_entity->type) {
 								case ENTITY_TYPE_ITEM_MISSILE: {
+									game->player_state.ammo *= (int)(player_entity->type_data == PLAYER_WEAPON_MISSILE);
 									player_entity->type_data = PLAYER_WEAPON_MISSILE;
-									game->player_state.ammo = 10;	
+									game->player_state.ammo += 10;	
 								} break;
 								
 								case ENTITY_TYPE_ITEM_LASER: {
+									game->player_state.ammo *= (int)(player_entity->type_data == PLAYER_WEAPON_LASER);
 									player_entity->type_data = PLAYER_WEAPON_LASER;
-									game->player_state.ammo = 10;
+									game->player_state.ammo += 10;
 								} break;
 							}
 						} else if (entity->team && collision_entity->team && entity->team != collision_entity->team) {
@@ -1101,7 +1165,7 @@ void update_entities(Game_State* game, float dt) {
 				force_circle(game->entities, game->entity_count, dead_entity->x, dead_entity->y, ENEMY_EXPLOSION_RADIUS, 1.5f);
 				float value = get_entity_score_value(dead_entity->type);
 				add_score(game, value);
-				//random_item_spawn(game, dead_entity->position, value);
+				random_item_spawn(game, dead_entity->position, value);
 			}
 
 			if (entity_type_explodes(dead_entity->type)) {
@@ -1132,12 +1196,12 @@ void update_entities(Game_State* game, float dt) {
 	}
 }
 
-SDL_FRect get_entity_bounding_box(Game_State* game, Entity* entity) {
-	SDL_FRect result = {0};
+Rectangle get_entity_bounding_box(Game_State* game, Entity* entity) {
+	Rectangle result = {0};
 
 	if (entity->sprite_count > 0) {
 		SDL_Rect rect = get_sprite_rect(game, &entity->sprites[0]);
-		result = (SDL_FRect){rect.x, rect.y, rect.w, rect.h};
+		result = (Rectangle){rect.x, rect.y, rect.w, rect.h};
 		result.x -= result.w/2.0f;
 		result.y -= result.h/2.0f;
 	} else {
@@ -1180,7 +1244,7 @@ void draw_entities(Game_State* game) {
 
 		transforms[0] = transforms[1] = transforms[2]= transforms[3] = entity->transform;
 		transform_count = 1;
-		SDL_FRect bounding_box = get_entity_bounding_box(game, entity);
+		Rectangle bounding_box = get_entity_bounding_box(game, entity);
 
 		int wrap_x = (int)(entity->x + bounding_box.x < 0) - (int)(entity->x + bounding_box.w > game->world_w);
 		int wrap_y = (int)(entity->y + bounding_box.y < 0) - (int)(entity->y + bounding_box.h > game->world_h);
@@ -1214,7 +1278,7 @@ void draw_entities(Game_State* game) {
 			}
 
 #if DEBUG		
-			SDL_FRect test = bounding_box;
+			Rectangle test = bounding_box;
 			test.x += transforms[i].x;
 			test.y += transforms[i].y;
 			

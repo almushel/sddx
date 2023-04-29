@@ -22,8 +22,8 @@ Vector2 subtract_vector2	(Vector2 v1, Vector2 v2);
 float dot_product_vector2	(Vector2 v1, Vector2 v2);
 Vector2 wrap_world_coords	(float x, float y, float min_x, float min_y, float max_x, float max_y);
 
-SDL_FRect translate_rect	(SDL_FRect rect, Vector2 translation);
-Game_Poly2D rect_to_poly2D	(SDL_FRect rect);
+Rectangle translate_rect	(Rectangle rect, Vector2 translation);
+Game_Poly2D rect_to_poly2D	(Rectangle rect);
 
 Game_Poly2D generate_poly2D	(int vert_count, float r_min, float r_max);
 Game_Poly2D translate_poly2d(Game_Poly2D polygon, Vector2 translation);

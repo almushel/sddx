@@ -1,10 +1,10 @@
-#include "SDL2/SDL.h"
+//#include "SDL2/SDL.h"
 #include "stb/stb_truetype.h"
 
-#include "assets.h"
 #include "platform.h"
-
 #include "game_math.h"
+#include "assets.h"
+
 
 float measure_text(STBTTF_Font* font, float size, const char* text) {
 	float result = 0; // width
@@ -34,7 +34,7 @@ void render_text(STBTTF_Font* font, float size, float x, float y, const char* te
 			stbtt_packedchar* info = &font->chars[text[i] - 32];
 			SDL_Rect src_rect = {info->x0, info->y0, info->x1 - info->x0, info->y1 - info->y0};
 
-			SDL_FRect dst_rect = {
+			Rectangle dst_rect = {
 				x + info->xoff * scale, 
 				y + info->yoff * scale, 
 				(info->x1 - info->x0) * scale, 
@@ -233,7 +233,7 @@ void render_draw_texture(SDL_Texture* texture, float x, float y, float angle, SD
 	if (texture) {
 		Vector2 dim = platform_get_texture_dimensions(texture);
 
-		SDL_FRect dest_rect;
+		Rectangle dest_rect;
 		dest_rect.x = x;
 		dest_rect.y = y;
 		dest_rect.w = dim.x;
@@ -256,7 +256,7 @@ void render_draw_game_sprite(Game_State* game, Game_Sprite* sprite, Transform2D 
 	if (texture) {
 		SDL_Rect sprite_rect = get_sprite_rect(game, sprite);
 
-		SDL_FRect dest_rect;
+		Rectangle dest_rect;
 		dest_rect.x = transform.x;
 		dest_rect.y = transform.y;
 		dest_rect.w = (float)sprite_rect.w;
@@ -361,7 +361,7 @@ void render_draw_game_shape(Vector2 position, Game_Shape shape, RGBA_Color color
 			render_draw_circle(position.x, position.y, shape.radius);
 		} break;
 		case SHAPE_TYPE_RECT: {
-			SDL_FRect rect = translate_rect(shape.rectangle, position);
+			Rectangle rect = translate_rect(shape.rectangle, position);
 			platform_render_draw_rect(rect);
 		} break;
 		case SHAPE_TYPE_POLY2D: {
@@ -380,7 +380,7 @@ void render_fill_game_shape(Vector2 position, Game_Shape shape, RGBA_Color color
 
 		case SHAPE_TYPE_RECT: {
 			platform_set_render_draw_color(color);
-			SDL_FRect rect = translate_rect(shape.rectangle, position);
+			Rectangle rect = translate_rect(shape.rectangle, position);
 			platform_render_fill_rect(rect);
 		} break;
 

@@ -1,6 +1,8 @@
 #ifndef DEFS_H
 #define DEFS_H
 
+#define DEBUG 1
+
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_mixer.h"
 #include "game_input.h"
@@ -40,11 +42,18 @@ typedef struct Transform2D {
 } Transform2D;
 
 #define Transform2D_Union								\
-	union {												\
-		Transform2D transform;							\
-		struct {float x, y, sx, sy, angle; };			\
-		struct {Vector2 position, scale; };				\
-	}
+union {												\
+	Transform2D transform;							\
+	struct {float x, y, sx, sy, angle; };			\
+	struct {Vector2 position, scale; };				\
+}
+
+typedef struct Rectangle {
+	float x;
+    float y;
+    float w;
+    float h;
+} Rectangle;
 
 #define MAX_POLY2D_VERTS 8
 typedef struct Game_Poly2D {
@@ -56,7 +65,7 @@ typedef struct Game_Sprite {
 	char* texture_name;
 	SDL_Rect src_rect;
 	Vector2 offset;
-	SDL_bool rotation_enabled;
+	bool rotation_enabled;
 } Game_Sprite;
 
 typedef enum Game_Shape_Types {
@@ -71,7 +80,7 @@ typedef struct Game_Shape {
 	Game_Shape_Types type;
 	union {
 		Game_Poly2D polygon;
-		SDL_FRect rectangle;
+		Rectangle rectangle;
 		struct { float radius;};
 	};
 } Game_Shape;
@@ -149,7 +158,7 @@ typedef struct Game_Starfield {
 	Vector2 positions[STARFIELD_STAR_COUNT];
 	float timers[STARFIELD_STAR_COUNT];
 	RGBA_Color colors[STARFIELD_STAR_COUNT];
-	SDL_bool twinkle_direction[STARFIELD_STAR_COUNT];
+	bool twinkle_direction[STARFIELD_STAR_COUNT];
 } Game_Starfield;
 
 typedef struct Score_System {

@@ -37,7 +37,7 @@ void draw_score(Game_State* game) {
 		RGBA_Color rect_color = {125, 125, 125, 255};
 		if ((int)(combo_seconds_remaining+0.5f) > t) rect_color = SD_BLUE;
 
-		SDL_FRect rect = {8 + 32 * t, screen_h - 56, 26, 26};
+		Rectangle rect = {8 + 32 * t, screen_h - 56, 26, 26};
 		
 		platform_set_render_draw_color(rect_color);
 		platform_render_fill_rect(rect);
