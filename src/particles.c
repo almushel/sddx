@@ -44,19 +44,24 @@ void update_particles(Particle_System* ps, float dt) {
 
 void draw_particles(Game_State* game) {
 	Particle_System* ps = &game->particle_system;
+	Particle* particle;
 	for (int p = 0; p < ps->particle_count; p++) {
-		Particle particle = ps->particles[p];
-		if (particle.timer <= 0) continue;
+		particle = ps->particles + p;
+		if (particle->timer <= 0) continue;
 
-		float scale = SDL_clamp(particle.timer / (float)PARTICLE_LIFETIME, 0.0f, 1.0f);
+		float scale = SDL_clamp(particle->timer / (float)PARTICLE_LIFETIME, 0.0f, 1.0f);
 
-		particle.sx = scale;
-		particle.sy = scale;
+		particle->sx = scale;
+		particle->sy = scale;
 
-		if (particle.sprite.texture_name) {
-			render_draw_game_sprite(game, &particle.sprite, particle.transform, 1);
+		if (particle->sprite.texture_name) {
+			render_draw_game_sprite(game, &particle->sprite, particle->transform, 1);
 		} else {
-			render_fill_game_shape((Vector2){particle.x, particle.y}, scale_game_shape(particle.shape, particle.scale), particle.color);
+			Game_Shape 	shape = particle->shape;
+						shape = scale_game_shape(shape, particle->scale);
+						shape = rotate_game_shape(shape, particle->angle);
+
+			render_fill_game_shape((Vector2){particle->x, particle->y}, shape, particle->color);
 		}
 	}
 }
@@ -182,9 +187,8 @@ void explode_at_point(Particle_System* ps, float x, float y, RGBA_Color* colors,
 Uint32 get_new_particle_emitter(Particle_System* ps) {
 	Uint32 result = 0;
 	if (ps->dead_emitter_count > 0) {
-		result = ps->dead_emitters[0];
-		ps->dead_emitters[0] = ps->dead_emitters[ps->dead_emitter_count-1];
 		ps->dead_emitter_count--;
+		result = ps->dead_emitters[ps->dead_emitter_count];
 	} else if (ps->emitter_count < array_length(ps->emitters)) {
 		result = ps->emitter_count++;
 	} else {
@@ -197,7 +201,7 @@ Uint32 get_new_particle_emitter(Particle_System* ps) {
 Particle_Emitter* get_particle_emitter(Particle_System* ps, Uint32 index) {
 	Particle_Emitter* result = 0;
 
-	if (index < ps->emitter_count) result = ps->emitters + index;
+	if (index && index < ps->emitter_count) result = ps->emitters + index;
 
 	return result;
 }
@@ -214,7 +218,7 @@ void remove_particle_emitter(Particle_System* ps, Uint32 index) {
 }
 
 void update_particle_emitters(Particle_System* ps, float dt) {
-	for (int emitter_index = 0; emitter_index < ps->emitter_count; emitter_index++) {
+	for (int emitter_index = 1; emitter_index < ps->emitter_count; emitter_index++) {
 		Particle_Emitter* emitter = ps->emitters + emitter_index;
 		if (emitter->state != EMITTER_STATE_ACTIVE) continue;
 		
@@ -231,8 +235,8 @@ void update_particle_emitters(Particle_System* ps, float dt) {
 					p->x = emitter->x;
 					p->y = emitter->y;
 
-					p->vx = cos_deg(emitter->angle) * PARTICLE_SPEED;
-					p->vy = sin_deg(emitter->angle) * PARTICLE_SPEED;
+					p->vx = cos_deg(emitter->angle) * emitter->speed;
+					p->vy = sin_deg(emitter->angle) * emitter->speed;
 				}
 				particles_to_emit--;
 			}

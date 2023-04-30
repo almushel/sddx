@@ -313,6 +313,7 @@ Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 					*get_particle_emitter(&game->particle_system, entity->particle_emitters[i]) =
 						(Particle_Emitter) {
 							.shape = SHAPE_TYPE_RECT,
+							.speed = PARTICLE_SPEED/2.0f,
 							.density = 2.0f,
 							.colors[0] = SD_BLUE,
 							.color_count = 1,
@@ -341,6 +342,9 @@ Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 				entity->emitter_count = 1;
 				Particle_Emitter* thruster = get_particle_emitter(&game->particle_system, entity->particle_emitters[0]);
 				thruster->shape= SHAPE_TYPE_RECT,
+				thruster->speed = 1.0f;
+				thruster->colors[0] = WHITE;
+				thruster->color_count = 1;
 				thruster->density = 1.0f;
 
 			} break;
@@ -377,9 +381,9 @@ Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 				entity->emitter_count = 1;
 				Particle_Emitter* thruster = get_particle_emitter(&game->particle_system, entity->particle_emitters[0]);
 				thruster->shape= SHAPE_TYPE_RECT,
-				thruster->angle = 180;
-				thruster->density = 1.5f;
-				thruster->colors[0] = (RGBA_Color){255, 0, 0};
+				thruster->speed = PARTICLE_SPEED/2.0f;
+				thruster->density = 1.0f;
+				thruster->colors[0] = RED;
 				thruster->color_count = 1;
 			} break;
 
@@ -834,24 +838,23 @@ void update_entities(Game_State* game, float dt) {
 				
 				case ENTITY_TYPE_ENEMY_TRACKER:{
 					Particle_Emitter* thruster = get_particle_emitter(&game->particle_system, entity->particle_emitters[0]);
-					if (thruster) thruster->state = 0;
-				
+					if (thruster) { thruster->state = 0; }
 					Entity* target = get_enemy_target(game);
 					if (target) {
 						float acceleration_speed = TRACKER_ACCEL/2.0f;
 						float aim_offset = get_aim_offset(entity->position, target->position, entity->angle, TRACKER_PRECISION);
 
 						if (aim_offset == 0) {
-							acceleration_speed *=2;
-							if (thruster) thruster->state = 1;
+							acceleration_speed *= 2;
+						
+							if (thruster) {
+								thruster->state = 1;
+								thruster->angle = entity->angle + 180;
+								thruster->x = entity->x + cos_deg(thruster->angle);// * (entity->shape.radius + PARTICLE_MAX_START_RADIUS) / 2.0f;
+								thruster->y = entity->y + sin_deg(thruster->angle);// * (entity->shape.radius + PARTICLE_MAX_START_RADIUS) / 2.0f;
+							}
 						} else {
 							entity->angle += TRACKER_TURN_RATE * aim_offset * dt;
-						}
-
-						if (thruster && thruster->state == 1) {
-							thruster->angle = entity->angle + 180;
-							thruster->x = entity->x + cos_deg(thruster->angle);// * (entity->shape.radius + PARTICLE_MAX_START_RADIUS) / 2.0f;
-							thruster->y = entity->y + sin_deg(thruster->angle);// * (entity->shape.radius + PARTICLE_MAX_START_RADIUS) / 2.0f;
 						}
 
 						entity->vx += cos_deg(entity->angle) * acceleration_speed * dt;

@@ -10,6 +10,8 @@
 typedef struct RGBA_Color {uint8_t r, g, b, a;} RGBA_Color;
 #define CLEAR_COLOR (RGBA_Color){0, 10, 48 , 255}
 #define SD_BLUE (RGBA_Color){109, 194, 255, 255}
+#define WHITE (RGBA_Color){255,255,255,255}
+#define RED (RGBA_Color){255, 0, 0, 255}
 
 #define array_length(array) ( sizeof(array) / sizeof(array[0]) )
 
@@ -56,10 +58,10 @@ typedef struct Rectangle {
 } Rectangle;
 
 #define MAX_POLY2D_VERTS 8
-typedef struct Game_Poly2D {
+typedef struct Poly2D {
 	Vector2 vertices[MAX_POLY2D_VERTS];
 	Uint32 vert_count;
-} Game_Poly2D;
+} Poly2D;
 
 typedef struct Game_Sprite {
 	char* texture_name;
@@ -79,7 +81,7 @@ typedef enum Game_Shape_Types {
 typedef struct Game_Shape {
 	Game_Shape_Types type;
 	union {
-		Game_Poly2D polygon;
+		Poly2D polygon;
 		Rectangle rectangle;
 		struct { float radius;};
 	};

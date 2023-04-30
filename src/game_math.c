@@ -109,8 +109,8 @@ Rectangle translate_rect(Rectangle rect, Vector2 translation) {
 	return result;
 }
 
-Game_Poly2D rect_to_poly2D(Rectangle rect) {
-	Game_Poly2D result = {
+Poly2D rect_to_poly2D(Rectangle rect) {
+	Poly2D result = {
 		.vert_count = 4,
 		.vertices = {
 			{rect.x, rect.y},
@@ -123,8 +123,8 @@ Game_Poly2D rect_to_poly2D(Rectangle rect) {
 	return result;
 }
 
-Game_Poly2D generate_poly2D(int vert_count, float r_min, float r_max) {
-	Game_Poly2D result = {
+Poly2D generate_poly2D(int vert_count, float r_min, float r_max) {
+	Poly2D result = {
 		.vert_count = vert_count,
 	};
 	
@@ -139,8 +139,8 @@ Game_Poly2D generate_poly2D(int vert_count, float r_min, float r_max) {
 	return result;
 }
 
-Game_Poly2D translate_poly2d(Game_Poly2D polygon, Vector2 translation) {
-	Game_Poly2D result = {0};
+Poly2D translate_poly2d(Poly2D polygon, Vector2 translation) {
+	Poly2D result = {0};
 	result.vert_count = polygon.vert_count;
 
 	for (int i = 0; i < polygon.vert_count; i++) {
@@ -151,8 +151,8 @@ Game_Poly2D translate_poly2d(Game_Poly2D polygon, Vector2 translation) {
 	return result;
 }
 
-Game_Poly2D rotate_poly2d(Game_Poly2D p, float degrees) {
-	Game_Poly2D result = p;
+Poly2D rotate_poly2d(Poly2D p, float degrees) {
+	Poly2D result = p;
 
 	for (int i = 0; i < p.vert_count; i++) {
 		result.vertices[i] = rotate_vector2(p.vertices[i], degrees);
@@ -161,8 +161,8 @@ Game_Poly2D rotate_poly2d(Game_Poly2D p, float degrees) {
 	return result;
 }
 
-Game_Poly2D scale_poly2d(Game_Poly2D polygon, Vector2 scale) {
-	Game_Poly2D result = {0};
+Poly2D scale_poly2d(Poly2D polygon, Vector2 scale) {
+	Poly2D result = {0};
 	result.vert_count = polygon.vert_count;
 
 	for (int i = 0; i < polygon.vert_count; i++) {
@@ -233,7 +233,7 @@ bool check_shape_collision(Transform2D t1, Game_Shape s1, Transform2D t2, Game_S
 
 	Transform2D* transforms[] = {&t1, &t2};
 	Game_Shape* shapes[2] = {&s1, &s2};
-	Game_Poly2D colliders[2];
+	Poly2D colliders[2];
 
 	for (int i = 0; i < 2; i++) {
 		switch(shapes[i]->type) {

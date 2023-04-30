@@ -49,7 +49,7 @@ void draw_player_lives(Game_State* game) {
 		int screen_h = screen_dim.y;
 		int screen_w = screen_dim.x;
 	
-		Game_Poly2D lives_bg = {
+		Poly2D lives_bg = {
 			.vertices = {
 				{ .x =  0 , .y = -20 },
 				{ .x =  13, .y =  20 },
@@ -101,7 +101,7 @@ void draw_thrust_meter(Game_State* game) {
 	int screen_h = screen_dim.y;
 	int screen_w = screen_dim.x;
 
-	Game_Poly2D meterOuterPoly = {
+	Poly2D meterOuterPoly = {
 		.vertices = {
 			{ .x =  -50, .y =   10 },
 			{ .x =  -44, .y =  -10 },
@@ -111,7 +111,7 @@ void draw_thrust_meter(Game_State* game) {
 		.vert_count = 4,
 	};
 
-	Game_Poly2D meterInnerPoly = {
+	Poly2D meterInnerPoly = {
 		.vertices = {
 			{ .x =  -47, .y =   8 },
 			{ .x =  -42, .y =  -8 },
@@ -150,7 +150,7 @@ void draw_weapon_heat(Game_State* game) {
 	int screen_h = screen_dim.y;
 	int screen_w = screen_dim.x;
 
-	Game_Poly2D heatOuterPoly = {
+	Poly2D heatOuterPoly = {
 		.vertices = {
 			{ .x =  -44, .y =   10 },
 			{ .x =  -50, .y =  -10 },
@@ -160,7 +160,7 @@ void draw_weapon_heat(Game_State* game) {
 		.vert_count = 4,
 	};
 
-	Game_Poly2D heatInnerPoly = {
+	Poly2D heatInnerPoly = {
 		.vertices = {
 			{ .x =  -42, .y =   8 },
 			{ .x =  -47, .y =  -8 },
@@ -259,7 +259,7 @@ void draw_HUD(Game_State* game) {
 
 	if (true) {//gameState == gameStarted) {
 
-		Game_Poly2D meterBG = {
+		Poly2D meterBG = {
 			.vertices = {
 				{ .x =  -125, .y =   22 },
 				{ .x =  -113, .y =  -22 },
@@ -269,7 +269,7 @@ void draw_HUD(Game_State* game) {
 			.vert_count = 4,
 		};
 
-		Game_Poly2D weapon_and_score_bg = {
+		Poly2D weapon_and_score_bg = {
 			.vertices = {
 				{ .x =  -125, .y =   32 },
 				{ .x =  -113, .y =  -32 },

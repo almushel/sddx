@@ -44,6 +44,8 @@ void load_game_assets(Game_State* game) {
 }
 
 void init_game(Game_State* game) {
+	game->particle_system.emitter_count = 1;
+
 	game->world_w = 800;
 	game->world_h = 600;
 
@@ -115,7 +117,7 @@ void init_game(Game_State* game) {
 		Uint32 entity_id = spawn_entity(game, ENTITY_TYPE_SPAWN_WARP, (Vector2){random() * (float)game->world_w, random() * (float)game->world_h});
 		if (entity_id) {
 			Entity* entity = get_entity(game, entity_id);
-			entity->type_data = i;
+			entity->type_data = ENTITY_TYPE_ENEMY_TRACKER;
 		}
 	}
 
@@ -138,10 +140,10 @@ void update_game(Game_State* game, float dt) {
 				game->player = get_entity(game,
 					spawn_entity(game, ENTITY_TYPE_PLAYER, (Vector2){(float)(float)game->world_w/2.0f, (float)(float)game->world_h})
 				);
-		//		game->player->type_data = 1;
+//				game->player_state.lives--;
+				game->player->type_data = PLAYER_WEAPON_MISSILE;
+				game->player_state.ammo = 100;
 				Mix_PlayChannel(-1, game_get_sfx(game, "Player Spawn"), 0);
-				//game->player_state.lives--;
-				game->player_state.ammo = 0;
 			}
 		} break;
 		

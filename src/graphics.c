@@ -19,8 +19,6 @@ float measure_text(STBTTF_Font* font, float size, const char* text) {
 	return result;
 }
 
-void render_fill_circle(int cx, int cy, int r);
-
 void render_text(STBTTF_Font* font, float size, float x, float y, const char* text) {
 	RGBA_Color color = platform_get_render_draw_color();
 	SDL_SetTextureColorMod(font->atlas, color.r, color.g, color.b);
@@ -365,7 +363,7 @@ void render_draw_game_shape(Vector2 position, Game_Shape shape, RGBA_Color color
 			platform_render_draw_rect(rect);
 		} break;
 		case SHAPE_TYPE_POLY2D: {
-			Game_Poly2D polygon = translate_poly2d(shape.polygon, position);
+			Poly2D polygon = translate_poly2d(shape.polygon, position);
 			render_draw_polygon(polygon.vertices, shape.polygon.vert_count);
 		} break;
 	}
@@ -385,7 +383,7 @@ void render_fill_game_shape(Vector2 position, Game_Shape shape, RGBA_Color color
 		} break;
 
 		case SHAPE_TYPE_POLY2D: {
-			Game_Poly2D polygon = translate_poly2d(shape.polygon, position);
+			Poly2D polygon = translate_poly2d(shape.polygon, position);
 			render_fill_polygon(polygon.vertices, shape.polygon.vert_count, color);
 		} break;
 	}
