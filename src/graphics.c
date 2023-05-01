@@ -5,7 +5,6 @@
 #include "game_math.h"
 #include "assets.h"
 
-
 float measure_text(STBTTF_Font* font, float size, const char* text) {
 	float result = 0; // width
 	float scale = size / font->size;

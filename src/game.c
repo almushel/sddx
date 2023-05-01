@@ -9,6 +9,27 @@
 #include "score.c"
 
 #define clamp(value, min, max) (value > max) ? max : (value < min) ? min : value;
+#define SCENE_TRANSITION_TIME 120.0f
+
+static Game_Scene current_scene;
+static Game_Scene next_scene;
+static float scene_transition_timer;
+
+static void switch_game_scene(Game_Scene new_scene) {
+	current_scene = new_scene;
+//	next_scene = new_scene;
+//	scene_transition_timer = SCENE_TRANSITION_TIME;
+}
+
+static void spawn_player(Game_State* game) {
+	game->player = get_entity(game,
+		spawn_entity(game, ENTITY_TYPE_PLAYER, (Vector2){(float)(float)game->world_w/2.0f, (float)(float)game->world_h})
+	);
+	
+	game->player->type_data = PLAYER_WEAPON_MG;
+	game->player_state.ammo = 0;
+	Mix_PlayChannel(-1, game_get_sfx(game, "Player Spawn"), 0);
+}
 
 void load_game_assets(Game_State* game) {
 	game_load_texture(game, "assets/images/player.png", "Player Ship");
@@ -41,6 +62,33 @@ void load_game_assets(Game_State* game) {
 	game_load_sfx(game, "assets/audio/WeaponPickup.mp3", "Weapon Pickup");
 	game_load_sfx(game, "assets/audio/PlayerLaser.mp3", "Player Laser");
 	game_load_sfx(game, "assets/audio/PlayerMissile.mp3", "Player Missile");
+}
+
+void restart_game(Game_State* game) {
+	game->entity_count = 1;
+	game->particle_system.particle_count = 0;
+	game->particle_system.dead_emitter_count = 0;
+	game->particle_system.emitter_count = 1;
+	
+	game->player_state.lives = 3;
+	game->player_state.ammo = 0;
+	game->player_state.weapon_heat = 0;
+	game->player_state.thrust_energy = THRUST_MAX;
+
+	spawn_player(game);
+
+#if DEBUG
+	for (int i = ENTITY_TYPE_PLAYER+1; i < ENTITY_TYPE_SPAWN_WARP; i++) {
+		Uint32 entity_id = spawn_entity(game, ENTITY_TYPE_SPAWN_WARP, (Vector2){random() * (float)game->world_w, random() * (float)game->world_h});
+		if (entity_id) {
+			Entity* entity = get_entity(game, entity_id);
+			entity->type_data = i;
+		}
+	}
+#endif
+
+
+	switch_game_scene(GAME_SCENE_GAMEPLAY);
 }
 
 void init_game(Game_State* game) {
@@ -111,45 +159,44 @@ void init_game(Game_State* game) {
 			.button = SDL_CONTROLLER_BUTTON_A,
 		},
 	};
-	
-	get_new_entity(game); // reserve 0
-	for (int i = ENTITY_TYPE_PLAYER+1; i < ENTITY_TYPE_SPAWN_WARP; i++) {
-		Uint32 entity_id = spawn_entity(game, ENTITY_TYPE_SPAWN_WARP, (Vector2){random() * (float)game->world_w, random() * (float)game->world_h});
-		if (entity_id) {
-			Entity* entity = get_entity(game, entity_id);
-			entity->type_data = ENTITY_TYPE_ENEMY_TRACKER;
-		}
-	}
-
-	game->player_state.lives = 3;
-	game->player_state.ammo = 0;
-	game->player_state.weapon_heat = 0;
-	game->player_state.thrust_energy = THRUST_MAX;
 }
 
 void update_game(Game_State* game, float dt) {
-	switch(game->scene) {
+//	if (scene_transition_timer > 0.0f) {
+//		scene_transition_timer -= dt;
+//	} else if (current_scene != next_scene) {
+//		current_scene = next_scene;
+//	}
+
+	switch(current_scene) {
 		case GAME_SCENE_MAIN_MENU: {
 			if (is_game_control_pressed(&game->input, &game->player_controller.fire)) {
-				game->scene = GAME_SCENE_GAMEPLAY;
+				restart_game(game);
 			}
 		} break;
 		
 		case GAME_SCENE_GAMEPLAY: {
-			if (!game->player && is_game_control_held(&game->input, &game->player_controller.fire) && game->player_state.lives > 0) {
-				game->player = get_entity(game,
-					spawn_entity(game, ENTITY_TYPE_PLAYER, (Vector2){(float)(float)game->world_w/2.0f, (float)(float)game->world_h})
-				);
-//				game->player_state.lives--;
-				game->player->type_data = PLAYER_WEAPON_MISSILE;
-				game->player_state.ammo = 100;
-				Mix_PlayChannel(-1, game_get_sfx(game, "Player Spawn"), 0);
+			if (game->player_state.lives > 0) {
+				if (!game->player && is_game_control_pressed(&game->input, &game->player_controller.fire)) {
+					spawn_player(game);
+					game->player_state.lives--;
+				} 
+			} else if (!game->player) {
+				switch_game_scene(GAME_SCENE_GAME_OVER);
 			}
 		} break;
 		
-		case GAME_SCENE_GAME_OVER: {} break;
+		case GAME_SCENE_GAME_OVER: {
+			if (is_game_control_pressed(&game->input, &game->player_controller.fire)) {
+				switch_game_scene(GAME_SCENE_HIGH_SCORES);
+			}
+		} break;
 		
-		case GAME_SCENE_HIGH_SCORES: {} break;
+		case GAME_SCENE_HIGH_SCORES: {
+			if (is_game_control_pressed(&game->input, &game->player_controller.fire)) {
+				restart_game(game);
+			}
+		} break;
 	}
 
 	for (int star_index = 0; star_index < STARFIELD_STAR_COUNT; star_index++) {
@@ -239,18 +286,58 @@ void draw_main_menu(Game_State* game) {
 
 void draw_game_ui(Game_State* game) {
 	
-	switch(game->scene) {
+	switch(current_scene) {
+
 		case GAME_SCENE_MAIN_MENU: {
 			draw_main_menu(game);
 		} break;
+
 		case GAME_SCENE_GAMEPLAY: {
 			draw_HUD(game);
 		} break;
-		case GAME_SCENE_GAME_OVER: {} break;
-		case GAME_SCENE_HIGH_SCORES: {} break;
-		default: { 
-			draw_HUD(game);
-		}
+
+		case GAME_SCENE_GAME_OVER: {
+			char score_buf[24];
+			SDL_itoa(game->score.total, score_buf, 10);
+			Vector2 screen = platform_get_window_size();
+			Vector2 offset = {screen.x/2.0f, screen.y/2.0f - 96};
+
+			platform_set_render_draw_color(RED);
+			render_text_aligned(game->font, 64, offset.x, offset.y - 96, "GAME OVER", "center");
+			offset.y += 64;
+			platform_set_render_draw_color(WHITE);
+			render_text_aligned(game->font, 48, offset.x, offset.y, "Final Score:", "center");
+			offset.y += 48;
+			render_text_aligned(game->font, 32, offset.x, offset.y, score_buf, "center");
+		} break;
+
+		case GAME_SCENE_HIGH_SCORES: {
+			char score_buf[24];
+			SDL_itoa(game->score.total, score_buf, 10);
+			Vector2 screen = platform_get_window_size();
+			Vector2 offset = {screen.x/2.0f, screen.y/4.0f};
+			platform_set_render_draw_color(WHITE);
+			render_text_aligned(game->font, 48, offset.x, offset.y, "HIGH SCORES", "center");
+			offset.y += 64.0f;
+
+			Vector2 line[2] = {
+				{screen.x*0.25f, offset.y},
+				{screen.x*0.75f, offset.y}
+			};
+			for (int i = 0; i < 10; i++) {
+				line[0].y = line[1].y = offset.y-30;
+				platform_render_draw_lines(line, 2);
+
+				render_text_aligned(game->font, 32, offset.x, offset.y, score_buf, 0);
+				offset.y += 40;
+			}
+
+			line[0].y = line[1].y = offset.y-30;
+			platform_render_draw_lines(line, 2);
+			
+		} break;
+		
+		default: {}
 	}
 
 }

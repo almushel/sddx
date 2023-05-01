@@ -217,8 +217,6 @@ typedef struct Game_State {
 
 	int world_w, world_h;
 
-	Game_Scene scene;
-
 	Entity* entities;
 	Uint32 entity_count;
 	Uint32 entities_size;
