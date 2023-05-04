@@ -9,16 +9,15 @@
 #include "score.c"
 
 #define clamp(value, min, max) (value > max) ? max : (value < min) ? min : value;
-#define SCENE_TRANSITION_TIME 120.0f
+#define SCENE_TRANSITION_TIME 30.0f
 
 static Game_Scene current_scene;
 static Game_Scene next_scene;
 static float scene_transition_timer;
 
 static void switch_game_scene(Game_Scene new_scene) {
-	current_scene = new_scene;
-//	next_scene = new_scene;
-//	scene_transition_timer = SCENE_TRANSITION_TIME;
+	next_scene = new_scene;
+	scene_transition_timer = SCENE_TRANSITION_TIME;
 }
 
 static void spawn_player(Game_State* game) {
@@ -64,36 +63,14 @@ void load_game_assets(Game_State* game) {
 	game_load_sfx(game, "assets/audio/PlayerMissile.mp3", "Player Missile");
 }
 
-void restart_game(Game_State* game) {
+static void reset_game(Game_State* game) {
 	game->entity_count = 1;
 	game->particle_system.particle_count = 0;
 	game->particle_system.dead_emitter_count = 0;
 	game->particle_system.emitter_count = 1;
-	
-	game->player_state.lives = 3;
-	game->player_state.ammo = 0;
-	game->player_state.weapon_heat = 0;
-	game->player_state.thrust_energy = THRUST_MAX;
-
-	spawn_player(game);
-
-#if DEBUG
-	for (int i = ENTITY_TYPE_PLAYER+1; i < ENTITY_TYPE_SPAWN_WARP; i++) {
-		Uint32 entity_id = spawn_entity(game, ENTITY_TYPE_SPAWN_WARP, (Vector2){random() * (float)game->world_w, random() * (float)game->world_h});
-		if (entity_id) {
-			Entity* entity = get_entity(game, entity_id);
-			entity->type_data = i;
-		}
-	}
-#endif
-
-
-	switch_game_scene(GAME_SCENE_GAMEPLAY);
 }
 
 void init_game(Game_State* game) {
-	game->particle_system.emitter_count = 1;
-
 	game->world_w = 800;
 	game->world_h = 600;
 
@@ -159,44 +136,76 @@ void init_game(Game_State* game) {
 			.button = SDL_CONTROLLER_BUTTON_A,
 		},
 	};
+
+	reset_game(game);
+}
+
+void restart_game(Game_State* game) {
+	game->player_state.lives = 0;
+	game->player_state.ammo = 0;
+	game->player_state.weapon_heat = 0;
+	game->player_state.thrust_energy = THRUST_MAX;
+
+	spawn_player(game);
+
+#if DEBUG
+	for (int i = ENTITY_TYPE_PLAYER+1; i < ENTITY_TYPE_SPAWN_WARP; i++) {
+		Uint32 entity_id = spawn_entity(game, ENTITY_TYPE_SPAWN_WARP, (Vector2){random() * (float)game->world_w, random() * (float)game->world_h});
+		if (entity_id) {
+			Entity* entity = get_entity(game, entity_id);
+			entity->type_data = i;
+		}
+	}
+#endif
+
 }
 
 void update_game(Game_State* game, float dt) {
-//	if (scene_transition_timer > 0.0f) {
-//		scene_transition_timer -= dt;
-//	} else if (current_scene != next_scene) {
-//		current_scene = next_scene;
-//	}
+	if (next_scene == current_scene) {
+		switch(current_scene) {
+			case GAME_SCENE_MAIN_MENU: {
+				if (is_game_control_pressed(&game->input, &game->player_controller.fire)) {
+					switch_game_scene(GAME_SCENE_GAMEPLAY);
+				}
+			} break;
+			
+			case GAME_SCENE_GAMEPLAY: {
+				if (game->player_state.lives > 0) {
+					if (!game->player && is_game_control_pressed(&game->input, &game->player_controller.fire)) {
+						spawn_player(game);
+						game->player_state.lives--;
+					} 
+				} else if (!game->player) {
+					switch_game_scene(GAME_SCENE_GAME_OVER);
+				}
+			} break;
+			
+			case GAME_SCENE_GAME_OVER: {
+				if (is_game_control_pressed(&game->input, &game->player_controller.fire)) {
+					switch_game_scene(GAME_SCENE_HIGH_SCORES);
+				}
+			} break;
+			
+			case GAME_SCENE_HIGH_SCORES: {
+				if (is_game_control_pressed(&game->input, &game->player_controller.fire)) {
+					switch_game_scene(GAME_SCENE_MAIN_MENU);
+				}
+			} break;
+		}
+	} else if (scene_transition_timer > 0.0f) {
+		scene_transition_timer -= dt;
+	} else { // NOTE: Do I want to trigger this when the switch starts ( in switch_game_scene() )?
+		switch(next_scene) {
+			case GAME_SCENE_MAIN_MENU: {
+				reset_game(game);
+			}
 
-	switch(current_scene) {
-		case GAME_SCENE_MAIN_MENU: {
-			if (is_game_control_pressed(&game->input, &game->player_controller.fire)) {
+			case GAME_SCENE_GAMEPLAY: {
 				restart_game(game);
-			}
-		} break;
-		
-		case GAME_SCENE_GAMEPLAY: {
-			if (game->player_state.lives > 0) {
-				if (!game->player && is_game_control_pressed(&game->input, &game->player_controller.fire)) {
-					spawn_player(game);
-					game->player_state.lives--;
-				} 
-			} else if (!game->player) {
-				switch_game_scene(GAME_SCENE_GAME_OVER);
-			}
-		} break;
-		
-		case GAME_SCENE_GAME_OVER: {
-			if (is_game_control_pressed(&game->input, &game->player_controller.fire)) {
-				switch_game_scene(GAME_SCENE_HIGH_SCORES);
-			}
-		} break;
-		
-		case GAME_SCENE_HIGH_SCORES: {
-			if (is_game_control_pressed(&game->input, &game->player_controller.fire)) {
-				restart_game(game);
-			}
-		} break;
+			} break;
+		}
+
+		current_scene = next_scene;
 	}
 
 	for (int star_index = 0; star_index < STARFIELD_STAR_COUNT; star_index++) {
@@ -284,10 +293,8 @@ void draw_main_menu(Game_State* game) {
 	}
 }
 
-void draw_game_ui(Game_State* game) {
-	
-	switch(current_scene) {
-
+void draw_scene_ui(Game_State* game, Game_Scene scene) {
+	switch(scene) {
 		case GAME_SCENE_MAIN_MENU: {
 			draw_main_menu(game);
 		} break;
@@ -339,5 +346,41 @@ void draw_game_ui(Game_State* game) {
 		
 		default: {}
 	}
+}
 
+void draw_game_ui(Game_State* game) {
+	SDL_Texture* target = 0;
+
+	if (current_scene != next_scene) {
+		Vector2 screen = platform_get_window_size();
+		target = platform_create_texture((int)screen.x, (int)screen.y, true);
+		
+		unsigned char alpha = lerp(0.0f, 255.0f, scene_transition_timer/SCENE_TRANSITION_TIME);
+		platform_set_texture_alpha(target, alpha);
+		
+		platform_set_render_target(target);
+		platform_set_render_draw_color((RGBA_Color){0});
+		platform_render_clear();
+	}
+
+	draw_scene_ui(game, current_scene);
+
+	if (target) {
+		platform_set_render_target(0);
+		render_draw_texture(target, 0, 0, 0, false);
+
+		unsigned char alpha = lerp(0.0f, 255.0f, 1.0f - scene_transition_timer/SCENE_TRANSITION_TIME);
+		platform_set_texture_alpha(target, alpha);
+
+		platform_set_render_target(target);
+		
+		platform_set_render_draw_color((RGBA_Color){0});
+		platform_render_clear();		
+		draw_scene_ui(game, next_scene);
+		
+		platform_set_render_target(0);
+		
+		render_draw_texture(target, 0, 0, 0, false);
+		platform_destroy_texture(target);
+	}
 }

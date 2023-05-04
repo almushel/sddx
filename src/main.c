@@ -19,11 +19,12 @@ Vector2 platform_get_window_size(void) {
 	return result;
 }
 
-SDL_Texture* platform_create_texture(Uint32 format, int access, int w, int h) {
+SDL_Texture* platform_create_texture(int w, int h, bool target) {
 	SDL_Texture* result = 0;
 	
 	if (renderer) {
-		result = SDL_CreateTexture(renderer, format, access, w, h);
+		result = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, target ? SDL_TEXTUREACCESS_TARGET : SDL_TEXTUREACCESS_STATIC, w, h);
+		SDL_SetTextureBlendMode(result, SDL_BLENDMODE_BLEND);
 	} else {
 		SDL_SetError("platform_create_texture(): renderer does not exist.");
 	}
@@ -40,6 +41,16 @@ SDL_Texture* platform_create_texture_from_surface(SDL_Surface* surface) {
 		SDL_SetError("platform_create_texture_from_surface(): renderer does not exist.");
 	}
 
+	return result;
+}
+
+void platform_destroy_texture(SDL_Texture* texture) {
+	SDL_DestroyTexture(texture);
+}
+
+int platform_set_texture_alpha(SDL_Texture* texture, uint8_t alpha) {
+	int result = SDL_SetTextureAlphaMod(texture, alpha);
+	
 	return result;
 }
 

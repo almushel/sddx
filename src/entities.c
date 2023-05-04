@@ -177,16 +177,13 @@ SDL_Texture* generate_item_texture(Game_State* game, SDL_Texture* icon) {
 	
 	int result_size = ITEM_RADIUS*2 + 4;
 
-	result = platform_create_texture(SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, result_size, result_size);
+	result = platform_create_texture(result_size, result_size, true);
 	if (result) {
-		SDL_SetTextureBlendMode(result, SDL_BLENDMODE_BLEND);
-		
 		platform_set_render_target(result);
 
 		platform_set_render_draw_color((RGBA_Color){0});
 		platform_render_clear();
-		render_fill_circlef_linear_gradient((float)result_size/2.0f, (float)result_size/2.0f, ITEM_RADIUS, CLEAR_COLOR, SD_BLUE);
-		
+		render_fill_circlef_linear_gradient((float)result_size/2.0f, (float)result_size/2.0f, ITEM_RADIUS, (RGBA_Color){0}, SD_BLUE);
 	if (icon) {
 		Vector2 dim = platform_get_texture_dimensions(icon);
 		float larger_dim = (dim.x > dim.y) ? dim.x : dim.y;

@@ -7,9 +7,13 @@
 Vector2 platform_get_window_size(void);
 int platform_set_render_target(SDL_Texture *texture);
 
-SDL_Texture* 	platform_create_texture					(Uint32 format, int access, int w, int h);
+typedef enum Texture_Access SDL_PixelFormatEnum;
+
+SDL_Texture* 	platform_create_texture					(int w, int h, bool target);
 SDL_Texture* 	platform_create_texture_from_surface	(SDL_Surface* surface);
+void 			platform_destroy_texture				(SDL_Texture* texture);
 Vector2 		platform_get_texture_dimensions			(SDL_Texture* texture);
+int 			platform_set_texture_alpha				(SDL_Texture* texture, uint8_t alpha);
 
 int 			platform_render_clear					(void);
 RGBA_Color 		platform_get_render_draw_color			(void);

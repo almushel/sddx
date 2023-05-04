@@ -56,8 +56,7 @@ STBTTF_Font* load_stbtt_font(const char* file_name, float font_size) {
 			}
 		}
 
-		result->atlas = platform_create_texture(SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC, result->texture_size, result->texture_size);
-		SDL_SetTextureBlendMode(result->atlas, SDL_BLENDMODE_BLEND);
+		result->atlas = platform_create_texture(result->texture_size, result->texture_size, false);
 
 		Uint32* pixels = malloc(result->texture_size * result->texture_size * sizeof(Uint32));
 		static SDL_PixelFormat* format = 0;
