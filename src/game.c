@@ -138,6 +138,7 @@ void init_game(Game_State* game) {
 	};
 
 	reset_game(game);
+	spawn_entity(game, ENTITY_TYPE_DEMOSHIP, (Vector2){game->world_w/2.0f, game->world_h/2.0f});
 }
 
 void restart_game(Game_State* game) {
@@ -148,7 +149,7 @@ void restart_game(Game_State* game) {
 
 	spawn_player(game);
 
-#if DEBUG
+#if 0
 	for (int i = ENTITY_TYPE_PLAYER+1; i < ENTITY_TYPE_SPAWN_WARP; i++) {
 		Uint32 entity_id = spawn_entity(game, ENTITY_TYPE_SPAWN_WARP, (Vector2){random() * (float)game->world_w, random() * (float)game->world_h});
 		if (entity_id) {
@@ -197,10 +198,22 @@ void update_game(Game_State* game, float dt) {
 	} else { // NOTE: Do I want to trigger this when the switch starts ( in switch_game_scene() )?
 		switch(next_scene) {
 			case GAME_SCENE_MAIN_MENU: {
+//	Despawn does not work as expected for asteroids because violent death and "despawn" death are not
+//	differentiated when dead entities are removed
+//				for (int i = 1; i < game->entity_count; i++) {
+//					game->entities[i].state = ENTITY_STATE_DESPAWNING;
+//					game->entities[i].timer = 30.0f;
+//				}
 				reset_game(game);
-			}
+				spawn_entity(game, ENTITY_TYPE_DEMOSHIP, (Vector2){game->world_w/2.0f, game->world_h/2.0f});
+			} break;
 
-			case GAME_SCENE_GAMEPLAY: {
+			case GAME_SCENE_GAMEPLAY: {				
+				for (int i = 1; i < game->entity_count; i++) {
+					game->entities[i].state = ENTITY_STATE_DESPAWNING;
+					game->entities[i].timer = 30.0f;
+				}
+
 				restart_game(game);
 			} break;
 		}

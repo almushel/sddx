@@ -14,6 +14,8 @@
 
 #define DEFAULT_ENTITY_RADIUS 20.0f
 
+#define DEMO_DIR_CHANGE 360.0f
+
 #define PLAYER_FORWARD_THRUST 0.15f
 #define PLAYER_LATERAL_THRUST 0.2f
 #define PLAYER_TURN_SPEED 3.14f
@@ -296,6 +298,7 @@ Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 		entity->team = ENTITY_TEAM_ENEMY;
 
 		switch(type) {
+			case ENTITY_TYPE_DEMOSHIP:
 			case ENTITY_TYPE_PLAYER: {
 				entity->team = ENTITY_TEAM_PLAYER;
 				entity->shape.radius = SHIP_RADIUS;
@@ -571,7 +574,44 @@ void update_entities(Game_State* game, float dt) {
 		} else if (entity->state == ENTITY_STATE_ACTIVE) {
 			entity->timer -= dt * (float)(int)(entity->timer > 0);
 			switch(entity->type) {
+				case ENTITY_TYPE_DEMOSHIP: {
+					float w = game->world_w / 2.0f;
+					float h = game->world_h / 2.0f;
+					Vector2 delta = {
+						entity->x - w,
+						entity->y - h,
+					};
+					float dist = delta.x*delta.x + delta.y*delta.y;
+					float vert = 1.25f - dist / (w*w+h*h);
+
+					entity->transform.scale.x = entity->transform.scale.y = vert;
+					entity->shape.radius = 0;//vert * SHIP_RADIUS * 2;
+
+					if (entity->timer <= 0.0f) {
+						entity->type_data = (uint8_t)(!(bool)entity->type_data);
+						entity->timer = DEMO_DIR_CHANGE;
+					}
+
+					entity->angle += (1 + ((float)entity->type_data * -2.0f)) * dt;
+
+					entity->vx += cos_deg(entity->angle) * vert * dt;
+					entity->vy += sin_deg(entity->angle) * vert * dt;
 				
+					entity->vx *= 1.0f - 0.15f * dt;
+					entity->vy *= 1.0f - 0.15f * dt;
+
+					Particle_Emitter* thruster = get_particle_emitter(&game->particle_system, entity->particle_emitters[0]);	
+					thruster->state = EMITTER_STATE_ACTIVE * (vert > 0.2);
+					thruster->position = entity->position;
+					thruster->scale = vert;
+					thruster->angle = entity->angle - 180.0f;
+					thruster->position = (Vector2) {
+						entity->position.x + cos_deg(thruster->angle) * 16.0f * vert,
+						entity->position.y + sin_deg(thruster->angle) * 16.0f * vert,
+					};
+
+				} break;
+
 				case ENTITY_TYPE_PLAYER: {
 					Game_Player_Controller controller = game->player_controller;
 
@@ -1109,6 +1149,7 @@ void update_entities(Game_State* game, float dt) {
 		} // end of if (entity->state == ENTITY_STATE_ACTIVE)
 	}
 
+	// TO-DO: Differentiate "dead" and "despawned" entities
 	if (dead_entity_count > 0) {
 		Entity* dead_entity;
 		for (int i = dead_entity_count-1; i >= 0 ; i--) {
