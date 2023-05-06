@@ -58,10 +58,16 @@ void draw_particles(Game_State* game) {
 			render_draw_game_sprite(game, &particle->sprite, particle->transform, 1);
 		} else {
 			Game_Shape 	shape = particle->shape;
-						shape = scale_game_shape(shape, particle->scale);
-						shape = rotate_game_shape(shape, particle->angle);
+			shape = scale_game_shape(shape, particle->scale);
 
-			render_fill_game_shape((Vector2){particle->x, particle->y}, shape, particle->color);
+			if (shape.type == SHAPE_TYPE_RECT) {
+				shape.rectangle.x = -shape.rectangle.w/2.0f;
+				shape.rectangle.y = -shape.rectangle.h/2.0f;
+			}
+
+			shape = rotate_game_shape(shape, particle->angle);
+
+			render_fill_game_shape(particle->position, shape, particle->color);
 		}
 	}
 }
@@ -142,10 +148,10 @@ void randomize_particle(Particle* p, RGBA_Color* colors, Uint32 color_count) {
 		} break;
 		
 		case SHAPE_TYPE_RECT: {
-			p->shape.rectangle.x = -radius;
-			p->shape.rectangle.y = -radius;
-			p->shape.rectangle.w =  radius*2;
-			p->shape.rectangle.h =  radius*2;
+			p->shape.rectangle.x = 0.0f;
+			p->shape.rectangle.y = 0.0f;
+			p->shape.rectangle.w =  radius*2.0f;
+			p->shape.rectangle.h =  radius*2.0f;
 		} break;
 
 		case SHAPE_TYPE_POLY2D: {
@@ -154,12 +160,14 @@ void randomize_particle(Particle* p, RGBA_Color* colors, Uint32 color_count) {
 
 			float angle = 0;
 			for (int v = 0; v < vert_count; v++) {
+
 				p->shape.polygon.vertices[v] = (Vector2) {
-					cos_deg(angle) * random_particle_radius(),
-					sin_deg(angle) * random_particle_radius(),
+					cos_deg(angle) * radius,
+					sin_deg(angle) * radius,
 				};
 
 				angle += angle_increment;
+				radius = random_particle_radius();
 			}
 		} break;
 	}
@@ -193,6 +201,12 @@ Uint32 get_new_particle_emitter(Particle_System* ps) {
 		result = ps->emitter_count++;
 	} else {
 		SDL_Log("get_get_new_particle_emitter(): Particle emitter maximum reached");
+	}
+
+	if (result) {
+		*(ps->emitters + result) = (Particle_Emitter) {
+			.scale = {1.0f,1.0f},
+		};
 	}
 
 	return result;
@@ -231,6 +245,8 @@ void update_particle_emitters(Particle_System* ps, float dt) {
 				if (id) {
 					Particle* p = ps->particles + id;
 					randomize_particle(p, emitter->colors, emitter->color_count);
+
+					p->shape = scale_game_shape(p->shape, emitter->scale);
 					
 					p->x = emitter->x;
 					p->y = emitter->y;

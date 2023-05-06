@@ -29,7 +29,7 @@ void render_text(STBTTF_Font* font, float size, float x, float y, const char* te
 		if (text[i] >= 32 && text[i] < 128) {
 
 			stbtt_packedchar* info = &font->chars[text[i] - 32];
-			SDL_Rect src_rect = {info->x0, info->y0, info->x1 - info->x0, info->y1 - info->y0};
+			Rectangle src_rect = {info->x0, info->y0, info->x1 - info->x0, info->y1 - info->y0};
 
 			Rectangle dst_rect = {
 				x + info->xoff * scale, 
@@ -251,7 +251,7 @@ void render_draw_game_sprite(Game_State* game, Game_Sprite* sprite, Transform2D 
 	SDL_Texture* texture =  game_get_texture(game, sprite->texture_name);
 
 	if (texture) {
-		SDL_Rect sprite_rect = get_sprite_rect(game, sprite);
+		Rectangle sprite_rect = get_sprite_rect(game, sprite);
 
 		Rectangle dest_rect;
 		dest_rect.x = transform.x;

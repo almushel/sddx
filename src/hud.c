@@ -121,7 +121,7 @@ void draw_thrust_meter(Game_State* game) {
 		.vert_count = 4,
 	};
 
-	float thrust_energy = SDL_clamp(game->player_state.thrust_energy, 0, THRUST_MAX);
+	float thrust_energy = SDL_clamp(game->player_state.thrust_energy, 0, PLAYER_THRUST_MAX);
 
 	RGBA_Color tmColorOuter = {17, 17, 17, 255};
 	RGBA_Color tmColorInner = {
@@ -133,7 +133,7 @@ void draw_thrust_meter(Game_State* game) {
 
 	render_fill_polygon(translate_poly2d(meterOuterPoly, (Vector2){screen_w / 2 - 60, screen_h - 16}).vertices, meterOuterPoly.vert_count, tmColorOuter);
 
-	float thrustDelta = thrust_energy / THRUST_MAX;
+	float thrustDelta = thrust_energy / PLAYER_THRUST_MAX;
 	meterInnerPoly.vertices[2].x = -41 + (int)(thrustDelta * 90);
 	meterInnerPoly.vertices[3].x = -41 + (int)(thrustDelta * 90) - 5;
 	
@@ -174,7 +174,7 @@ void draw_weapon_heat(Game_State* game) {
 	RGBA_Color hmColorInner = {255, 0, 0, 255};
 
 	float weapon_heat = 0;
-	if (game->player) weapon_heat = SDL_clamp(game->player_state.weapon_heat, 0, HEAT_MAX);
+	if (game->player) weapon_heat = SDL_clamp(game->player_state.weapon_heat, 0, PLAYER_WEAPON_HEAT_MAX);
 	
 	if (weapon_heat < 100) hmColorOuter = (RGBA_Color){17, 17, 17, 255};
 	else hmColorOuter = (RGBA_Color){255, 165, 0, 255};
@@ -188,7 +188,7 @@ void draw_weapon_heat(Game_State* game) {
 
 	render_fill_polygon(translate_poly2d(heatOuterPoly, (Vector2){screen_w / 2 + 60, screen_h - 16}).vertices, heatOuterPoly.vert_count, hmColorOuter);
 
-	float heatDelta = weapon_heat / HEAT_MAX;
+	float heatDelta = weapon_heat / PLAYER_WEAPON_HEAT_MAX;
 	heatInnerPoly.vertices[2].x = -41 + (int)(heatDelta * 90) - 5;
 	heatInnerPoly.vertices[3].x = -41 + (int)(heatDelta * 90);
 	

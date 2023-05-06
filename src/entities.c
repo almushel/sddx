@@ -20,18 +20,16 @@
 #define PLAYER_LATERAL_THRUST 0.2f
 #define PLAYER_TURN_SPEED 3.14f
 
-#define THRUST_POWER 0.15f
-#define LATERAL_THRUST 0.2f
-#define TURN_RATE 0.025f
-#define PLAYER_SHOT_MAX 8
+#define PLAYER_SHIP_RADIUS 13
+
+#define PLAYER_THRUST_PARTICLE_SPEED 3.0f
+#define PLAYER_THRUST_MAX 100
+#define PLAYER_THRUST_CONSUMPTION 0.45f
+#define PLAYER_WEAPON_HEAT_MAX 100
+
 #define PLAYER_SHOT_RADIUS 3.0f
 #define PLAYER_SHOT_SPEED 7.0f
 #define PLAYER_SHOT_LIFE 80.0f
-#define HEAT_MAX 100
-#define THRUST_MAX 100
-#define THRUST_CONSUMPTION 0.45f
-#define SHIP_RADIUS 13
-#define PLAYER_STARTING_LIVES 3
 
 #define PLAYER_MG_COOLDOWN 200.0f/16.666f
 #define PLAYER_LASER_COOLDOWN 250.0f/16.666f
@@ -46,36 +44,35 @@
 
 #define ENEMY_EXPLOSION_RADIUS 100.0f
 
-#define DRIFTER_SPEED 1
+#define DRIFTER_SPEED 1.0f
 #define DRIFTER_RADIUS 40
 #define DRIFTER_GREY (RGBA_Color){105, 105, 105, 255}
 
-#define UFO_SPEED 1.9
+#define UFO_SPEED 1.9f
 #define UFO_DIR_CHANGE_DELAY 120.0f
 #define UFO_COLLISION_RADIUS 20.0f
-#define UFO_TURN_PRECISION 0.05
+#define UFO_TURN_PRECISION 0.05f
 
 #define TRACKER_ACCEL 0.13f
 #define TRACKER_FRICTION 0.02f
 #define TRACKER_TURN_RATE 1.5f
 #define TRACKER_PRECISION 0.1f
-#define TRACKER_COLLISION_RADIUS 14
+#define TRACKER_COLLISION_RADIUS 14.0f
 
-#define TURRET_RADIUS 15
+#define TURRET_RADIUS 15.0f
 #define TURRET_ACCEL 0.06f
-#define TURRET_SHOT_MAX 1
-#define TURRET_SHOT_RADIUS 4
-#define TURRET_SHOT_SPEED 3
-#define TURRET_SHOT_LIFE 220
+#define TURRET_SHOT_RADIUS 4.0f
+#define TURRET_SHOT_SPEED 3.0f
+#define TURRET_SHOT_LIFE 220.0f
 #define TURRET_AIM_TOLERANCE 0.125f
-#define TURRET_TURN_SPEED 1.2
+#define TURRET_TURN_SPEED 1.2f
 #define TURRET_FIRE_ANIM_SPEED 5.0f //83ms
 #define TURRET_RECOVERY_ANIM_SPEED 60.0f //500ms
 
 #define GRAPPLER_AIM_TOLERANCE 0.1f
-#define GRAPPLER_TURN_SPEED 1.3
-#define GRAPPLER_SPACE_FRICTION 0.06
-#define GRAPPLER_ACCEL 0.06
+#define GRAPPLER_TURN_SPEED 1.3f
+#define GRAPPLER_SPACE_FRICTION 0.06f
+#define GRAPPLER_ACCEL 0.06f
 #define GRAPPLER_HOOK_SPEED 6.0f
 #define GRAPPLER_REELING_ACCELERATION 0.08f
 
@@ -301,7 +298,7 @@ Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 			case ENTITY_TYPE_DEMOSHIP:
 			case ENTITY_TYPE_PLAYER: {
 				entity->team = ENTITY_TEAM_PLAYER;
-				entity->shape.radius = SHIP_RADIUS;
+				entity->shape.radius = PLAYER_SHIP_RADIUS;
 				entity->angle = 270;
 				entity->sprites[0].texture_name = "Player Ship";
 				entity->sprites[0].rotation_enabled = 1;
@@ -310,14 +307,12 @@ Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 
 				for (int i = 0; i < entity->emitter_count; i++) {
 					entity->particle_emitters[i] = get_new_particle_emitter(&game->particle_system);
-					*get_particle_emitter(&game->particle_system, entity->particle_emitters[i]) =
-						(Particle_Emitter) {
-							.shape = SHAPE_TYPE_RECT,
-							.speed = PARTICLE_SPEED/2.0f,
-							.density = 2.0f,
-							.colors[0] = SD_BLUE,
-							.color_count = 1,
-						};
+					Particle_Emitter* thruster = get_particle_emitter(&game->particle_system, entity->particle_emitters[i]);
+					thruster->shape = SHAPE_TYPE_RECT;
+					thruster->speed = PLAYER_THRUST_PARTICLE_SPEED;
+					thruster->density = 2.0f;
+					thruster->colors[0] = SD_BLUE;
+					thruster->color_count = 1;
 				}
 			} break;
 
@@ -525,17 +520,17 @@ void update_entities(Game_State* game, float dt) {
 				thrusters[2]->position = entity->position;
 				thrusters[2]->angle = normalize_degrees(entity->angle + 45);
 
-				force_circle(game->entities, game->entity_count, entity->x, entity->y, entity->sx * SHIP_RADIUS * 3.0f, 1.5f);
+				force_circle(game->entities, game->entity_count, entity->x, entity->y, entity->sx * PLAYER_SHIP_RADIUS * 3.0f, 1.5f);
 				entity->y -= (8.0f - lerp(0.0f, 6.0f, t)) * dt;
 				entity->sx = entity->sy = t;
-				entity->shape.radius = ts * SHIP_RADIUS;
+				entity->shape.radius = ts * PLAYER_SHIP_RADIUS;
 
 				if (entity->y <= game->world_h/2.0f) {
 //					startTransition(-1);
 //					transitionHUD(-1);
 					entity->state = ENTITY_STATE_ACTIVE;
 					entity->scale = (Vector2){1.0f, 1.0f};
-					entity->shape.radius = SHIP_RADIUS;// * 2.0f;
+					entity->shape.radius = PLAYER_SHIP_RADIUS;// * 2.0f;
 					entity->velocity = (Vector2){0};
 					entity->timer = 0;
 				}
@@ -585,7 +580,7 @@ void update_entities(Game_State* game, float dt) {
 					float vert = 1.25f - dist / (w*w+h*h);
 
 					entity->transform.scale.x = entity->transform.scale.y = vert;
-					entity->shape.radius = 0;//vert * SHIP_RADIUS * 2;
+					entity->shape.radius = 0;//vert * PLAYER_SHIP_RADIUS * 2;
 
 					if (entity->timer <= 0.0f) {
 						entity->type_data = (uint8_t)(!(bool)entity->type_data);
@@ -603,7 +598,8 @@ void update_entities(Game_State* game, float dt) {
 					Particle_Emitter* thruster = get_particle_emitter(&game->particle_system, entity->particle_emitters[0]);	
 					thruster->state = EMITTER_STATE_ACTIVE * (vert > 0.2);
 					thruster->position = entity->position;
-					thruster->scale = vert;
+					thruster->speed = PLAYER_THRUST_PARTICLE_SPEED * vert;
+					thruster->scale.x = thruster->scale.y = vert;
 					thruster->angle = entity->angle - 180.0f;
 					thruster->position = (Vector2) {
 						entity->position.x + cos_deg(thruster->angle) * 16.0f * vert,
@@ -639,22 +635,22 @@ void update_entities(Game_State* game, float dt) {
 								thruster->state = EMITTER_STATE_ACTIVE;
 								entity->vx += cos_deg(entity->angle + angle_offset) * thrust_speed * dt;
 								entity->vy += sin_deg(entity->angle + angle_offset) * thrust_speed * dt;
-								game->player_state.thrust_energy -= THRUST_CONSUMPTION *dt;
+								game->player_state.thrust_energy -= PLAYER_THRUST_CONSUMPTION *dt;
 							}
 						}
 
 						if (thruster->state == EMITTER_STATE_ACTIVE) {
 							thruster->angle = entity->angle + angle_offset + 180;
-							thruster->y = entity->y + sin_deg(thruster->angle) * (float)SHIP_RADIUS;
-							thruster->x = entity->x + cos_deg(thruster->angle) * (float)SHIP_RADIUS;
+							thruster->y = entity->y + sin_deg(thruster->angle) * (float)PLAYER_SHIP_RADIUS;
+							thruster->x = entity->x + cos_deg(thruster->angle) * (float)PLAYER_SHIP_RADIUS;
 						}
 
 						angle_offset -= 90.0f * (float)(i+1);
 					}
-					game->player_state.thrust_energy = SDL_clamp(game->player_state.thrust_energy + (float)(int)(!thrusting) * dt, 0, THRUST_MAX);
+					game->player_state.thrust_energy = SDL_clamp(game->player_state.thrust_energy + (float)(int)(!thrusting) * dt, 0, PLAYER_THRUST_MAX);
 
 					if (is_game_control_held(&game->input, &controller.fire)) {	
-						if (game->player_state.weapon_heat < HEAT_MAX) {
+						if (game->player_state.weapon_heat < PLAYER_WEAPON_HEAT_MAX) {
 							game->player_state.weapon_heat -= dt;
 						
 							if (entity->timer <= 0)  {
@@ -674,8 +670,8 @@ void update_entities(Game_State* game, float dt) {
 												sin_deg(entity->angle)
 											};
 											
-											bullet->x += angle.x * SHIP_RADIUS;
-											bullet->y += angle.y * SHIP_RADIUS;
+											bullet->x += angle.x * PLAYER_SHIP_RADIUS;
+											bullet->y += angle.y * PLAYER_SHIP_RADIUS;
 											
 											bullet->vx = entity->vx + (angle.x * PLAYER_SHOT_SPEED);
 											bullet->vy = entity->vy + (angle.y * PLAYER_SHOT_SPEED);
@@ -704,8 +700,8 @@ void update_entities(Game_State* game, float dt) {
 												
 												missile->timer /= 2.0f;
 
-												missile->x += cos_deg(entity->angle + position_offset) * SHIP_RADIUS;
-												missile->y += sin_deg(entity->angle + position_offset) * SHIP_RADIUS;
+												missile->x += cos_deg(entity->angle + position_offset) * PLAYER_SHIP_RADIUS;
+												missile->y += sin_deg(entity->angle + position_offset) * PLAYER_SHIP_RADIUS;
 												
 												missile->angle = entity->angle;
 												missile->vx = entity->vx + angle.x;
@@ -740,8 +736,8 @@ void update_entities(Game_State* game, float dt) {
 												laser->state = ENTITY_STATE_ACTIVE;
 												laser->timer = PLAYER_SHOT_LIFE;
 												
-												laser->x += cos_deg(entity->angle + position_offset) * SHIP_RADIUS;
-												laser->y += sin_deg(entity->angle + position_offset) * SHIP_RADIUS;
+												laser->x += cos_deg(entity->angle + position_offset) * PLAYER_SHIP_RADIUS;
+												laser->y += sin_deg(entity->angle + position_offset) * PLAYER_SHIP_RADIUS;
 												
 												laser->angle = entity->angle;
 												laser->vx = entity->vx + angle.x * PLAYER_SHOT_SPEED * 2.0f;
@@ -764,7 +760,7 @@ void update_entities(Game_State* game, float dt) {
 						game->player_state.weapon_heat -= dt;
 					}
 
-					game->player_state.weapon_heat = SDL_clamp(game->player_state.weapon_heat, 0, HEAT_MAX);
+					game->player_state.weapon_heat = SDL_clamp(game->player_state.weapon_heat, 0, PLAYER_WEAPON_HEAT_MAX);
 				} break;
 
 				case ENTITY_TYPE_LASER:
@@ -1164,7 +1160,7 @@ void update_entities(Game_State* game, float dt) {
 			switch(dead_entity->type) {
 				case ENTITY_TYPE_PLAYER: {
 					game->player = 0;
-					game->player_state.thrust_energy = THRUST_MAX;
+					game->player_state.thrust_energy = PLAYER_THRUST_MAX;
 					game->player_state.weapon_heat = 0;
 
 					end_score_combo(&game->score);
@@ -1239,36 +1235,43 @@ void update_entities(Game_State* game, float dt) {
 
 Rectangle get_entity_bounding_box(Game_State* game, Entity* entity) {
 	Rectangle result = {0};
+	Game_Shape shape;
 
 	if (entity->sprite_count > 0) {
-		SDL_Rect rect = get_sprite_rect(game, &entity->sprites[0]);
-		result = (Rectangle){rect.x, rect.y, rect.w, rect.h};
-		result.x -= result.w/2.0f;
-		result.y -= result.h/2.0f;
-	} else {
-		switch(entity->shape.type) {
-			case SHAPE_TYPE_CIRCLE: {
-				result.x = result.y = -entity->shape.radius;
-				result.w = result.h = entity->shape.radius*2.0f;
-			} break;
+		shape.type = SHAPE_TYPE_RECT;
+		shape.rectangle = get_sprite_rect(game, &entity->sprites[0]);
+		shape.rectangle.x -= shape.rectangle.w/2.0f;
+		shape.rectangle.y -= shape.rectangle.h/2.0f;
 
-			case SHAPE_TYPE_RECT: {
-				// TO-DO: Handle rotation
-				result = entity->shape.rectangle;
-			} break;
-			
-			case SHAPE_TYPE_POLY2D: {
-				for (int i = 0; i < entity->shape.polygon.vert_count; i++) {
-					result.x = SDL_min(result.x, entity->shape.polygon.vertices[i].x);
-					result.y = SDL_min(result.y, entity->shape.polygon.vertices[i].y);
-					
-					result.w = SDL_max(result.w, entity->shape.polygon.vertices[i].x);
-					result.h = SDL_max(result.h, entity->shape.polygon.vertices[i].y);
-				}
-				result.w -= result.x;
-				result.h -= result.y;
-			} break;
-		}
+		shape = rotate_game_shape(shape, entity->angle * (float)(int)(entity->sprites[0].rotation_enabled));
+	} else {
+		shape = entity->shape;
+		shape = rotate_game_shape(shape, entity->angle);
+	}
+
+	shape = scale_game_shape (shape, entity->scale);
+
+	switch (shape.type) {
+		case SHAPE_TYPE_CIRCLE: {
+			result.x = result.y = -shape.radius;
+			result.w = result.h =  shape.radius*2.0f;
+		} break;
+
+		case SHAPE_TYPE_RECT: {
+			result = shape.rectangle;
+		} break;
+		
+		case SHAPE_TYPE_POLY2D: {
+			for (int i = 0; i < shape.polygon.vert_count; i++) {
+				result.x = SDL_min(result.x, shape.polygon.vertices[i].x);
+				result.y = SDL_min(result.y, shape.polygon.vertices[i].y);
+				
+				result.w = SDL_max(result.w, shape.polygon.vertices[i].x);
+				result.h = SDL_max(result.h, shape.polygon.vertices[i].y);
+			}
+			result.w -= result.x;
+			result.h -= result.y;
+		} break;
 	}
 
 	return result;

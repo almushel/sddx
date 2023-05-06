@@ -19,7 +19,7 @@ int 			platform_render_clear					(void);
 RGBA_Color 		platform_get_render_draw_color			(void);
 int 			platform_set_render_draw_color			(RGBA_Color color);
 
-int 			platform_render_copy					(SDL_Texture *texture, const SDL_Rect *src_rect, const Rectangle *dst_rect,
+int 			platform_render_copy					(SDL_Texture *texture, const Rectangle *src_rect, const Rectangle *dst_rect,
 														 const double angle  , const Vector2 *center, const SDL_RendererFlip flip
 														);
 int 			platform_render_draw_points 			(Vector2* points, int count);

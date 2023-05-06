@@ -167,8 +167,8 @@ define_game_get_asset(Mix_Music, music, music)
 define_game_get_asset(Mix_Chunk, sfx, sfx)
 define_game_get_asset(SDL_Texture, textures, texture)
 
-SDL_Rect get_sprite_rect(Game_State* game, Game_Sprite* sprite) {
-	SDL_Rect result = {0};
+Rectangle get_sprite_rect(Game_State* game, Game_Sprite* sprite) {
+	Rectangle result = {0};
 
 	if (sprite->src_rect.w && sprite->src_rect.h) {
 		result = sprite->src_rect;
@@ -177,8 +177,13 @@ SDL_Rect get_sprite_rect(Game_State* game, Game_Sprite* sprite) {
 		if (sprite->texture_name) {
 			texture = game_get_texture(game, sprite->texture_name);
 		}
-			
-		if (texture) SDL_QueryTexture(texture, NULL, NULL, &result.w, &result.h);
+		
+		if (texture) {
+			int w,h;
+			SDL_QueryTexture(texture, NULL, NULL, &w, &h);
+			result.w = (float)w;
+			result.h = (float)h;
+		}
 		else SDL_Log("get_sprite_rect(): Invalid texture.");
 	}
 
@@ -196,7 +201,7 @@ Game_Sprite* divide_sprite(Game_State* game, Game_Sprite* sprite, int pieces) {
 
 		result = SDL_malloc(sizeof(Game_Sprite) * (pieces));
 		
-		SDL_Rect sprite_rect = get_sprite_rect(game, sprite);
+		Rectangle sprite_rect = get_sprite_rect(game, sprite);
 		
 		int chunk_width =  (int)(sprite_rect.w / columns);
 		int chunk_height = (int)(sprite_rect.h / rows);

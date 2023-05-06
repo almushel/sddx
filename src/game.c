@@ -9,7 +9,9 @@
 #include "score.c"
 
 #define clamp(value, min, max) (value > max) ? max : (value < min) ? min : value;
+
 #define SCENE_TRANSITION_TIME 30.0f
+#define STARTING_LIVES 1
 
 static Game_Scene current_scene;
 static Game_Scene next_scene;
@@ -142,10 +144,11 @@ void init_game(Game_State* game) {
 }
 
 void restart_game(Game_State* game) {
-	game->player_state.lives = 0;
+	game->player_state.lives = STARTING_LIVES;
 	game->player_state.ammo = 0;
 	game->player_state.weapon_heat = 0;
-	game->player_state.thrust_energy = THRUST_MAX;
+	// TO-DO: Use "heat" units for thrust (like weapon heat) 
+	game->player_state.thrust_energy = PLAYER_THRUST_MAX;
 
 	spawn_player(game);
 

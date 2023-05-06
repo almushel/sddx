@@ -65,7 +65,7 @@ typedef struct Poly2D {
 
 typedef struct Game_Sprite {
 	char* texture_name;
-	SDL_Rect src_rect;
+	Rectangle src_rect;
 	Vector2 offset;
 	bool rotation_enabled;
 } Game_Sprite;
@@ -125,6 +125,7 @@ typedef struct Particle_Emitter {
 		Vector2 position;
 		struct { float x, y; };
 	};
+	Vector2 scale;
 	float angle;
 	float speed;
 
@@ -135,7 +136,6 @@ typedef struct Particle_Emitter {
 	Uint32 color_count;
 
 	float counter;
-	float scale;
 	enum Emitter_State {
 		EMITTER_STATE_INACTIVE,
 		EMITTER_STATE_ACTIVE,

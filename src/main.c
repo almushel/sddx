@@ -111,14 +111,23 @@ int platform_set_render_draw_color(RGBA_Color color) {
 	return result;
 }
 
-int platform_render_copy(SDL_Texture *texture, const SDL_Rect *src_rect, const Rectangle *dst_rect, const double angle, const SDL_FPoint *center, const SDL_RendererFlip flip) {
+int platform_render_copy(SDL_Texture *texture, const Rectangle *src_rect, const Rectangle *dst_rect, const double angle, const SDL_FPoint *center, const SDL_RendererFlip flip) {
 	int result = -1;
 
 	if (renderer) {
+		SDL_Rect int_src_rect;
+		SDL_Rect* pi_src_rect = 0;
+		if (src_rect) {
+			int_src_rect = (SDL_Rect) {
+				(int)src_rect->x, (int)src_rect->y,(int)src_rect->w,(int)src_rect->h,
+			};
+			pi_src_rect = &int_src_rect;
+		}
+		
 		if (angle || center || flip) {
-			result = SDL_RenderCopyExF(renderer, texture, src_rect, (SDL_FRect*)dst_rect, angle, center, flip);
+			result = SDL_RenderCopyExF(renderer, texture, pi_src_rect, (SDL_FRect*)dst_rect, angle, center, flip);
 		} else {
-			result = SDL_RenderCopyF(renderer, texture, src_rect, (SDL_FRect*)dst_rect);
+			result = SDL_RenderCopyF  (renderer, texture, pi_src_rect, (SDL_FRect*)dst_rect);
 		}
 	} else {
 		SDL_SetError("platform_render_copy(): renderer does not exist.");

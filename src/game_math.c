@@ -191,6 +191,8 @@ Game_Shape scale_game_shape(Game_Shape shape, Vector2 scale) {
 	if (scale.x != 1.0f && scale.y != 1.0f) {
 		switch(result.type) {
 			case SHAPE_TYPE_RECT: 	{
+				result.rectangle.x *= scale.x;
+				result.rectangle.y *= scale.y;
 				result.rectangle.w *= scale.x;
 				result.rectangle.h *= scale.y;
 			} break;
@@ -213,10 +215,10 @@ Game_Shape rotate_game_shape(Game_Shape shape, float degrees) {
 
 	if (degrees) {
 		switch(result.type) {
-			case SHAPE_TYPE_RECT: 	{
+			case SHAPE_TYPE_RECT: {
 				result.type = SHAPE_TYPE_POLY2D;
 				result.polygon = rect_to_poly2D(shape.rectangle);
-				rotate_poly2d(result.polygon, degrees);
+				result.polygon = rotate_poly2d(result.polygon, degrees);
 			} break;
 
 			case SHAPE_TYPE_POLY2D: {
