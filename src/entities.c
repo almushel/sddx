@@ -81,21 +81,6 @@
 #define WAVE_ESCALATION_RATE 4
 #define ITEM_ACCUMULATE_RATE 1
 
-typedef enum Entity_States {
-	ENTITY_STATE_UNDEFINED,
-	ENTITY_STATE_SPAWNING,
-	ENTITY_STATE_ACTIVE,
-	ENTITY_STATE_DESPAWNING,
-	ENTITY_STATE_DYING,
-	ENTITY_STATE_COUNT,
-} Entity_States;
-
-typedef enum Entity_Teams {
-	ENTITY_TEAM_UNDEFINED = 0,
-	ENTITY_TEAM_PLAYER,
-	ENTITY_TEAM_ENEMY,
-} Entity_Teams;
-
 typedef enum Turret_State {
 	TURRET_STATE_AIMING,
 	TURRET_STATE_FIRING,
@@ -687,7 +672,8 @@ void update_entities(Game_State* game, float dt) {
 											game->player->type_data = 0;
 											break;	
 										}
-										
+										Mix_PlayChannel(-1, game_get_sfx(game, "Player Missile"), 0);
+
 										game->player_state.weapon_heat += PLAYER_MISSILE_HEAT;
 
 										float position_offset = -60.0f;
@@ -722,7 +708,8 @@ void update_entities(Game_State* game, float dt) {
 											game->player->type_data = 0;
 											break;	
 										}
-										
+										Mix_PlayChannel(-1, game_get_sfx(game, "Player Laser"), 0);
+
 										game->player_state.weapon_heat += PLAYER_LASER_HEAT;
 
 										float position_offset = -60.0f;
@@ -929,7 +916,9 @@ void update_entities(Game_State* game, float dt) {
 											shot_offset_angle = normalize_degrees(shot_offset_angle + 180.0f);
 										}
 									}
-								
+
+									Mix_PlayChannel(-1, game_get_sfx(game, "Turret Fire"), 0);
+
 									entity->timer = TURRET_FIRE_ANIM_SPEED;
 									entity->type_data = TURRET_STATE_FIRING;
 								} else {
@@ -969,10 +958,12 @@ void update_entities(Game_State* game, float dt) {
 						case GRAPPLER_STATE_AIMING: {
 							if (target) {
 								float aim_delta = get_aim_offset(entity->position, target->position, entity->angle, GRAPPLER_AIM_TOLERANCE);
-								if (aim_delta == 0)
+								if (aim_delta == 0) {
 									entity->type_data = GRAPPLER_STATE_EXTENDING;
-								else 
+									Mix_PlayChannel(-1, game_get_sfx(game, "Grappler Fire"), 0);
+								} else {
 									entity->angle += aim_delta * GRAPPLER_TURN_SPEED * dt;
+								}
 							}
 						} break;
 
@@ -989,6 +980,7 @@ void update_entities(Game_State* game, float dt) {
 												   			 &overlap.x, &overlap.y)) {
 									
 									entity->type_data = GRAPPLER_STATE_REELING;
+									Mix_PlayChannel(-1, game_get_sfx(game, "Hook Impact"), 0);
 							} else if (!sc2d_check_point_rect( 	hook_position.x, hook_position.y,
 																0, 0, game->world_w, game->world_h,
 																&overlap.x, &overlap.y)) {
@@ -1091,6 +1083,9 @@ void update_entities(Game_State* game, float dt) {
 						if (item_entity && player_entity) {
 							item_entity->state = ENTITY_STATE_DESPAWNING;
 							item_entity->timer = ENTITY_WARP_DELAY/2.0f;
+
+							Mix_PlayChannel(-1, game_get_sfx(game, "Weapon Pickup"), 0);
+
 						
 							switch (item_entity->type) {
 								case ENTITY_TYPE_ITEM_MISSILE: {
@@ -1159,10 +1154,12 @@ void update_entities(Game_State* game, float dt) {
 
 			switch(dead_entity->type) {
 				case ENTITY_TYPE_PLAYER: {
+					Mix_PlayChannel(-1, game_get_sfx(game, "Player Death"), 0);
+					
 					game->player = 0;
 					game->player_state.thrust_energy = PLAYER_THRUST_MAX;
 					game->player_state.weapon_heat = 0;
-
+										
 					end_score_combo(&game->score);
 				} break;
 
@@ -1199,6 +1196,8 @@ void update_entities(Game_State* game, float dt) {
 			}
 
 			if (dead_entity->team == ENTITY_TEAM_ENEMY) {
+				Mix_PlayChannel(-1, game_get_sfx(game, "Enemy Death"), 0);
+
 				force_circle(game->entities, game->entity_count, dead_entity->x, dead_entity->y, ENEMY_EXPLOSION_RADIUS, 1.5f);
 				float value = get_entity_score_value(dead_entity->type);
 				add_score(game, value);

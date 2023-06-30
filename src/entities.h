@@ -22,6 +22,21 @@ typedef enum Entity_Types {
 	ENTITY_TYPE_COUNT
 } Entity_Types;
 
+typedef enum Entity_States {
+	ENTITY_STATE_UNDEFINED,
+	ENTITY_STATE_SPAWNING,
+	ENTITY_STATE_ACTIVE,
+	ENTITY_STATE_DESPAWNING,
+	ENTITY_STATE_DYING,
+	ENTITY_STATE_COUNT,
+} Entity_States;
+
+typedef enum Entity_Teams {
+	ENTITY_TEAM_UNDEFINED = 0,
+	ENTITY_TEAM_PLAYER,
+	ENTITY_TEAM_ENEMY,
+} Entity_Teams;
+
 Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position);
 
 #endif

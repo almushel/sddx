@@ -57,16 +57,30 @@ void load_game_assets(Game_State* game) {
 	game_store_texture(game, generate_item_texture(game, game_get_texture(game, "Player Ship")), "Item LifeUp");
 	game_store_texture(game, generate_item_texture(game, 0), "Item Laser");
 
-	game_load_music(game, "assets/audio/WrappingAction.mp3", "Wrapping Action");
-	game_load_sfx(game, "assets/audio/PlayerShot.mp3", "Player Shot");
-	game_load_sfx(game, "assets/audio/PlayerSpawn.mp3", "Player Spawn");
-	game_load_sfx(game, "assets/audio/WeaponPickup.mp3", "Weapon Pickup");
-	game_load_sfx(game, "assets/audio/PlayerLaser.mp3", "Player Laser");
-	game_load_sfx(game, "assets/audio/PlayerMissile.mp3", "Player Missile");
+	game_load_music(game, "assets/audio/music_wrapping_action.mp3", "Wrapping Action");
+	game_load_music(game, "assets/audio/music_space_drifter.mp3", "Space Drifter");
+	game_load_music(game, "assets/audio/music_game_over.mp3", "Game Over");
+
+	game_load_sfx(game, "assets/audio/menu_confirm.mp3", "Menu Confirm");
+
+	game_load_sfx(game, "assets/audio/weapon_pickup.mp3", "Weapon Pickup");
+	game_load_sfx(game, "assets/audio/player_shot.mp3", "Player Shot");
+	game_load_sfx(game, "assets/audio/player_spawn.mp3", "Player Spawn");
+	game_load_sfx(game, "assets/audio/player_laser.mp3", "Player Laser");
+	game_load_sfx(game, "assets/audio/player_missile.mp3", "Player Missile");
+	game_load_sfx(game, "assets/audio/player_death.mp3", "Player Death");
+	
+	game_load_sfx(game, "assets/audio/enemy_death.mp3", "Enemy Death");
+	game_load_sfx(game, "assets/audio/turret_fire.mp3", "Turret Fire");
+	game_load_sfx(game, "assets/audio/grappler_fire.mp3", "Grappler Fire");
+	game_load_sfx(game, "assets/audio/hook_impact.mp3", "Hook Impact");
+
+	Mix_VolumeChunk(game_get_sfx(game, "Player Laser"), 64);
+	Mix_VolumeChunk(game_get_sfx(game, "Player Missile"), 64);
 }
 
 static void reset_game(Game_State* game) {
-	game->entity_count = 1;
+//	game->entity_count = 1;
 	game->particle_system.particle_count = 0;
 	game->particle_system.dead_emitter_count = 0;
 	game->particle_system.emitter_count = 1;
@@ -78,7 +92,6 @@ void init_game(Game_State* game) {
 
 	game->font = load_stbtt_font("c:/windows/fonts/times.ttf", 64);
 	load_game_assets(game);
-//	Mix_PlayMusic(game_get_music(game, "Wrapping Action"), -1);
 
 	{ // Generate star field
 		int stars_per_row = 20;
@@ -106,6 +119,10 @@ void init_game(Game_State* game) {
 			next_position.y += star_offset.y;
 		}
 	}
+
+	current_scene = -1;
+	next_scene = GAME_SCENE_MAIN_MENU;
+	scene_transition_timer = 0;
 
 	game->player_controller = (Game_Player_Controller) {
 		.thrust = {
@@ -140,6 +157,7 @@ void init_game(Game_State* game) {
 	};
 
 	reset_game(game);
+	game->entity_count = 1;
 	spawn_entity(game, ENTITY_TYPE_DEMOSHIP, (Vector2){game->world_w/2.0f, game->world_h/2.0f});
 }
 
@@ -151,8 +169,7 @@ void restart_game(Game_State* game) {
 	game->player_state.thrust_energy = PLAYER_THRUST_MAX;
 
 	spawn_player(game);
-
-#if 0
+#if 1
 	for (int i = ENTITY_TYPE_PLAYER+1; i < ENTITY_TYPE_SPAWN_WARP; i++) {
 		Uint32 entity_id = spawn_entity(game, ENTITY_TYPE_SPAWN_WARP, (Vector2){random() * (float)game->world_w, random() * (float)game->world_h});
 		if (entity_id) {
@@ -169,6 +186,7 @@ void update_game(Game_State* game, float dt) {
 		switch(current_scene) {
 			case GAME_SCENE_MAIN_MENU: {
 				if (is_game_control_pressed(&game->input, &game->player_controller.fire)) {
+					Mix_PlayChannel(-1, game_get_sfx(game, "Menu Confirm"), 0);
 					switch_game_scene(GAME_SCENE_GAMEPLAY);
 				}
 			} break;
@@ -203,12 +221,15 @@ void update_game(Game_State* game, float dt) {
 			case GAME_SCENE_MAIN_MENU: {
 //	Despawn does not work as expected for asteroids because violent death and "despawn" death are not
 //	differentiated when dead entities are removed
-//				for (int i = 1; i < game->entity_count; i++) {
-//					game->entities[i].state = ENTITY_STATE_DESPAWNING;
-//					game->entities[i].timer = 30.0f;
-//				}
+	//			for (int i = 1; i < game->entity_count; i++) {
+	//				game->entities[i].state = ENTITY_STATE_DESPAWNING;
+	//				game->entities[i].timer = 30.0f;
+	//			}
+				game->entity_count = 1;
+
 				reset_game(game);
 				spawn_entity(game, ENTITY_TYPE_DEMOSHIP, (Vector2){game->world_w/2.0f, game->world_h/2.0f});
+				Mix_PlayMusic(game_get_music(game, "Space Drifter"), -1);
 			} break;
 
 			case GAME_SCENE_GAMEPLAY: {				
@@ -218,6 +239,12 @@ void update_game(Game_State* game, float dt) {
 				}
 
 				restart_game(game);
+				Mix_PlayMusic(game_get_music(game, "Wrapping Action"), -1);
+			} break;
+		
+			case GAME_SCENE_GAME_OVER: {
+				Mix_PauseMusic();
+				Mix_PlayChannel(-1, game_get_sfx(game, "Game Over"), 0);
 			} break;
 		}
 
@@ -269,7 +296,7 @@ void draw_main_menu(Game_State* game) {
 	render_text_aligned(game->font, 64, offset.x, offset.y, "Space Drifter", "center");
 //		ctx.shadowBlur = 10;
 //		ctx.shadowColor = 'red';
-	char* press_start_str = controller_enabled ? "Press ENTER to begin!" : "Press START to begin!";
+	char* press_start_str = controller_enabled ? "Press FIRE to begin!" : "Press START to begin!";
 	platform_set_render_draw_color((RGBA_Color){255, 165, 0, 255});
 	render_text_aligned(game->font, 20, offset.x, offset.y + 50, press_start_str, "center");
 
