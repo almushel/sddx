@@ -170,6 +170,10 @@ typedef struct Score_System {
 	float timer;
 
 	float item_accumulator;
+	// NOTE: current_wave and spawn_points_max are currently always the same value
+	// Should this be changed to some kind of non-linear relationship or 
+	// should points max just be removed?
+	// (This is accurate to the original, but is dumb)
 	int current_wave;
 	int spawn_points_max;
 
@@ -220,6 +224,8 @@ typedef struct Game_State {
 	Entity* entities;
 	Uint32 entity_count;
 	Uint32 entities_size;
+
+	Uint32 enemy_count;
 	
 	Game_Starfield starfield;
 	Particle_System particle_system;

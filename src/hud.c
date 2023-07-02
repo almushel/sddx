@@ -286,11 +286,36 @@ void draw_HUD(Game_State* game) {
 		
 		platform_set_render_draw_color((RGBA_Color){255, 255, 255, 255});
 
-		draw_score(game);
 		draw_player_lives(game);
 		draw_thrust_meter(game);
 		draw_weapon_heat(game);
 		draw_score(game);
 		draw_active_weapon(game);
+
+#if DEBUG
+{
+		char buffer[128];;
+		char* labels[] = {
+			"Current Wave: ",
+			"Spawn Points Max: ",
+			"Spawn Type Max: "
+		};
+		
+		int values[array_length(labels)] = {
+			game->score.current_wave,
+			game->score.spawn_points_max,
+			SDL_clamp((game->score.current_wave / WAVE_ESCALATION_RATE), 0, ENTITY_TYPE_ENEMY_GRAPPLER - ENTITY_TYPE_ENEMY_DRIFTER),
+		};
+
+		float font_size = 16.0f;
+
+		platform_set_render_draw_color(WHITE);
+		for (int i = 0; i < array_length(labels); i++) {
+			SDL_strlcpy(buffer, labels[i], 128);
+			itoa(values[i], buffer + SDL_strlen(labels[i]), 10);
+			render_text(game->font, font_size, 8.0f, 48.0f + (font_size * 1.25 * i), buffer);
+		}
+}
+#endif
 	}
 }

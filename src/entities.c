@@ -225,6 +225,13 @@ Vector2 get_clear_spawn(Game_State* game, float radius, SDL_Rect boundary) {
 	return result;
 }
 
+static inline bool entity_type_is_enemy(Entity_Types type) {
+	return (
+		type >= ENTITY_TYPE_ENEMY_DRIFTER && 
+		type <= ENTITY_TYPE_ENEMY_GRAPPLER
+	);
+}
+
 static inline bool entity_is_item(Entity_Types type) {
 	return (
 		type >= ENTITY_TYPE_ITEM_MISSILE &&
@@ -446,14 +453,14 @@ void spawn_wave(Game_State* game, int wave, int points_max) {
 	int zone_index = (random() * (array_length(spawn_zones))) - 1;
 
 	//Add new enemy types every 5 waves
-	int maxValue = ((float)wave / (float)WAVE_ESCALATION_RATE + 0.5f);
-	maxValue = SDL_clamp(maxValue, ENTITY_TYPE_ENEMY_DRIFTER, ENTITY_TYPE_ENEMY_GRAPPLER);
-
+	int type_value_max = ((float)wave / (float)WAVE_ESCALATION_RATE + 0.5f);
+	type_value_max = SDL_clamp(type_value_max, 0, ENTITY_TYPE_ENEMY_GRAPPLER - ENTITY_TYPE_ENEMY_DRIFTER);
+	
 	for (float points_remaining = (float)points_max; points_remaining > 0;) {
 		//Generate random type between 0 and current maximum point value
 		
-		Uint8 spawn_type = ENTITY_TYPE_ENEMY_DRIFTER + (int)(random() * (float)(ENTITY_TYPE_ENEMY_GRAPPLER - ENTITY_TYPE_ENEMY_DRIFTER) + 0.5f);
-		float spawn_value = get_entity_score_value(spawn_type);
+		Uint8 spawn_type = ENTITY_TYPE_ENEMY_DRIFTER + (int)(random() * (float)(type_value_max));// + 0.5f);
+		float spawn_value = 1.0f + (float)(spawn_type - ENTITY_TYPE_ENEMY_DRIFTER);
 
 		if (spawn_value && points_remaining >= spawn_value) {
 			points_remaining -= spawn_value;
@@ -464,8 +471,9 @@ void spawn_wave(Game_State* game, int wave, int points_max) {
 			if (warp_id){
 				Entity* warp = get_entity(game, warp_id);
 				warp->type_data = spawn_type;
-			}
 
+				game->enemy_count++;
+			}
 		}
 		
 		zone_index = (zone_index + 1) % array_length(spawn_zones);
@@ -1187,6 +1195,8 @@ void update_entities(Game_State* game, float dt) {
 
 							angle += 360.0f / 3.0f;
 						}
+
+						game->enemy_count += 3;
 					}
 				} break;
 
@@ -1195,13 +1205,15 @@ void update_entities(Game_State* game, float dt) {
 				} break;
 			}
 
-			if (dead_entity->team == ENTITY_TEAM_ENEMY) {
-				Mix_PlayChannel(-1, game_get_sfx(game, "Enemy Death"), 0);
-
-				force_circle(game->entities, game->entity_count, dead_entity->x, dead_entity->y, ENEMY_EXPLOSION_RADIUS, 1.5f);
+			if (entity_type_is_enemy(dead_entity->type)) {
 				float value = get_entity_score_value(dead_entity->type);
+				
 				add_score(game, value);
 				random_item_spawn(game, dead_entity->position, value);
+				game->enemy_count--;
+
+				force_circle(game->entities, game->entity_count, dead_entity->x, dead_entity->y, ENEMY_EXPLOSION_RADIUS, 1.5f);
+				Mix_PlayChannel(-1, game_get_sfx(game, "Enemy Death"), 0);
 			}
 
 			if (entity_type_explodes(dead_entity->type)) {
@@ -1224,7 +1236,7 @@ void update_entities(Game_State* game, float dt) {
 
 		//TO-DO: Implement better conditions for this.
 		// If there are as many dead entities as entities minus reserved 0 entity and player (if currently alive)
-		if (game->entity_count - (int)(game->player > 0) == 1) {
+		if (game->enemy_count == 0) {
 			game->score.current_wave++;
 			game->score.spawn_points_max++;
 			spawn_wave(game, game->score.current_wave, game->score.spawn_points_max);

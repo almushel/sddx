@@ -162,6 +162,10 @@ void init_game(Game_State* game) {
 }
 
 void restart_game(Game_State* game) {
+	game->enemy_count = 0;
+
+	game->score = (Score_System){0};
+
 	game->player_state.lives = STARTING_LIVES;
 	game->player_state.ammo = 0;
 	game->player_state.weapon_heat = 0;
@@ -169,7 +173,7 @@ void restart_game(Game_State* game) {
 	game->player_state.thrust_energy = PLAYER_THRUST_MAX;
 
 	spawn_player(game);
-#if 1
+#if 0
 	for (int i = ENTITY_TYPE_PLAYER+1; i < ENTITY_TYPE_SPAWN_WARP; i++) {
 		Uint32 entity_id = spawn_entity(game, ENTITY_TYPE_SPAWN_WARP, (Vector2){random() * (float)game->world_w, random() * (float)game->world_h});
 		if (entity_id) {
