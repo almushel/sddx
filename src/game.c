@@ -79,13 +79,6 @@ void load_game_assets(Game_State* game) {
 	Mix_VolumeChunk(game_get_sfx(game, "Player Missile"), 64);
 }
 
-static void reset_game(Game_State* game) {
-//	game->entity_count = 1;
-	game->particle_system.particle_count = 0;
-	game->particle_system.dead_emitter_count = 0;
-	game->particle_system.emitter_count = 1;
-}
-
 void init_game(Game_State* game) {
 	game->world_w = 800;
 	game->world_h = 600;
@@ -156,8 +149,11 @@ void init_game(Game_State* game) {
 		},
 	};
 
-	reset_game(game);
 	game->entity_count = 1;
+	game->enemy_count = 0;
+	game->particle_system.particle_count = 0;
+	game->particle_system.dead_emitter_count = 0;
+	game->particle_system.emitter_count = 1;
 	spawn_entity(game, ENTITY_TYPE_DEMOSHIP, (Vector2){game->world_w/2.0f, game->world_h/2.0f});
 }
 
@@ -189,6 +185,7 @@ void update_game(Game_State* game, float dt) {
 	if (next_scene == current_scene) {
 		switch(current_scene) {
 			case GAME_SCENE_MAIN_MENU: {
+				// TO-DO: trigger transition to gameplay scene AFTER demo ship has finished despawning
 				if (is_game_control_pressed(&game->input, &game->player_controller.fire)) {
 					Mix_PlayChannel(-1, game_get_sfx(game, "Menu Confirm"), 0);
 					switch_game_scene(GAME_SCENE_GAMEPLAY);
@@ -220,18 +217,15 @@ void update_game(Game_State* game, float dt) {
 		}
 	} else if (scene_transition_timer > 0.0f) {
 		scene_transition_timer -= dt;
-	} else { // NOTE: Do I want to trigger this when the switch starts ( in switch_game_scene() )?
+	} else {
 		switch(next_scene) {
 			case GAME_SCENE_MAIN_MENU: {
-//	Despawn does not work as expected for asteroids because violent death and "despawn" death are not
-//	differentiated when dead entities are removed
-	//			for (int i = 1; i < game->entity_count; i++) {
-	//				game->entities[i].state = ENTITY_STATE_DESPAWNING;
-	//				game->entities[i].timer = 30.0f;
-	//			}
-				game->entity_count = 1;
+				for (int i = 1; i < game->entity_count; i++) {
+					game->entities[i].state = ENTITY_STATE_DESPAWNING;
+					game->entities[i].timer = 30.0f;
+				}
+				game->enemy_count = 1; // Prevent the spawn system from triggering in menu
 
-				reset_game(game);
 				spawn_entity(game, ENTITY_TYPE_DEMOSHIP, (Vector2){game->world_w/2.0f, game->world_h/2.0f});
 				Mix_PlayMusic(game_get_music(game, "Space Drifter"), -1);
 			} break;

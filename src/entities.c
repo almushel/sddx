@@ -519,8 +519,6 @@ void update_entities(Game_State* game, float dt) {
 				entity->shape.radius = ts * PLAYER_SHIP_RADIUS;
 
 				if (entity->y <= game->world_h/2.0f) {
-//					startTransition(-1);
-//					transitionHUD(-1);
 					entity->state = ENTITY_STATE_ACTIVE;
 					entity->scale = (Vector2){1.0f, 1.0f};
 					entity->shape.radius = PLAYER_SHIP_RADIUS;// * 2.0f;
@@ -546,6 +544,7 @@ void update_entities(Game_State* game, float dt) {
 					entity->state = ENTITY_STATE_ACTIVE;
 				}
 			}
+		// TO-DO: Movement update for despawning enemies
 		} else if (entity->state == ENTITY_STATE_DESPAWNING) {
 			entity->timer -= dt * (float)(int)(entity->timer > 0);
 			
@@ -553,7 +552,10 @@ void update_entities(Game_State* game, float dt) {
 				entity->transform.scale.y = 
 					SDL_clamp(entity->timer/ENTITY_WARP_DELAY, 0.0f, 1.0f);
 
-			if (entity->timer <= 0) entity->state = ENTITY_STATE_DYING;
+			if (entity->timer <= 0 && dead_entity_count < DEAD_ENTITY_MAX) {
+				dead_entities[dead_entity_count] = entity_index;
+				dead_entity_count++;
+			}
 		} else if (entity->state == ENTITY_STATE_DYING) {
 			if (dead_entity_count < DEAD_ENTITY_MAX) {
 				dead_entities[dead_entity_count] = entity_index;
@@ -1061,7 +1063,7 @@ void update_entities(Game_State* game, float dt) {
 				} break;
 			}
 
-			normalize_degrees(entity->angle);
+			entity->angle = normalize_degrees(entity->angle);
 		
 			entity->x += entity->vx * dt;
 			entity->y += entity->vy * dt;
@@ -1071,6 +1073,7 @@ void update_entities(Game_State* game, float dt) {
 
 			entity->position = wrap_world_coords(entity->x, entity->y, 0, 0, game->world_w, game->world_h);
 		
+			// Entity-to-entity collision
 			if (entity->type  != ENTITY_TYPE_SPAWN_WARP) {
 				for (int collision_entity_index = entity_index+1; collision_entity_index < game->entity_count; collision_entity_index++) {
 					Entity* collision_entity 	 = game->entities + collision_entity_index;
@@ -1123,6 +1126,7 @@ void update_entities(Game_State* game, float dt) {
 				}
 			}
 
+			// Entity-to-particle collision
 			Game_Shape entity_shape = scale_game_shape(entity->shape, entity->scale);
 			for (int particle_index = 0; particle_index < game->particle_system.particle_count; particle_index++) {
 				Particle* particle = game->particle_system.particles + particle_index;
@@ -1148,7 +1152,6 @@ void update_entities(Game_State* game, float dt) {
 		} // end of if (entity->state == ENTITY_STATE_ACTIVE)
 	}
 
-	// TO-DO: Differentiate "dead" and "despawned" entities
 	if (dead_entity_count > 0) {
 		Entity* dead_entity;
 		for (int i = dead_entity_count-1; i >= 0 ; i--) {
@@ -1160,72 +1163,74 @@ void update_entities(Game_State* game, float dt) {
 			}
 			dead_entity->emitter_count = 0;
 
-			switch(dead_entity->type) {
-				case ENTITY_TYPE_PLAYER: {
-					Mix_PlayChannel(-1, game_get_sfx(game, "Player Death"), 0);
-					
-					game->player = 0;
-					game->player_state.thrust_energy = PLAYER_THRUST_MAX;
-					game->player_state.weapon_heat = 0;
-										
-					end_score_combo(&game->score);
-				} break;
+			if (dead_entity->state == ENTITY_STATE_DYING) { // Skip for despawning entities
+				switch(dead_entity->type) {
+					case ENTITY_TYPE_PLAYER: {
+						Mix_PlayChannel(-1, game_get_sfx(game, "Player Death"), 0);
+						
+						game->player = 0;
+						game->player_state.thrust_energy = PLAYER_THRUST_MAX;
+						game->player_state.weapon_heat = 0;
+											
+						end_score_combo(&game->score);
+					} break;
 
-				case ENTITY_TYPE_ENEMY_DRIFTER: {
-					float v_max = 0;
-					for (int i = 0; i < dead_entity->shape.polygon.vert_count; i++) {
-						v_max = SDL_max(dead_entity->shape.polygon.vertices[i].x, v_max);
-						v_max = SDL_max(dead_entity->shape.polygon.vertices[i].y, v_max);
-					}
-
-					if (v_max > DRIFTER_RADIUS/2) {
-						float angle = random() * 360.0f;
-						for (int i = 0; i < 3; i++) {
-							Vector2 position = dead_entity->position;
-							position.x += cos_deg(angle) * (float)DRIFTER_RADIUS/2.0f;
-							position.y += sin_deg(angle) * (float)DRIFTER_RADIUS/2.0f;
-
-							Uint32 id = spawn_entity(game, ENTITY_TYPE_ENEMY_DRIFTER, position);
-							Entity* drifter_child = game->entities + id;
-							generate_drifter_verts(&drifter_child->shape, (float)DRIFTER_RADIUS/2.0f);
-							drifter_child->angle = angle;
-							drifter_child->vx = cos_deg(angle) * (float)DRIFTER_SPEED;
-							drifter_child->vy = sin_deg(angle) * (float)DRIFTER_SPEED;
-							drifter_child->state = ENTITY_STATE_ACTIVE;
-
-							angle += 360.0f / 3.0f;
+					case ENTITY_TYPE_ENEMY_DRIFTER: {
+						float v_max = 0;
+						for (int i = 0; i < dead_entity->shape.polygon.vert_count; i++) {
+							v_max = SDL_max(dead_entity->shape.polygon.vertices[i].x, v_max);
+							v_max = SDL_max(dead_entity->shape.polygon.vertices[i].y, v_max);
 						}
 
-						game->enemy_count += 3;
+						if (v_max > DRIFTER_RADIUS/2) {
+							float angle = random() * 360.0f;
+							for (int i = 0; i < 3; i++) {
+								Vector2 position = dead_entity->position;
+								position.x += cos_deg(angle) * (float)DRIFTER_RADIUS/2.0f;
+								position.y += sin_deg(angle) * (float)DRIFTER_RADIUS/2.0f;
+
+								Uint32 id = spawn_entity(game, ENTITY_TYPE_ENEMY_DRIFTER, position);
+								Entity* drifter_child = game->entities + id;
+								generate_drifter_verts(&drifter_child->shape, (float)DRIFTER_RADIUS/2.0f);
+								drifter_child->angle = angle;
+								drifter_child->vx = cos_deg(angle) * (float)DRIFTER_SPEED;
+								drifter_child->vy = sin_deg(angle) * (float)DRIFTER_SPEED;
+								drifter_child->state = ENTITY_STATE_ACTIVE;
+
+								angle += 360.0f / 3.0f;
+							}
+
+							game->enemy_count += 3;
+						}
+					} break;
+
+					case ENTITY_TYPE_ITEM_LIFEUP: {
+						game->player_state.lives++;
+					} break;
+				}
+
+				if (entity_type_is_enemy(dead_entity->type)) {
+					float value = get_entity_score_value(dead_entity->type);
+					
+					add_score(game, value);
+					random_item_spawn(game, dead_entity->position, value);
+					game->enemy_count--;
+
+					force_circle(game->entities, game->entity_count, dead_entity->x, dead_entity->y, ENEMY_EXPLOSION_RADIUS, 1.5f);
+					Mix_PlayChannel(-1, game_get_sfx(game, "Enemy Death"), 0);
+				}
+
+				if (entity_type_explodes(dead_entity->type)) {
+					RGBA_Color entity_color = (dead_entity->color.r || dead_entity->color.g || dead_entity->color.b) ? dead_entity->color : (RGBA_Color){255, 255, 255, 255};
+					RGBA_Color colors[] = {entity_color, {255, 255, 255, 255}};
+
+					explode_at_point(&game->particle_system, dead_entity->x, dead_entity->y, colors, array_length(colors), 0, dead_entity->shape.type);
+					for (int sprite_index = 0; sprite_index < dead_entity->sprite_count; sprite_index++) {
+						explode_sprite(game, dead_entity->sprites+sprite_index, dead_entity->x, dead_entity->y, dead_entity->angle, 6);
 					}
-				} break;
-
-				case ENTITY_TYPE_ITEM_LIFEUP: {
-					game->player_state.lives++;
-				} break;
-			}
-
-			if (entity_type_is_enemy(dead_entity->type)) {
-				float value = get_entity_score_value(dead_entity->type);
-				
-				add_score(game, value);
-				random_item_spawn(game, dead_entity->position, value);
-				game->enemy_count--;
-
-				force_circle(game->entities, game->entity_count, dead_entity->x, dead_entity->y, ENEMY_EXPLOSION_RADIUS, 1.5f);
-				Mix_PlayChannel(-1, game_get_sfx(game, "Enemy Death"), 0);
-			}
-
-			if (entity_type_explodes(dead_entity->type)) {
-				RGBA_Color entity_color = (dead_entity->color.r || dead_entity->color.g || dead_entity->color.b) ? dead_entity->color : (RGBA_Color){255, 255, 255, 255};
-				RGBA_Color colors[] = {entity_color, {255, 255, 255, 255}};
-
-				explode_at_point(&game->particle_system, dead_entity->x, dead_entity->y, colors, array_length(colors), 0, dead_entity->shape.type);
-				for (int sprite_index = 0; sprite_index < dead_entity->sprite_count; sprite_index++) {
-					explode_sprite(game, dead_entity->sprites+sprite_index, dead_entity->x, dead_entity->y, dead_entity->angle, 6);
 				}
 			}
-			
+
 			if (dead_entity_index < game->entity_count-1) {
 				Entity* swap_entity = game->entities + (game->entity_count-1);
 				*dead_entity = *swap_entity;
