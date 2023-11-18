@@ -1,0 +1,1 @@
+cmake -S src -B bin -DDEBUG=1

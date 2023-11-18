@@ -11,7 +11,7 @@
 #define clamp(value, min, max) (value > max) ? max : (value < min) ? min : value;
 
 #define SCENE_TRANSITION_TIME 30.0f
-#define STARTING_LIVES 1
+#define STARTING_LIVES 3
 
 static Game_Scene current_scene;
 static Game_Scene next_scene;
@@ -83,7 +83,7 @@ void init_game(Game_State* game) {
 	game->world_w = 800;
 	game->world_h = 600;
 
-	game->font = load_stbtt_font("c:/windows/fonts/times.ttf", 64);
+	game->font = load_stbtt_font("assets/Orbitron-Regular.ttf", 64);
 	load_game_assets(game);
 
 	{ // Generate star field
@@ -154,7 +154,7 @@ void init_game(Game_State* game) {
 	game->particle_system.particle_count = 0;
 	game->particle_system.dead_emitter_count = 0;
 	game->particle_system.emitter_count = 1;
-	spawn_entity(game, ENTITY_TYPE_DEMOSHIP, (Vector2){game->world_w/2.0f, game->world_h/2.0f});
+	spawn_entity(game, ENTITY_TYPE_DEMOSHIP, (Vector2){game->world_w/2.0f, game->world_h});
 }
 
 void restart_game(Game_State* game) {
@@ -226,7 +226,7 @@ void update_game(Game_State* game, float dt) {
 				}
 				game->enemy_count = 1; // Prevent the spawn system from triggering in menu
 
-				spawn_entity(game, ENTITY_TYPE_DEMOSHIP, (Vector2){game->world_w/2.0f, game->world_h/2.0f});
+				spawn_entity(game, ENTITY_TYPE_DEMOSHIP, (Vector2){game->world_w/2.0f, game->world_h});
 				Mix_PlayMusic(game_get_music(game, "Space Drifter"), -1);
 			} break;
 

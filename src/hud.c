@@ -292,7 +292,7 @@ void draw_HUD(Game_State* game) {
 		draw_score(game);
 		draw_active_weapon(game);
 
-#if DEBUG
+#ifdef DEBUG
 {
 		char buffer[128];;
 		char* labels[] = {

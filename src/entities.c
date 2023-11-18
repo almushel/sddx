@@ -287,7 +287,9 @@ Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 		entity->team = ENTITY_TEAM_ENEMY;
 
 		switch(type) {
-			case ENTITY_TYPE_DEMOSHIP:
+			case ENTITY_TYPE_DEMOSHIP: {
+				entity->timer = 0;
+			}	
 			case ENTITY_TYPE_PLAYER: {
 				entity->team = ENTITY_TEAM_PLAYER;
 				entity->shape.radius = PLAYER_SHIP_RADIUS;
@@ -571,8 +573,8 @@ void update_entities(Game_State* game, float dt) {
 						entity->x - w,
 						entity->y - h,
 					};
-					float dist = delta.x*delta.x + delta.y*delta.y;
-					float vert = 1.25f - dist / (w*w+h*h);
+					float dist = sqrtf(delta.x*delta.x + delta.y*delta.y);
+					float vert = 1.2f - dist / sqrtf(w*w+h*h);
 
 					entity->transform.scale.x = entity->transform.scale.y = vert;
 					entity->shape.radius = 0;//vert * PLAYER_SHIP_RADIUS * 2;
@@ -584,8 +586,9 @@ void update_entities(Game_State* game, float dt) {
 
 					entity->angle += (1 + ((float)entity->type_data * -2.0f)) * dt;
 
-					entity->vx += cos_deg(entity->angle) * vert * dt;
-					entity->vy += sin_deg(entity->angle) * vert * dt;
+					float v2 = vert*vert;
+					entity->vx += cos_deg(entity->angle) * v2 * dt;
+					entity->vy += sin_deg(entity->angle) * v2 * dt;
 				
 					entity->vx *= 1.0f - 0.15f * dt;
 					entity->vy *= 1.0f - 0.15f * dt;
@@ -1337,7 +1340,7 @@ void draw_entities(Game_State* game) {
 				render_fill_game_shape(transforms[i].position, shape, entity->color);
 			}
 
-#if DEBUG		
+#ifdef DEBUG		
 			Rectangle test = bounding_box;
 			test.x += transforms[i].x;
 			test.y += transforms[i].y;

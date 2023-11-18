@@ -1,8 +1,6 @@
 #ifndef DEFS_H
 #define DEFS_H
 
-#define DEBUG 1
-
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_mixer.h"
 #include "game_input.h"

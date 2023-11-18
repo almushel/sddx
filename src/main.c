@@ -236,7 +236,7 @@ int main(int argc, char* argv[]) {
 
 	SDL_GameControllerEventState(SDL_ENABLE);
 
-	if (Mix_OpenAudio(48000, AUDIO_S16SYS, 2, 4096) != -1) {
+	if (Mix_OpenAudio(48000, MIX_DEFAULT_FORMAT, 2, 2048) != -1) {
 		Mix_AllocateChannels(32);
 	}
 
@@ -254,7 +254,7 @@ int main(int argc, char* argv[]) {
 		SDL_Log("Creating world buffer failed. %s", SDL_GetError());
 	}
 
-#if DEBUG
+#ifdef DEBUG
 	SDL_bool DEBUG_fit_world_to_screen = 1;
 #endif
 
@@ -291,7 +291,7 @@ int main(int argc, char* argv[]) {
 			if (!running) break;
 		}
 
-#if DEBUG
+#ifdef DEBUG
 		if (is_key_released(&game->input, SDL_SCANCODE_EQUALS)) {
 			DEBUG_fit_world_to_screen = !DEBUG_fit_world_to_screen;
 		}
@@ -320,7 +320,7 @@ int main(int argc, char* argv[]) {
 		float world_scale = 1;
 		int world_offset_x = 1, world_offset_y = 1;
 
-#if DEBUG
+#ifdef DEBUG
 		if (DEBUG_fit_world_to_screen) {
 			SDL_SetTextureScaleMode(world_buffer, SDL_ScaleModeBest);
 			if (screen_h < screen_w) {

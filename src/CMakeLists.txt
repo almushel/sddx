@@ -5,6 +5,9 @@ message(${EXTERNAL_DIR})
 
 project(sddx C)
 add_executable(sddx main.c game.c assets.c game_math.c)
+if (DEBUG)
+	target_compile_definitions(sddx PRIVATE DEBUG)
+endif()
 
 target_link_directories(sddx 
 	PRIVATE "${EXTERNAL_DIR}/bin/SDL_mixer/"
