@@ -182,6 +182,11 @@ void restart_game(Game_State* game) {
 }
 
 void update_game(Game_State* game, float dt) {
+#if DEBUG
+		if (is_key_released(&game->input, SDL_SCANCODE_R)) {
+			next_scene = GAME_SCENE_MAIN_MENU;
+		}
+#endif
 	if (next_scene == current_scene) {
 		switch(current_scene) {
 			case GAME_SCENE_MAIN_MENU: {

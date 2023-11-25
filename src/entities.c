@@ -418,6 +418,7 @@ Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 			}
 
 			case ENTITY_TYPE_SPAWN_WARP: {
+				entity->scale.x = entity->scale.y = 0;
 				entity->shape.radius = ENTITY_WARP_RADIUS;
 				entity->team = ENTITY_TEAM_UNDEFINED;
 				entity->color = SD_BLUE;
