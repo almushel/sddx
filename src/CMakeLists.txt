@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.22.2)
 
 set(EXTERNAL_DIR "${CMAKE_SOURCE_DIR}/../../external")
-message(${EXTERNAL_DIR})
 
 project(sddx C)
 add_executable(sddx main.c game.c assets.c game_math.c)
