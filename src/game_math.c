@@ -1,9 +1,20 @@
 #include "defs.h"
 #include "game_math.h"
 
-#define SIMPLE_COLLISION_2D_IMPLEMENTATION
-#include "sc2d/src/sc2d.h"
+#include "SDL2/SDL_stdinc.h"
 
+#define sc2d_atan2 SDL_atan2
+#define sc2d_fabsf SDL_abs
+#define sc2d_hypotf hypotf
+#define sc2d_min(i, j) (i < j) ? i : j 
+#define sc2d_max(i, j) sc2d_min(j, i)
+#define SIMPLE_COLLISION_2D_IMPLEMENTATION
+#include "external/sc2d.h"
+
+float hypotf(float x, float y) {
+	float result = SDL_sqrt(SDL_powf(x, 2) + SDL_powf(y, 2));
+	return result;
+}
 float sin_deg  (float degrees) 		{ return SDL_sinf(DEG_TO_RAD(degrees)); }
 float cos_deg  (float degrees) 		{ return SDL_cosf(DEG_TO_RAD(degrees)); }
 float atan2_deg(float y, float x) 	{ return RAD_TO_DEG(SDL_atan2f(y, x )); }
@@ -22,7 +33,7 @@ float lerp(float start, float end, float t) {
 }
 
 // Returns a pseudo-random value between 0 and 1
-float random(void) {
+float randomf(void) {
 	static SDL_bool seeded = 0;
 	if (!seeded) {
 		srand(42);
@@ -38,7 +49,7 @@ float vector2_length(Vector2 v) {
 	float result = 0;
 
 	if (v.x || v.y) {
-		result = sqrtf( (v.x * v.x) + (v.y * v.y) );
+		result = SDL_sqrt( (v.x * v.x) + (v.y * v.y) );
 	}
 
 	return result;

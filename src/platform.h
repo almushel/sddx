@@ -7,8 +7,6 @@
 Vector2 platform_get_window_size(void);
 int platform_set_render_target(SDL_Texture *texture);
 
-typedef enum Texture_Access SDL_PixelFormatEnum;
-
 SDL_Texture* 	platform_create_texture					(int w, int h, bool target);
 SDL_Texture* 	platform_create_texture_from_surface	(SDL_Surface* surface);
 void 			platform_destroy_texture				(SDL_Texture* texture);

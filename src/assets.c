@@ -1,15 +1,50 @@
+#include <SDL2/SDL_rwops.h>
+#include <SDL2/SDL_stdinc.h>
 #include "platform.h"
 #include "defs.h"
 #include "assets.h"
 
+#define STBI_NO_STDIO
 #define STB_IMAGE_IMPLEMENTATION
-#include "stb/stb_image.h"
+#include "external/stb_image.h"
 
 #define STB_RECT_PACK_IMPLEMENTATION
-#include "stb/stb_rect_pack.h"
+#include "external/stb_rect_pack.h"
+
+#define STBTT_ifloor(x)   ((int) SDL_floor(x))
+#define STBTT_iceil(x)    ((int) SDL_ceil(x))
+#define STBTT_sqrt(x)      SDL_sqrt(x)
+#define STBTT_pow(x,y)     SDL_pow(x,y)
+#define STBTT_fmod(x,y)    SDL_fmod(x,y)
+#define STBTT_cos(x)       SDL_cos(x)
+#define STBTT_acos(x)      SDL_acos(x)
+#define STBTT_fabs(x)      SDL_fabs(x)
+#define STBTT_malloc(x,u)  ((void)(u),SDL_malloc(x))
+#define STBTT_free(x,u)    ((void)(u),SDL_free(x))
+#define STBTT_assert(x)    SDL_assert(x)
+#define STBTT_strlen(x)    SDL_strlen(x)
+#define STBTT_memcpy       SDL_memcpy
+#define STBTT_memset       SDL_memset
 
 #define STB_TRUETYPE_IMPLEMENTATION
-#include "stb/stb_truetype.h"
+#include "external/stb_truetype.h"
+
+double pow(double x, double y) {
+	double result = x;
+
+	if (y == 0) {
+		result = 1;
+	} else {
+		int power = SDL_abs(y);
+		for (int i = 1; i < power; i++) {
+			result *= result;
+		}
+	}
+
+	if (y < 0) result = 1.0/result;
+
+	return result;
+}
 
 STBTTF_Font* load_stbtt_font(const char* file_name, float font_size) {
 	STBTTF_Font* result = 0;
@@ -19,20 +54,20 @@ STBTTF_Font* load_stbtt_font(const char* file_name, float font_size) {
 	if (file) file_size = SDL_RWsize(file);
 	
 	if (file_size) {
-		unsigned char* file_buffer = malloc(file_size);
+		unsigned char* file_buffer = SDL_malloc(file_size);
 		if (SDL_RWread(file, file_buffer, file_size, 1) != 1) return 0;
 		SDL_RWclose(file);
 
-		result = calloc(sizeof(STBTTF_Font), 1);
-		result->info = malloc(sizeof(stbtt_fontinfo));
-		result->chars = malloc(sizeof(stbtt_packedchar) * 96);
+		result = SDL_calloc(sizeof(STBTTF_Font), 1);
+		result->info = SDL_malloc(sizeof(stbtt_fontinfo));
+		result->chars = SDL_malloc(sizeof(stbtt_packedchar) * 96);
 		result->size = font_size;
 	
 		if (stbtt_InitFont(result->info, file_buffer, 0) == 0) {
-			free(file_buffer);
-			free(result->info);
-			free(result->chars);
-			free(result);
+			SDL_free(file_buffer);
+			SDL_free(result->info);
+			SDL_free(result->chars);
+			SDL_free(result);
 
 			result = 0;
 			return result;
@@ -42,12 +77,12 @@ STBTTF_Font* load_stbtt_font(const char* file_name, float font_size) {
 		result->texture_size = 32;
 
 		while(1) {
-			bitmap = malloc(result->texture_size * result->texture_size);
+			bitmap = SDL_malloc(result->texture_size * result->texture_size);
 			stbtt_pack_context pack_context;
 			stbtt_PackBegin(&pack_context, bitmap, result->texture_size, result->texture_size, 0, 1, 0);
 			stbtt_PackSetOversampling(&pack_context, 1, 1);
 			if (!stbtt_PackFontRange(&pack_context, file_buffer, 0, font_size, 32, 95, result->chars)) {
-				free(bitmap);
+				SDL_free(bitmap);
 				stbtt_PackEnd(&pack_context);
 				result->texture_size *= 2;
 			} else {
@@ -58,7 +93,7 @@ STBTTF_Font* load_stbtt_font(const char* file_name, float font_size) {
 
 		result->atlas = platform_create_texture(result->texture_size, result->texture_size, false);
 
-		Uint32* pixels = malloc(result->texture_size * result->texture_size * sizeof(Uint32));
+		Uint32* pixels = SDL_malloc(result->texture_size * result->texture_size * sizeof(Uint32));
 		static SDL_PixelFormat* format = 0;
 		if(format == 0) format = SDL_AllocFormat(SDL_PIXELFORMAT_RGBA32);
 		for (int i = 0; i < result->texture_size * result->texture_size; i++) {
@@ -66,14 +101,14 @@ STBTTF_Font* load_stbtt_font(const char* file_name, float font_size) {
 		}
 		SDL_UpdateTexture(result->atlas, 0, pixels, result->texture_size * sizeof(Uint32));
 		
-		free(pixels);
-		free(bitmap);
+		SDL_free(pixels);
+		SDL_free(bitmap);
 
 		result->scale = stbtt_ScaleForPixelHeight(result->info, font_size);
 		stbtt_GetFontVMetrics(result->info, &result->ascent, 0, 0);
 		result->baseline = (int) (result->ascent * result->scale);
 	
-		free(file_buffer);
+		SDL_free(file_buffer);
 	}
 
 	return result;
@@ -94,10 +129,12 @@ Uint64 str_hash(unsigned char* str) {
 #define get_hash_index(name, table) str_hash((unsigned char*)name) % array_length(table)
 
 static SDL_Texture* load_texture(const char* file) {
+	size_t file_size;
 	int image_width, image_height, image_components;
 	SDL_Texture* result = 0;
-
-	unsigned char* image = stbi_load(file, &image_width, &image_height, &image_components, 0);
+	
+	stbi_uc* buf = (stbi_uc*)SDL_LoadFile(file, &file_size);
+	unsigned char* image = stbi_load_from_memory(buf, file_size, &image_width, &image_height, &image_components, 0);
 
 	SDL_Surface* image_surface;
 	if (image) {
@@ -119,6 +156,7 @@ static SDL_Texture* load_texture(const char* file) {
 
 	if (image_surface) SDL_FreeSurface(image_surface);
 	if (image) stbi_image_free(image);
+	if (buf) SDL_free(buf);
 
 	return result;
 }

@@ -22,12 +22,12 @@ void draw_score(Game_State* game) {
 	text_pos.x += measure_text(game->font, text_size, "Score:");
 	text_pos.y = screen_h - 7.5;
 	platform_set_render_draw_color((RGBA_Color){255, 255, 255, 255});
-	itoa(game->score.total, text_buffer, 10);
+	SDL_itoa(game->score.total, text_buffer, 10);
 	render_text(game->font, text_size, text_pos.x, text_pos.y, text_buffer);
 
 	text_pos = (Vector2){186, screen_h - 36};
 	text_buffer[0] = 'x';
-	itoa(game->score.multiplier, text_buffer+1, 10);
+	SDL_itoa(game->score.multiplier, text_buffer+1, 10);
 	render_text(game->font, text_size, text_pos.x, text_pos.y, text_buffer);
 
 	int combo_decay_seconds = SCORE_COMBO_DECAY/TICK_RATE;
@@ -81,7 +81,7 @@ void draw_player_lives(Game_State* game) {
 		render_draw_game_sprite(game, &player_lives_ship, transform, 1);
 		
 		char lives_str[8];
-		itoa(game->player_state.lives, lives_str, 10);
+		SDL_itoa(game->player_state.lives, lives_str, 10);
 		float lives_text_size = 32;
 		Vector2 lives_text_pos = {2.0f + (float)screen_w / 2.0f, screen_h - 6};
 		
@@ -235,7 +235,7 @@ void draw_active_weapon(Game_State* game) {
 	
 	// Ammo count
 	char ammo_str[8];
-	itoa(game->player_state.ammo, ammo_str, 10);
+	SDL_itoa(game->player_state.ammo, ammo_str, 10);
 	text_pos.x = (screen_w - 160) - measure_text(game->font, 34, ammo_str)/2.0f;
 	text_pos.y = screen_h - 16;
 	render_text(game->font, 34, text_pos.x, text_pos.y, ammo_str);
@@ -312,7 +312,7 @@ void draw_HUD(Game_State* game) {
 		platform_set_render_draw_color(WHITE);
 		for (int i = 0; i < array_length(labels); i++) {
 			SDL_strlcpy(buffer, labels[i], 128);
-			itoa(values[i], buffer + SDL_strlen(labels[i]), 10);
+			SDL_itoa(values[i], buffer + SDL_strlen(labels[i]), 10);
 			render_text(game->font, font_size, 8.0f, 48.0f + (font_size * 1.25 * i), buffer);
 		}
 }

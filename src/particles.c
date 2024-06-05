@@ -1,5 +1,4 @@
-#include "SDL2/SDL.h"
-#include "stdlib.h"
+#include "assets.h"
 #include "defs.h"
 #include "graphics.h"
 #include "game_math.h"
@@ -21,7 +20,7 @@ void update_particles(Particle_System* ps, float dt) {
 	for (int p = 0; p < ps->particle_count; p++) {
 		Particle* particle = ps->particles + p;
 		
-		if (random() * 100 > 50) {
+		if (randomf() * 100 > 50) {
 			particle->timer -= PARTICLE_DECAY * dt;
 		}
 		
@@ -121,7 +120,7 @@ Uint32 spawn_particle(Particle_System* ps, Game_Sprite* sprite, Game_Shape_Types
 }
 	
 static float random_particle_radius() {
-	float result = PARTICLE_MIN_START_RADIUS + SDL_floorf(random() * (PARTICLE_MAX_START_RADIUS - PARTICLE_MIN_START_RADIUS));
+	float result = PARTICLE_MIN_START_RADIUS + SDL_floorf(randomf() * (PARTICLE_MAX_START_RADIUS - PARTICLE_MIN_START_RADIUS));
 		
 	return result;
 }
@@ -134,12 +133,12 @@ static RGBA_Color random_color(RGBA_Color* colors, Uint32 color_count) {
 		colors = &default_color;
 	}
 
-	result = colors[ (Uint32)(random() * (color_count)) ]; 
+	result = colors[ (Uint32)(randomf() * (color_count)) ]; 
 	return result;
 }
 
 void randomize_particle(Particle* p, RGBA_Color* colors, Uint32 color_count) {
-	float angle = random() * 360.0f;
+	float angle = randomf() * 360.0f;
 
 	float radius = random_particle_radius();
 	switch(p->shape.type) {
@@ -155,7 +154,7 @@ void randomize_particle(Particle* p, RGBA_Color* colors, Uint32 color_count) {
 		} break;
 
 		case SHAPE_TYPE_POLY2D: {
-			int vert_count = SDL_clamp(3 + (random() * 5.0f), 3, MAX_POLY2D_VERTS);
+			int vert_count = SDL_clamp(3 + (randomf() * 5.0f), 3, MAX_POLY2D_VERTS);
 			float angle_increment = 360.0f / (float)vert_count;
 
 			float angle = 0;
@@ -280,7 +279,7 @@ void explode_sprite(Game_State* game, Game_Sprite* sprite, float x, float y, flo
 			const float random_deviation = 30.0f;
 
 			float chunk_angle = angle + 180.0f + (chunk_index * angle_division);
-				chunk_angle += random_deviation/2.0f - (random() * random_deviation);
+				chunk_angle += random_deviation/2.0f - (randomf() * random_deviation);
 			float vx = cos_deg(chunk_angle) * (float)PARTICLE_SPEED;
 			float vy = sin_deg(chunk_angle) * (float)PARTICLE_SPEED;
 

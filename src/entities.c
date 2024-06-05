@@ -1,5 +1,5 @@
-
 #include "defs.h"
+#include "platform.h"
 #include "game_math.h"
 #include "assets.h"
 #include "graphics.h"
@@ -151,7 +151,7 @@ Entity* get_entity(Game_State* game, Uint32 entity_id) {
 }
 
 static void generate_drifter_verts(Game_Shape* shape, float radius) {
-	int vert_count = SDL_clamp(5 + (int)(random() * 3.0f), 4, MAX_POLY2D_VERTS);
+	int vert_count = SDL_clamp(5 + (int)(randomf() * 3.0f), 4, MAX_POLY2D_VERTS);
 	shape->polygon = generate_poly2D(vert_count, radius / 2.0f, radius);
 	shape->type = SHAPE_TYPE_POLY2D;
 }
@@ -203,8 +203,8 @@ static inline float get_entity_score_value(Entity_Types type) {
 
 Vector2 get_clear_spawn(Game_State* game, float radius, SDL_Rect boundary) {
 	Vector2 result = {
-		.x = (boundary.x + radius) + random() * (boundary.x + boundary.w - radius),
-		.y = (boundary.y + radius) + random() * (boundary.y + boundary.h - radius),
+		.x = (boundary.x + radius) + randomf() * (boundary.x + boundary.w - radius),
+		.y = (boundary.y + radius) + randomf() * (boundary.y + boundary.h - radius),
 	};
 
 	Game_Shape spawn_area = {
@@ -348,14 +348,14 @@ Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 			case ENTITY_TYPE_ENEMY_DRIFTER: {
 				generate_drifter_verts(&entity->shape, DRIFTER_RADIUS);
 				entity->color = DRIFTER_GREY;
-				entity->angle = random() * 360.0f;
+				entity->angle = randomf() * 360.0f;
 				entity->velocity.x = cos_deg(entity->angle) * DRIFTER_SPEED;
 				entity->velocity.y = sin_deg(entity->angle) * DRIFTER_SPEED;
 			} break;
 
 			case ENTITY_TYPE_ENEMY_UFO: {
 				entity->shape.radius = UFO_COLLISION_RADIUS;
-				entity->angle = entity->target_angle = random() * 360.0f;
+				entity->angle = entity->target_angle = randomf() * 360.0f;
 				entity->sprites[0].texture_name = "Enemy UFO";
 				entity->sprite_count = 1;
 			} break;
@@ -432,10 +432,10 @@ Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 void random_item_spawn(Game_State* game, Vector2 position, float accumulation) {
 	game->score.item_accumulator += ITEM_ACCUMULATE_RATE * accumulation;
 
-	float roll = 5.0f + random() * 95.0f;
+	float roll = 5.0f + randomf() * 95.0f;
 
 	if (roll < game->score.item_accumulator) {
-		float roll = random() * 100.0f;
+		float roll = randomf() * 100.0f;
 		if (roll > 55) {
 			spawn_entity(game, ENTITY_TYPE_ITEM_MISSILE, position);
 		} else {
@@ -453,7 +453,7 @@ void spawn_wave(Game_State* game, int wave, int points_max) {
 		{0  , 310, 390, 290},
 		{410, 330, 390, 290}
 	};
-	int zone_index = (random() * (array_length(spawn_zones))) - 1;
+	int zone_index = (randomf() * (array_length(spawn_zones))) - 1;
 
 	//Add new enemy types every 5 waves
 	int type_value_max = ((float)wave / (float)WAVE_ESCALATION_RATE + 0.5f);
@@ -462,7 +462,7 @@ void spawn_wave(Game_State* game, int wave, int points_max) {
 	for (float points_remaining = (float)points_max; points_remaining > 0;) {
 		//Generate random type between 0 and current maximum point value
 		
-		Uint8 spawn_type = ENTITY_TYPE_ENEMY_DRIFTER + (int)(random() * (float)(type_value_max));// + 0.5f);
+		Uint8 spawn_type = ENTITY_TYPE_ENEMY_DRIFTER + (int)(randomf() * (float)(type_value_max));// + 0.5f);
 		float spawn_value = 1.0f + (float)(spawn_type - ENTITY_TYPE_ENEMY_DRIFTER);
 
 		if (spawn_value && points_remaining >= spawn_value) {
@@ -574,8 +574,8 @@ void update_entities(Game_State* game, float dt) {
 						entity->x - w,
 						entity->y - h,
 					};
-					float dist = sqrtf(delta.x*delta.x + delta.y*delta.y);
-					float vert = 1.2f - dist / sqrtf(w*w+h*h);
+					float dist = SDL_sqrtf(delta.x*delta.x + delta.y*delta.y);
+					float vert = 1.2f - dist / SDL_sqrtf(w*w+h*h);
 
 					entity->transform.scale.x = entity->transform.scale.y = vert;
 					entity->shape.radius = 0;//vert * PLAYER_SHIP_RADIUS * 2;
@@ -855,7 +855,7 @@ void update_entities(Game_State* game, float dt) {
 					}
 
 					if (entity->timer <= 0) {
-						entity->target_angle = random() * 360.0f;
+						entity->target_angle = randomf() * 360.0f;
 						entity->timer = UFO_DIR_CHANGE_DELAY;
 					}
 
@@ -1018,7 +1018,7 @@ void update_entities(Game_State* game, float dt) {
 									target->y - entity->y
 								};
 								
-								float magnitude = sqrtf( (delta.x * delta.x) + (delta.y * delta.y));
+								float magnitude = SDL_sqrtf( (delta.x * delta.x) + (delta.y * delta.y));
 								delta = scale_vector2(delta, 1.0f/magnitude);
 								
 								float dot = dot_product_vector2(
@@ -1187,7 +1187,7 @@ void update_entities(Game_State* game, float dt) {
 						}
 
 						if (v_max > DRIFTER_RADIUS/2) {
-							float angle = random() * 360.0f;
+							float angle = randomf() * 360.0f;
 							for (int i = 0; i < 3; i++) {
 								Vector2 position = dead_entity->position;
 								position.x += cos_deg(angle) * (float)DRIFTER_RADIUS/2.0f;

@@ -1,5 +1,5 @@
 //#include "SDL2/SDL.h"
-#include "stb/stb_truetype.h"
+#include "external/stb_truetype.h"
 
 #include "platform.h"
 #include "game_math.h"

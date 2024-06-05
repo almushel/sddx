@@ -2,7 +2,7 @@
 #define GAME_MATH_H
 
 #include "defs.h"
-#include "sc2d/src/sc2d.h"
+#include "external/sc2d.h"
 
 #define MATH_PI 3.14159265
 #define RAD_TO_DEG(rads) rads * (180/MATH_PI)
@@ -35,6 +35,6 @@ Game_Shape rotate_game_shape(Game_Shape shape, float degrees);
 bool check_shape_collision	(Transform2D, Game_Shape s1, Transform2D t2, Game_Shape s2, Vector2* overlap);
 
 float lerp					(float start, float end, float t);
-float random				(void);
+float randomf				(void);
 
 #endif

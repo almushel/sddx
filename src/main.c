@@ -11,7 +11,7 @@ Vector2 platform_get_window_size(void) {
 
 	if (window) {
 		int w, h;
-		SDL_GetWindowSizeInPixels(window, &w, &h);
+		SDL_GetWindowSize(window, &w, &h);
 		result.x = (float)w;
 		result.y = (float)h;
 	}
@@ -19,7 +19,7 @@ Vector2 platform_get_window_size(void) {
 	return result;
 }
 
-SDL_Texture* platform_create_texture(int w, int h, bool target) {
+SDL_Texture* platform_create_texture(int w, int h, SDL_bool target) {
 	SDL_Texture* result = 0;
 	
 	if (renderer) {
@@ -222,14 +222,14 @@ int main(int argc, char* argv[]) {
 
 	window = SDL_CreateWindow("Space Drifter DX", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, screen_w, screen_h, SDL_WINDOW_RESIZABLE);
 	if (window == NULL) {
-		SDL_LogError(0, SDL_GetError());
+		SDL_LogError(0, "%s", SDL_GetError());
 		exit(1);
 	}
 
 	SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
 	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC); 
 	if (renderer == NULL) {
-		SDL_LogError(0, SDL_GetError());
+		SDL_LogError(0, "%s", SDL_GetError());
 		exit(1);
 	}
 	SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
@@ -263,7 +263,7 @@ int main(int argc, char* argv[]) {
 	Uint64 last_count = SDL_GetPerformanceCounter();
 	Uint64 current_count = last_count;
 
-	bool running = true;
+	SDL_bool running = true;
 	while (running) {
 		double dt = (double)(current_count - last_count) / (double)SDL_GetPerformanceFrequency();
 		dt = dt/(1.0 / (double)TICK_RATE);
@@ -315,7 +315,7 @@ int main(int argc, char* argv[]) {
 		SDL_SetRenderDrawColor(renderer,0,0,0,0);
 		SDL_RenderClear(renderer);
 
-		SDL_GetWindowSizeInPixels(window, &screen_w, &screen_h);
+		SDL_GetWindowSize(window, &screen_w, &screen_h);
 
 		float world_scale = 1;
 		int world_offset_x = 1, world_offset_y = 1;

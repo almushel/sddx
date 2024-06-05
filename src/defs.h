@@ -18,7 +18,7 @@ typedef struct RGBA_Color {uint8_t r, g, b, a;} RGBA_Color;
 
 #define STAR_TWINKLE_INTERVAL 180.0f
 
-enum stbi_masks {
+typedef enum stbi_masks {
 	STBI_MASK_R = 0x000000FF, 
 	STBI_MASK_G = 0x0000FF00,
 	STBI_MASK_B = 0x00FF0000,
@@ -29,9 +29,9 @@ typedef struct Vector2 {
 	float x, y;
 } Vector2;
 
-#define Vec2_Union(v2_name, fx, fy) \
-	union { 						\
-		Vector2 v2_name; 			\
+#define Vec2_Union(v2_name, fx, fy)		\
+	union { 				\
+		Vector2 v2_name; 		\
 		struct {float fx, fy; }; 	\
 	}
 
@@ -41,11 +41,11 @@ typedef struct Transform2D {
 	float angle;
 } Transform2D;
 
-#define Transform2D_Union								\
-union {												\
-	Transform2D transform;							\
-	struct {float x, y, sx, sy, angle; };			\
-	struct {Vector2 position, scale; };				\
+#define Transform2D_Union			\
+union {						\
+	Transform2D transform;			\
+	struct {float x, y, sx, sy, angle; };	\
+	struct {Vector2 position, scale; };	\
 }
 
 typedef struct Rectangle {
@@ -89,7 +89,7 @@ typedef struct Mix_Music_Node 	{ char* name; Mix_Music* data; 	 struct Mix_Music
 typedef struct Mix_Chunk_Node 	{ char* name; Mix_Chunk* data; 	 struct Mix_Chunk_Node* next; 	} Mix_Chunk_Node;
 typedef struct SDL_Texture_Node { char* name; SDL_Texture* data; struct SDL_Texture_Node* next; } SDL_Texture_Node;
 
-#include "stb/stb_truetype.h"
+#include "external/stb_truetype.h"
 typedef struct STBTTF_Font {
 	stbtt_fontinfo* info;
 	stbtt_packedchar* chars;
