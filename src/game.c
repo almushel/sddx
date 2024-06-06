@@ -96,15 +96,15 @@ void init_game(Game_State* game) {
 			for (int star_x = 0; star_x < stars_per_row; star_x++) {
 				int star_index = star_y * stars_per_row + star_x;
 				
-				game->starfield.positions[star_index].x = next_position.x + (deviation.x/2.0f) + (random() * deviation.x);
-				game->starfield.positions[star_index].y = next_position.y + (deviation.y/2.0f) + (random() * deviation.y);
+				game->starfield.positions[star_index].x = next_position.x + (deviation.x/2.0f) + (randomf() * deviation.x);
+				game->starfield.positions[star_index].y = next_position.y + (deviation.y/2.0f) + (randomf() * deviation.y);
 				
-				game->starfield.colors[star_index].r = 100 + (uint8_t)(random() * 155.0f);
-				game->starfield.colors[star_index].g = 100 + (uint8_t)(random() * 155.0f);
-				game->starfield.colors[star_index].b = 100 + (uint8_t)(random() * 155.0f);
+				game->starfield.colors[star_index].r = 100 + (uint8_t)(randomf() * 155.0f);
+				game->starfield.colors[star_index].g = 100 + (uint8_t)(randomf() * 155.0f);
+				game->starfield.colors[star_index].b = 100 + (uint8_t)(randomf() * 155.0f);
 
-				game->starfield.timers[star_index] = random() * STAR_TWINKLE_INTERVAL;
-				game->starfield.twinkle_direction[star_index] = (random() > 0.5f);
+				game->starfield.timers[star_index] = randomf() * STAR_TWINKLE_INTERVAL;
+				game->starfield.twinkle_direction[star_index] = (randomf() > 0.5f);
 			
 				next_position.x += star_offset.x;
 			}
@@ -171,7 +171,7 @@ void restart_game(Game_State* game) {
 	spawn_player(game);
 #if 0
 	for (int i = ENTITY_TYPE_PLAYER+1; i < ENTITY_TYPE_SPAWN_WARP; i++) {
-		Uint32 entity_id = spawn_entity(game, ENTITY_TYPE_SPAWN_WARP, (Vector2){random() * (float)game->world_w, random() * (float)game->world_h});
+		Uint32 entity_id = spawn_entity(game, ENTITY_TYPE_SPAWN_WARP, (Vector2){randomf() * (float)game->world_w, randomf() * (float)game->world_h});
 		if (entity_id) {
 			Entity* entity = get_entity(game, entity_id);
 			entity->type_data = i;
@@ -293,12 +293,8 @@ void draw_main_menu(Game_State* game) {
 
 	bool controller_enabled = (SDL_NumJoysticks() > 0);
 
-//		ctx.shadowBlur = 10;
-//		ctx.shadowColor = 'black';
 	platform_set_render_draw_color(SD_BLUE);
 	render_text_aligned(game->font, 64, offset.x, offset.y, "Space Drifter", "center");
-//		ctx.shadowBlur = 10;
-//		ctx.shadowColor = 'red';
 	char* press_start_str = controller_enabled ? "Press FIRE to begin!" : "Press START to begin!";
 	platform_set_render_draw_color((RGBA_Color){255, 165, 0, 255});
 	render_text_aligned(game->font, 20, offset.x, offset.y + 50, press_start_str, "center");
@@ -306,7 +302,6 @@ void draw_main_menu(Game_State* game) {
 	platform_set_render_draw_color((RGBA_Color){105, 105, 105, 128});
 	platform_render_fill_rect((Rectangle){offset.x - 130, offset.y + 75, 260, 145});
 
-//		ctx.font = '15px Orbitron';
 	platform_set_render_draw_color((RGBA_Color){255,255,255,255});
 
 	offset.x -= 110;
@@ -324,7 +319,6 @@ void draw_main_menu(Game_State* game) {
 		render_text(game->font, 15, offset.x, offset.y + 200, "E");
 	}
 
-//		ctx.textAlign = "right";
 	offset.x += 220;
 	render_text_aligned(game->font, 15, offset.x, offset.y + 100,	"Rotate Left"	, "right");
 	render_text_aligned(game->font, 15, offset.x, offset.y + 120,	"Rotate Right"	, "right");

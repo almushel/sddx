@@ -1084,15 +1084,13 @@ void update_entities(Game_State* game, float dt) {
 					if (collision_entity->state != ENTITY_STATE_ACTIVE || collision_entity->type == ENTITY_TYPE_SPAWN_WARP) continue;
 					
 					Vector2 overlap = {0};
-					
-					Entity* item_entity = 	(entity_is_item(entity->type)) ? entity :
-											(entity_is_item(collision_entity->type)) ? collision_entity :
-											0;
+					Entity* item_entity = 	(entity_is_item(entity->type)) ? entity	 :
+								(entity_is_item(collision_entity->type)) ? collision_entity :
+								0;
 
 					Entity* player_entity = (entity->type == ENTITY_TYPE_PLAYER) ? entity :
-											(collision_entity->type == ENTITY_TYPE_PLAYER) ? collision_entity :
-											0;
-
+								(collision_entity->type == ENTITY_TYPE_PLAYER) ? collision_entity :
+								0;
 					
 					if (check_shape_collision(entity->transform, entity->shape, collision_entity->transform, collision_entity->shape, &overlap)) {
 						if (item_entity && player_entity) {

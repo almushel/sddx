@@ -4,16 +4,34 @@
 #ifndef SIMPLE_COLLISION_2D_H
 #define SIMPLE_COLLISION_2D_H 
 
-bool sc2d_check_point_circle(float px, float py, float cx, float xy, float cr, float* overlap_x, float* overlap_y);
-bool sc2d_check_point_rect(float px, float py, float rx, float ry, float rw, float rh, float* overlap_x, float* overlap_y);
-bool sc2d_check_circles(float p1x, float p1y, float r1, float p2x, float p2y, float r2, float* overlap_x, float* overlap_y);
-bool sc2d_check_rects(float p1x, float p1y, float r1w, float r1h, float p2x, float p2y, float r2w, float r2h, float* overlap_x, float* overlap_y);
-bool sc2d_check_circle_centered_rect(float cx, float cy, float cr, float rx, float ry, float rw, float rh, float* overlap_x, float* overlap_y);
-bool sc2d_check_circle_rect(float cx, float cy, float cr, float rx, float ry, float rw, float rh, float* overlap_x, float* overlap_y);
+bool sc2d_check_point_circle(float px, float py,
+			     float cx, float xy, float cr,
+			     float* overlap_x, float* overlap_y);
+
+bool sc2d_check_point_rect(float px, float py,
+			   float rx, float ry, float rw, float rh,
+			   float* overlap_x, float* overlap_y);
+
+bool sc2d_check_circles(float p1x, float p1y, float r1, 
+			float p2x, float p2y, float r2,
+			float* overlap_x, float* overlap_y);
+
+bool sc2d_check_rects(float p1x, float p1y, float r1w, float r1h,
+		      float p2x, float p2y, float r2w, float r2h,
+		      float* overlap_x, float* overlap_y);
+
+bool sc2d_check_circle_centered_rect(float cx, float cy, float cr,
+				     float rx, float ry, float rw, float rh,
+				     float* overlap_x, float* overlap_y);
+
+bool sc2d_check_circle_rect(float cx, float cy, float cr, float rx,
+			    float ry, float rw, float rh, 
+			    float* overlap_x, float* overlap_y);
 
 bool sc2d_check_poly2d(	float p1x, float p1y, float* p1_verts, int p1_count, 
-							float p2x, float p2y, float* p2_verts, int p2_count, 
-							float* overlap_x, float* overlap_y);
+			float p2x, float p2y, float* p2_verts, int p2_count, 
+			float* overlap_x, float* overlap_y);
+
 bool sc2d_check_point_poly2d(float px, float py, float* poly_verts, int vert_count);
 bool sc2d_check_point_line(float px, float py, float start_x, float start_y, float end_x, float end_y, bool segment);
 
@@ -43,9 +61,8 @@ bool sc2d_check_point_line(float px, float py, float start_x, float start_y, flo
 
 #ifndef sc2d_atan2
 #include "math.h"
-#define sc2d_atan2 atan2
+#define sc2d_atan2 atan2f
 #endif
-
 
 // Check for collion between a point and a circle and return penetration by reference
 bool sc2d_check_point_circle(float px, float py, float cx, float cy, float cr, float* overlap_x, float* overlap_y) {
@@ -78,8 +95,7 @@ bool sc2d_check_point_rect(float px, float py, float rx, float ry, float rw, flo
 	float delta_x = rect_center_x - px;
 	float delta_y = rect_center_y - py;
 
-	if (result = (fabsf(delta_x) < rect_center_width && fabsf(delta_y) < rect_center_height) ) {
-		
+	if (result = (sc2d_fabsf(delta_x) < rect_center_width && sc2d_fabsf(delta_y) < rect_center_height) ) {
 		*overlap_x = (rect_center_width - sc2d_fabsf(delta_x));
 		*overlap_y = (rect_center_height - sc2d_fabsf(delta_y));
 
@@ -109,7 +125,7 @@ bool sc2d_check_circles(float p1x, float p1y, float r1, float p2x, float p2y, fl
 	return result;
 }
 
-//Check for collision between to rectangles (left x, top y, width, height) and return overlap by reference
+// Check for collision between two rectangles (left x, top y, width, height) and return overlap by reference
 bool sc2d_check_rects(float p1x, float p1y, float r1w, float r1h, float p2x, float p2y, float r2w, float r2h, float* overlap_x, float* overlap_y) {
 	bool result = false;
 
@@ -139,7 +155,7 @@ bool sc2d_check_circle_centered_rect(float cx, float cy, float cr, float rx, flo
 	float delta_x = cx - rx;
 	float delta_y = cy - ry;
 
-	if ( fabsf(delta_x) > (cr + rw) || sc2d_fabsf(delta_y) > (cr + rh)) {
+	if ( sc2d_fabsf(delta_x) > (cr + rw) || sc2d_fabsf(delta_y) > (cr + rh)) {
 		result = false;
 	} else {
 		//Get intersection point of vector and nearest rect edge relative to the center of the rectangle
@@ -251,7 +267,7 @@ bool sc2d_check_poly2d(	float p1x, float p1y, float* p1_verts, int p1_count,
 	float delta_x = p2x - p1x;
 	float delta_y = p2y - p1y;
 	float offset = 0;
-	float min_distance = (float)((unsigned int)0-1);
+	float min_distance = INFINITY;
 
 	// First polygon
 	for (int i = 0; i < p1_count; i++) {
@@ -341,12 +357,12 @@ bool sc2d_check_point_line(float px, float py, float start_x, float start_y, flo
 	// Vector pointing from line start to line end
 	float line_x = end_x - start_x;
 	float line_y = end_y - start_y;
-	float line_length = hypotf(line_y, line_x);
+	float line_length = sc2d_hypotf(line_y, line_x);
 
 	// Vector point from line start to point
 	float point_delta_x = px - start_x;
 	float point_delta_y = py - start_y;
-	float distance_to_point = hypotf(point_delta_x, point_delta_y);
+	float distance_to_point = sc2d_hypotf(point_delta_x, point_delta_y);
 
 	// If the angles of both vectors are equal,
 	// then the point is on the ray starting at start

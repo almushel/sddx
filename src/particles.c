@@ -169,6 +169,7 @@ void randomize_particle(Particle* p, RGBA_Color* colors, Uint32 color_count) {
 				radius = random_particle_radius();
 			}
 		} break;
+		default: { break; }
 	}
 	p->color = random_color(colors, color_count); 
 	p->vx = cos_deg(angle) * (float)PARTICLE_SPEED;

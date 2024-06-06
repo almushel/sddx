@@ -1,18 +1,17 @@
+#include "SDL2/SDL_stdinc.h"
 #include "defs.h"
 #include "game_math.h"
 
-#include "SDL2/SDL_stdinc.h"
-
-#define sc2d_atan2 SDL_atan2
-#define sc2d_fabsf SDL_abs
+#define sc2d_atan2 SDL_atan2f
+#define sc2d_fabsf SDL_fabsf
 #define sc2d_hypotf hypotf
-#define sc2d_min(i, j) (i < j) ? i : j 
-#define sc2d_max(i, j) sc2d_min(j, i)
+#define sc2d_min(i, j) SDL_min(i, j) 
+#define sc2d_max(i, j) SDL_max(i, j)
 #define SIMPLE_COLLISION_2D_IMPLEMENTATION
 #include "external/sc2d.h"
 
 float hypotf(float x, float y) {
-	float result = SDL_sqrt(SDL_powf(x, 2) + SDL_powf(y, 2));
+	float result = SDL_sqrtf(SDL_powf(x, 2) + SDL_powf(y, 2));
 	return result;
 }
 float sin_deg  (float degrees) 		{ return SDL_sinf(DEG_TO_RAD(degrees)); }
@@ -34,12 +33,6 @@ float lerp(float start, float end, float t) {
 
 // Returns a pseudo-random value between 0 and 1
 float randomf(void) {
-	static SDL_bool seeded = 0;
-	if (!seeded) {
-		srand(42);
-		seeded = 1;
-	}
-
 	float result = (float)(rand() % 1000) / 1000.0f;
 
 	return result;
@@ -140,7 +133,7 @@ Poly2D generate_poly2D(int vert_count, float r_min, float r_max) {
 	};
 	
 	for (int i = 0; i < vert_count; i++) {
-		float point_dist = r_min + random() * (r_max - r_min);
+		float point_dist = r_min + randomf() * (r_max - r_min);
 		float new_angle = 360.0f / (float)vert_count * (float)i;
 		
 		result.vertices[i].x = cos_deg(new_angle) * point_dist;
@@ -244,7 +237,7 @@ Game_Shape rotate_game_shape(Game_Shape shape, float degrees) {
 bool check_shape_collision(Transform2D t1, Game_Shape s1, Transform2D t2, Game_Shape s2, Vector2* overlap) {
 	bool result = false;
 
-	Transform2D* transforms[] = {&t1, &t2};
+	Transform2D* transforms[2] = {&t1, &t2};
 	Game_Shape* shapes[2] = {&s1, &s2};
 	Poly2D colliders[2];
 
@@ -289,6 +282,8 @@ bool check_shape_collision(Transform2D t1, Game_Shape s1, Transform2D t2, Game_S
 				}
 				colliders[i].vert_count = MAX_POLY2D_VERTS;
 			} break;
+
+			default: break;
 		}
 		
 		colliders[i] = scale_poly2d(colliders[i], transforms[i]->scale);
@@ -300,8 +295,6 @@ bool check_shape_collision(Transform2D t1, Game_Shape s1, Transform2D t2, Game_S
 		t2.x, t2.y, (float*)colliders[1].vertices, colliders[1].vert_count,
 		&overlap->x, &overlap->y
 	);
-
-//	if (result) SDL_Log("Shape Collision Overlap X: %f, Y: %f", overlap->x, overlap->y);
 
 	return result;
 }
