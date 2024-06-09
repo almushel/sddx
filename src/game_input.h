@@ -2,9 +2,9 @@
 #define GAME_INPUT_H
 
 #include <stdbool.h>
-#include "SDL2/SDL_scancode.h"
-#include "SDL2/SDL_gamecontroller.h"
-#include "SDL2/SDL_events.h"
+#include "SDL_scancode.h"
+#include "SDL_gamecontroller.h"
+#include "SDL_events.h"
 
 typedef enum Game_Input_State {
 	GAME_INPUT_NULL,

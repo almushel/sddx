@@ -1,5 +1,3 @@
-#include <SDL2/SDL_rwops.h>
-#include <SDL2/SDL_stdinc.h>
 #include "platform.h"
 #include "defs.h"
 #include "assets.h"

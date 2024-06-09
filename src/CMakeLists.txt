@@ -9,6 +9,9 @@ endif()
 if (WIN32)
 	target_link_libraries(sddx SDL2d SDL2maind SDL2_mixerd winmm version Imm32 Setupapi)
 else()
+	target_include_directories(sddx 
+		PRIVATE /usr/include/SDL2/
+	)
 	target_link_libraries(sddx SDL2d SDL2maind SDL2_mixerd)
 endif()
 

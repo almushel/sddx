@@ -1,4 +1,3 @@
-#include "SDL2/SDL_stdinc.h"
 #include "defs.h"
 #include "game_math.h"
 
@@ -10,10 +9,12 @@
 #define SIMPLE_COLLISION_2D_IMPLEMENTATION
 #include "external/sc2d.h"
 
+#ifndef _WIN32
 float hypotf(float x, float y) {
 	float result = SDL_sqrtf(SDL_powf(x, 2) + SDL_powf(y, 2));
 	return result;
 }
+#endif
 float sin_deg  (float degrees) 		{ return SDL_sinf(DEG_TO_RAD(degrees)); }
 float cos_deg  (float degrees) 		{ return SDL_cosf(DEG_TO_RAD(degrees)); }
 float atan2_deg(float y, float x) 	{ return RAD_TO_DEG(SDL_atan2f(y, x )); }

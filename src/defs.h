@@ -1,8 +1,8 @@
 #ifndef DEFS_H
 #define DEFS_H
 
-#include "SDL2/SDL.h"
-#include "SDL2/SDL_mixer.h"
+#include "SDL.h"
+#include "SDL_mixer.h"
 #include "game_input.h"
 
 typedef struct RGBA_Color {uint8_t r, g, b, a;} RGBA_Color;

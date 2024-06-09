@@ -1,8 +1,6 @@
 #ifndef GAME_ASSETS_H
 #define GAME_ASSETS_H
 
-#include "SDL2/SDL.h"
-#include "SDL2/SDL_mixer.h"
 #include "defs.h"
 
 #define declare_game_store_asset(type, table_name, func_suffix) void game_store_##func_suffix(Game_State* game, type* asset, const char* label)

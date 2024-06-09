@@ -1,4 +1,3 @@
-//#include "SDL2/SDL.h"
 #include "external/stb_truetype.h"
 
 #include "platform.h"
