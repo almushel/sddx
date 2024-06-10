@@ -13,6 +13,8 @@
 #define SCENE_TRANSITION_TIME 30.0f
 #define STARTING_LIVES 3
 
+#define STAR_TWINKLE_INTERVAL 180.0f
+
 static Game_Scene current_scene;
 static Game_Scene next_scene;
 static float scene_transition_timer;
@@ -287,9 +289,9 @@ void draw_game_world(Game_State* game) {
 }
 
 void draw_main_menu(Game_State* game) {
-	Vector2 offset = platform_get_window_size();
-	offset.x /= 2.0f;
-	offset.y /= 2.5f;
+	iVector2 offset = platform_get_window_size();
+	offset.x = (float)offset.x / 2.0f;
+	offset.y = (float)offset.y / 2.5f;
 
 	bool controller_enabled = (SDL_NumJoysticks() > 0);
 
@@ -346,8 +348,8 @@ void draw_scene_ui(Game_State* game, Game_Scene scene) {
 		case GAME_SCENE_GAME_OVER: {
 			char score_buf[24];
 			SDL_itoa(game->score.total, score_buf, 10);
-			Vector2 screen = platform_get_window_size();
-			Vector2 offset = {screen.x/2.0f, screen.y/2.0f - 96};
+			iVector2 screen = platform_get_window_size();
+			Vector2 offset = {(float)screen.x/2.0f, (float)screen.y/2.0f - 96};
 
 			platform_set_render_draw_color(RED);
 			render_text_aligned(game->font, 64, offset.x, offset.y - 96, "GAME OVER", "center");
@@ -361,8 +363,8 @@ void draw_scene_ui(Game_State* game, Game_Scene scene) {
 		case GAME_SCENE_HIGH_SCORES: {
 			char score_buf[24];
 			SDL_itoa(game->score.total, score_buf, 10);
-			Vector2 screen = platform_get_window_size();
-			Vector2 offset = {screen.x/2.0f, screen.y/4.0f};
+			iVector2 screen = platform_get_window_size();
+			Vector2 offset = {(float)screen.x/2.0f, (float)screen.y/4.0f};
 			platform_set_render_draw_color(WHITE);
 			render_text_aligned(game->font, 48, offset.x, offset.y, "HIGH SCORES", "center");
 			offset.y += 64.0f;
@@ -392,7 +394,7 @@ void draw_game_ui(Game_State* game) {
 	SDL_Texture* target = 0;
 
 	if (current_scene != next_scene) {
-		Vector2 screen = platform_get_window_size();
+		iVector2 screen = platform_get_window_size();
 		target = platform_create_texture((int)screen.x, (int)screen.y, true);
 		
 		unsigned char alpha = lerp(0.0f, 255.0f, scene_transition_timer/SCENE_TRANSITION_TIME);

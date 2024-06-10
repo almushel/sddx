@@ -1,19 +1,15 @@
 #include "SDL.h"
 #include "game.h"
-#include "game_input.h"
 
-static SDL_Window *	 	window = 0;
+static SDL_Window *	window = 0;
 static SDL_Renderer * 	renderer = 0;
 static SDL_Texture * 	world_buffer = 0;
 
-Vector2 platform_get_window_size(void) {
-	Vector2 result = {0};
+iVector2 platform_get_window_size(void) {
+	iVector2 result = {0};
 
 	if (window) {
-		int w, h;
-		SDL_GetWindowSize(window, &w, &h);
-		result.x = (float)w;
-		result.y = (float)h;
+		SDL_GetWindowSize(window, &result.x, &result.y);
 	}
 
 	return result;

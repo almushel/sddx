@@ -6,6 +6,10 @@
 
 float measure_text(STBTTF_Font* font, float size, const char* text) {
 	float result = 0; // width
+	if (size <= 0 || text == 0 || text[0] == '\0') {
+		return result;
+	}
+
 	float scale = size / font->size;
 	for (int i = 0; text[i]; i++) {
 		if (text[i] > 32 && text[i] < 128) {

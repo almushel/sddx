@@ -9,14 +9,13 @@ typedef struct RGBA_Color {uint8_t r, g, b, a;} RGBA_Color;
 #define CLEAR_COLOR (RGBA_Color){0, 10, 48 , 255}
 #define SD_BLUE (RGBA_Color){109, 194, 255, 255}
 #define WHITE (RGBA_Color){255,255,255,255}
+#define BLACK (RGBA_Color){0,0,0,255}
 #define RED (RGBA_Color){255, 0, 0, 255}
 
-#define array_length(array) ( sizeof(array) / sizeof(array[0]) )
+#define array_length(arr) (ptrdiff_t)(sizeof(arr) / sizeof(*(arr)))
 
 #define TARGET_FPS 60
 #define TICK_RATE 60
-
-#define STAR_TWINKLE_INTERVAL 180.0f
 
 typedef enum stbi_masks {
 	STBI_MASK_R = 0x000000FF, 
@@ -28,6 +27,10 @@ typedef enum stbi_masks {
 typedef struct Vector2 {
 	float x, y;
 } Vector2;
+
+typedef struct iVector2 {
+	int x, y;
+} iVector2;
 
 #define Vec2_Union(v2_name, fx, fy)		\
 	union { 				\
