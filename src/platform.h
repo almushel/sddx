@@ -3,7 +3,7 @@
 
 #include "defs.h"
 
-iVector2			platform_get_window_size		(void);
+iVector2		platform_get_window_size		(void);
 int			platform_set_render_target		(SDL_Texture *texture);
 
 SDL_Texture*		platform_create_texture			(int w, int h, bool target);
