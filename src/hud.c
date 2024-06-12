@@ -30,158 +30,99 @@ typedef struct ui_element {
 		struct {int size; char* str; char* align; } text;
 	};
 
-	void (*callback)(Game_State* game, struct ui_element* element);
+	void (*draw)(struct ui_element* element);
 	
 	int num_children;
 	struct ui_element* children;
 } ui_element;
 
-void draw_thrust_meter(Game_State* game) {
-	Vector2 origin;
-	{
-		iVector2 screen = platform_get_window_size();
-		origin.x = (float)screen.x / 2 - 60;
-		origin.y = (float)screen.y - 16;
-	}
+void thrust_meter_proc(ui_element* e) {
+	float thrust_energy = SDL_clamp(e->val, 0, PLAYER_THRUST_MAX);
 
-	Poly2D meterOuterPoly = {
-		.vertices = {
-			{ .x =  -50, .y =   10 },
-			{ .x =  -44, .y =  -10 },
-			{ .x =   52, .y =  -10 },
-			{ .x =   46, .y =   10 }
-		},
-		.vert_count = 4,
-	};
-
-	Poly2D meterInnerPoly = {
-		.vertices = {
-			{ .x =  -47, .y =   8 },
-			{ .x =  -42, .y =  -8 },
-			{ .x =   49, .y =  -8 },
-			{ .x =   44, .y =   8 }
-		},
-		.vert_count = 4,
-	};
-
-	float thrust_energy = SDL_clamp(game->player_state.thrust_energy, 0, PLAYER_THRUST_MAX);
-
-	RGBA_Color tmColorOuter = {17, 17, 17, 255};
-	RGBA_Color tmColorInner = {
-		(209 - thrust_energy),
-		(2   * thrust_energy),
-		(5   + 2.5 * thrust_energy),
+	e->color = (RGBA_Color){
+		(209 - (thrust_energy)),
+		(2   * (thrust_energy)),
+		(5   + (thrust_energy * 2.5)),
 		255
 	};
 
-	render_fill_polygon(translate_poly2d(meterOuterPoly, origin).vertices, meterOuterPoly.vert_count, tmColorOuter);
-
 	float thrustDelta = thrust_energy / PLAYER_THRUST_MAX;
-	meterInnerPoly.vertices[2].x = -41 + (int)(thrustDelta * 90);
-	meterInnerPoly.vertices[3].x = -41 + (int)(thrustDelta * 90) - 5;
-	
-	render_fill_polygon(translate_poly2d(meterInnerPoly, origin).vertices, meterInnerPoly.vert_count, tmColorInner);
+	float width1 = e->polygon.vertices[2].x - e->polygon.vertices[1].x;
+	float width2 = e->polygon.vertices[3].x - e->polygon.vertices[0].x;
+	e->polygon.vertices[2].x = e->polygon.vertices[1].x + (int)(thrustDelta * width1);
+	e->polygon.vertices[3].x = e->polygon.vertices[0].x + (int)(thrustDelta * width2);
 }
 
-void draw_weapon_heat(Game_State* game) {
-	Vector2 origin;
-	{
-		iVector2 screen = platform_get_window_size();
-		origin.x = ((float)screen.x / 2) + 60;
-		origin.y = screen.y - 16;
-	}
+void weapon_heat_outer_proc(ui_element* e) {
+	float weapon_heat = SDL_clamp(e->val, 0, PLAYER_WEAPON_HEAT_MAX);
+	e->color = 
+		(weapon_heat < 100) ?
+		(RGBA_Color){17, 17, 17, 255} :
+		(RGBA_Color){255, 165, 0, 255};
+}
 
-	Poly2D heatOuterPoly = {
-		.vertices = {
-			{ .x =  -44, .y =   10 },
-			{ .x =  -50, .y =  -10 },
-			{ .x =   46, .y =  -10 },
-			{ .x =   52, .y =   10 }
-		},
-		.vert_count = 4,
-	};
+void weapon_heat_inner_proc(ui_element* e) {
+	float weapon_heat = weapon_heat = SDL_clamp(e->val, 0, PLAYER_WEAPON_HEAT_MAX);
 
-	Poly2D heatInnerPoly = {
-		.vertices = {
-			{ .x =  -42, .y =   8 },
-			{ .x =  -47, .y =  -8 },
-			{ .x =   42, .y =  -8 },
-			{ .x =   47, .y =   8 }
-		},
-		.vert_count = 4,
-	};
-
-	RGBA_Color hmColorOuter = {128, 128, 128, 255};
-	RGBA_Color hmColorInner = {255, 0, 0, 255};
-
-	float weapon_heat = 0;
-	if (game->player) weapon_heat = SDL_clamp(game->player_state.weapon_heat, 0, PLAYER_WEAPON_HEAT_MAX);
-	
-	if (weapon_heat < 100)	hmColorOuter = (RGBA_Color){17, 17, 17, 255};
-	else			hmColorOuter = (RGBA_Color){255, 165, 0, 255};
-
-	hmColorInner = (RGBA_Color){
+	e->color = (RGBA_Color){
 		SDL_clamp(109 +		weapon_heat, 0, 255),
 		SDL_clamp(194 - 2 *	weapon_heat, 0, 255),
 		SDL_clamp(255 - 2.5 *	weapon_heat, 0, 255),
 		255
 	};
 
-	render_fill_polygon(translate_poly2d(heatOuterPoly, origin).vertices, heatOuterPoly.vert_count, hmColorOuter);
-
 	float heatDelta = weapon_heat / PLAYER_WEAPON_HEAT_MAX;
-	heatInnerPoly.vertices[2].x = heatInnerPoly.vertices[1].x+(int)(heatDelta * 90);
-	heatInnerPoly.vertices[3].x = heatInnerPoly.vertices[0].x+(int)(heatDelta * 90);
-	
-	render_fill_polygon(translate_poly2d(heatInnerPoly, origin).vertices, heatInnerPoly.vert_count, hmColorInner);
+	e->polygon.vertices[2].x = e->polygon.vertices[1].x+(int)(heatDelta * 90);
+	e->polygon.vertices[3].x = e->polygon.vertices[0].x+(int)(heatDelta * 90);
 }
 
+
 void draw_ui_element(Game_State* game, ui_element* e) {
-	if (e->callback != 0) {
-		e->callback(game, e);
-	} else {
-		switch(e->type) {
-			case UI_TYPE_TEXTURE: {
-				SDL_Texture* texture = game_get_texture(game, e->texture.name);
-				if (texture) {
-					Rectangle dest = e->texture.dest;
-					if (dest.w == 0 && dest.h == 0) {
-						int w, h;
-						SDL_QueryTexture(texture, NULL, NULL, &w, &h);
-						dest.w = w;
-						dest.h = h;
-					}
-					Vector2 pos = {e->pos.x-dest.w/2.0f, e->pos.y-dest.h/2.0f};
-					dest = translate_rect(dest, pos);
+	if (e->draw != 0) {
+		e->draw(e);
+	}
 
-					platform_render_copy(texture, 0, &dest, e->angle, 0, 0);
+	switch(e->type) {
+		case UI_TYPE_TEXTURE: {
+			SDL_Texture* texture = game_get_texture(game, e->texture.name);
+			if (texture) {
+				Rectangle dest = e->texture.dest;
+				if (dest.w == 0 && dest.h == 0) {
+					int w, h;
+					SDL_QueryTexture(texture, NULL, NULL, &w, &h);
+					dest.w = w;
+					dest.h = h;
 				}
-			} break;
+				Vector2 pos = {e->pos.x-dest.w/2.0f, e->pos.y-dest.h/2.0f};
+				dest = translate_rect(dest, pos);
 
-			case UI_TYPE_TEXT: {
-				char buf[64];
-				size_t len = 0;
-				if (e->text.str != 0 && e->text.str[0] != '\0') {
-					len = SDL_strlcpy(buf, e->text.str, array_length(buf));
-				}
-				SDL_itoa(e->val, buf+len, 10);
-				platform_set_render_draw_color(e->color);
-				render_text_aligned(game->font, e->text.size, e->pos.x, e->pos.y, buf, e->text.align);
-			} break;
+				platform_render_copy(texture, 0, &dest, e->angle, 0, 0);
+			}
+		} break;
 
-			case UI_TYPE_POLY: {
-				Poly2D p = translate_poly2d(e->polygon, e->pos);
-				render_fill_polygon(p.vertices, p.vert_count, e->color);
-			} break;
+		case UI_TYPE_TEXT: {
+			char buf[64];
+			size_t len = 0;
+			if (e->text.str != 0 && e->text.str[0] != '\0') {
+				len = SDL_strlcpy(buf, e->text.str, array_length(buf));
+			}
+			SDL_itoa(e->val, buf+len, 10);
+			platform_set_render_draw_color(e->color);
+			render_text_aligned(game->font, e->text.size, e->pos.x, e->pos.y, buf, e->text.align);
+		} break;
 
-			case UI_TYPE_RECT: {
-				Rectangle rect = translate_rect(e->rect, e->pos);
-				platform_set_render_draw_color(e->color);
-				platform_render_draw_rect(rect);
-			} break;
+		case UI_TYPE_POLY: {
+			Poly2D p = translate_poly2d(e->polygon, e->pos);
+			render_fill_polygon(p.vertices, p.vert_count, e->color);
+		} break;
 
-			default: break;
-		}
+		case UI_TYPE_RECT: {
+			Rectangle rect = translate_rect(e->rect, e->pos);
+			platform_set_render_draw_color(e->color);
+			platform_render_draw_rect(rect);
+		} break;
+
+		default: break;
 	}
 
 	for (int i = 0; i < e->num_children; i++) {
@@ -189,14 +130,17 @@ void draw_ui_element(Game_State* game, ui_element* e) {
 	}
 }
 
-//TODO: Default label and icon for "Unknown" (player is dead)
-void weapon_label_callback(Game_State* game, ui_element* e) {
-	if (e->type != UI_TYPE_TEXT || game->player == 0) {
+void weapon_label_proc(ui_element* e) {
+	if (e->type != UI_TYPE_TEXT) {
 		return;
 	}
-	switch (game->player->type_data) {
+	switch (e->val) {
+		case PLAYER_WEAPON_MG: {
+			e->text.str = "Machine Gun";
+		} break;
+
 		case PLAYER_WEAPON_MISSILE: {
-			e->text.str = "Missile";
+			e->text.str = "Missiles";
 		} break;
 
 		case PLAYER_WEAPON_LASER: {
@@ -204,20 +148,22 @@ void weapon_label_callback(Game_State* game, ui_element* e) {
 		} break;
 
 		default: {
-			e->text.str = "Machine Gun";
+			e->text.str = "Unknown";
 		} break;
 	}
-	e->callback = 0;
-
-	draw_ui_element(game, e);
 }
 
-void weapon_icon_callback(Game_State* game, ui_element* e) {
-	if (e->type != UI_TYPE_TEXTURE || game->player == 0) {
+//TODO: Icon for "Unknown"
+void weapon_icon_proc(ui_element* e) {
+	if (e->type != UI_TYPE_TEXTURE || e->val == 0) {
 		return;
 	}
 
-	switch (game->player->type_data) {
+	switch (e->val) {
+		case PLAYER_WEAPON_MG: {
+			e->texture.name = "HUD MG";
+		} break;
+
 		case PLAYER_WEAPON_MISSILE: {
 			e->texture.name = "HUD Missile";
 		} break;
@@ -226,19 +172,13 @@ void weapon_icon_callback(Game_State* game, ui_element* e) {
 			e->texture.name = "HUD Laser";
 		} break;
 
-		default: {
-			e->texture.name = "HUD MG";
-		} break;
+		default: {} break;
 	}
-
-	e->callback = 0;
-
-	draw_ui_element(game, e);
 }
 
-void score_timer_hud_callback(Game_State* game, ui_element* e) {
+void score_timer_hud_proc(ui_element* e) {
 	int combo_decay_seconds = SCORE_COMBO_DECAY/TICK_RATE;
-	float timer_seconds = (game->score.timer/(float)TICK_RATE);
+	float timer_seconds = (e->val/(float)TICK_RATE);
 
 	const int padding = 32;
 	Vector2 offset = e->pos;
@@ -251,11 +191,12 @@ void score_timer_hud_callback(Game_State* game, ui_element* e) {
 		platform_render_fill_rect(translate_rect(e->rect, offset));
 		offset.x += padding;
 	}
+	e->type = 0; // Skip default draw_ui
 }
 
 void draw_HUD(Game_State* game) {
 	iVector2 screen = platform_get_window_size();
-	Poly2D meterBG = {
+	Poly2D meter_bg = {
 		.vertices = {
 			{ .x =  -125, .y =   22 },
 			{ .x =  -113, .y =  -22 },
@@ -306,7 +247,8 @@ void draw_HUD(Game_State* game) {
 			.pos = {8, screen.y-56},
 			.rect = {0,0, 26, 26},
 			.color = {125, 125, 125, 255},
-			.callback = score_timer_hud_callback,
+			.val = game->score.timer,
+			.draw = score_timer_hud_proc,
 		}
 	};
 	score_hud.children = score_children;
@@ -315,7 +257,7 @@ void draw_HUD(Game_State* game) {
 	ui_element meter_hud = {
 		.type = UI_TYPE_POLY,
 		.pos = {(float)screen.x / 2, screen.y - 22},
-		.polygon = meterBG,
+		.polygon = meter_bg,
 		.color = MENU_COLOR,
 	};
 	ui_element meter_children[] = {
@@ -374,7 +316,72 @@ void draw_HUD(Game_State* game) {
 				.align = "center",
 			},
 			.color = WHITE,
+		},
+		{
+			.type = UI_TYPE_POLY,
+			.pos = {(float)screen.x/2.0f - 60, screen.y-16},
+			.color = {17, 17, 17, 255},
+			.polygon = {
+				.vertices = {
+					{ .x =  -50, .y =   10 },
+					{ .x =  -44, .y =  -10 },
+					{ .x =   52, .y =  -10 },
+					{ .x =   46, .y =   10 }
+				},
+				.vert_count = 4,
+			},
+		},
+		{
+			.type = UI_TYPE_POLY,
+			.pos = {(float)screen.x/2.0f - 60, screen.y-16},
+			.color = SD_BLUE,
+			.polygon = {
+				.vertices = {
+					{ .x =  -47, .y =   8 },
+					{ .x =  -42, .y =  -8 },
+					{ .x =   49, .y =  -8 },
+					{ .x =   44, .y =   8 }
+				},
+				.vert_count = 4,
+			},
+			.val = game->player_state.thrust_energy,
+			.draw = thrust_meter_proc,
+		},
+
+		{
+			.type = UI_TYPE_POLY,
+			.pos = {((float)screen.x / 2) + 60, screen.y-16},
+			.val = game->player_state.weapon_heat,
+			.polygon = {
+				.vertices = {
+					{ .x =  -44, .y =   10 },
+					{ .x =  -50, .y =  -10 },
+					{ .x =   46, .y =  -10 },
+					{ .x =   52, .y =   10 }
+				},
+				.vert_count = 4,
+			},
+			.color = {128, 128, 128, 255},
+			.draw = weapon_heat_outer_proc,
+		},
+		{
+			.type = UI_TYPE_POLY,
+			.pos = {((float)screen.x / 2) + 60, screen.y-16},
+			.val = game->player_state.weapon_heat,
+			.polygon = {
+				.vertices = {
+					{ .x =  -42, .y =   8 },
+					{ .x =  -47, .y =  -8 },
+					{ .x =   42, .y =  -8 },
+					{ .x =   47, .y =   8 }
+				},
+				.vert_count = 4,
+			},
+			.color = {255, 0, 0, 255},
+			.draw = weapon_heat_inner_proc,
 		}
+
+
 	};
 	meter_hud.children = meter_children;
 	meter_hud.num_children = array_length(meter_children);
@@ -414,12 +421,14 @@ void draw_HUD(Game_State* game) {
 			},
 			.pos = {screen.x-60, screen.y-48},
 			.color = WHITE,
-			.callback = weapon_label_callback
+			.val = game->player ? game->player->type_data : 0,
+			.draw = weapon_label_proc
 		},
 		{
 			.type = UI_TYPE_TEXTURE,
 			.pos = {screen.x-60, screen.y-24},
-			.callback = weapon_icon_callback,
+			.val = game->player ? game->player->type_data : 0,
+			.draw = weapon_icon_proc,
 		}
 	};
 	weapon_hud.children = weapon_children;
@@ -434,9 +443,6 @@ void draw_HUD(Game_State* game) {
 	for (int i = 0; i < array_length(hud); i++) {
 		draw_ui_element(game, hud+i);
 	}
-
-	draw_thrust_meter(game);
-	draw_weapon_heat(game);
 
 #ifdef DEBUG
 {

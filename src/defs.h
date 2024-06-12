@@ -181,6 +181,7 @@ typedef struct Score_System {
 } Score_System;
 
 typedef enum Player_Weapons {
+	PLAYER_WEAPON_UNDEFINED = 0,
 	PLAYER_WEAPON_MG,
 	PLAYER_WEAPON_MISSILE,
 	PLAYER_WEAPON_LASER,

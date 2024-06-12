@@ -683,7 +683,7 @@ void update_entities(Game_State* game, float dt) {
 									
 									case PLAYER_WEAPON_MISSILE: {
 										if (game->player_state.ammo <= 0) { 
-											game->player->type_data = 0;
+											game->player->type_data = PLAYER_WEAPON_MG;
 											break;	
 										}
 										Mix_PlayChannel(-1, game_get_sfx(game, "Player Missile"), 0);
@@ -719,7 +719,7 @@ void update_entities(Game_State* game, float dt) {
 									
 									case PLAYER_WEAPON_LASER: {
 										if (game->player_state.ammo <= 0) { 
-											game->player->type_data = 0;
+											game->player->type_data = PLAYER_WEAPON_MG;
 											break;	
 										}
 										Mix_PlayChannel(-1, game_get_sfx(game, "Player Laser"), 0);
