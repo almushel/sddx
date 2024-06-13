@@ -23,6 +23,8 @@ float dot_product_vector2	(Vector2 v1, Vector2 v2);
 Vector2 wrap_world_coords	(float x, float y, float min_x, float min_y, float max_x, float max_y);
 
 Rectangle translate_rect	(Rectangle rect, Vector2 translation);
+Rectangle fit_rect(Rectangle inner, Rectangle outer);
+Rectangle center_rect(Rectangle inner, Rectangle outer);
 Poly2D rect_to_poly2D		(Rectangle rect);
 
 Poly2D generate_poly2D		(int vert_count, float r_min, float r_max);

@@ -342,7 +342,14 @@ void draw_scene_ui(Game_State* game, Game_Scene scene) {
 		} break;
 
 		case GAME_SCENE_GAMEPLAY: {
-			draw_HUD(game);
+			iVector2 screen = platform_get_window_size();
+			Rectangle screen_rect = {0,0,screen.x, screen.y};
+			Rectangle world_rect = {0,0,game->world_w, game->world_h};
+			if (game->fit_world_to_screen) {
+				world_rect = fit_rect(world_rect, screen_rect);
+			}
+			world_rect = center_rect(world_rect, screen_rect);
+			draw_HUD(game, world_rect);
 		} break;
 
 		case GAME_SCENE_GAME_OVER: {

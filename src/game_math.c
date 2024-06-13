@@ -114,6 +114,29 @@ Rectangle translate_rect(Rectangle rect, Vector2 translation) {
 	return result;
 }
 
+Rectangle fit_rect(Rectangle inner, Rectangle outer) {
+	Rectangle result = inner;
+	float scale;
+	if (outer.h < outer.w) {
+		scale = outer.h / inner.h;
+	} else {
+		scale = outer.w / inner.w;
+	}
+
+	result.w *= scale;
+	result.h *= scale;
+
+	return result;
+}
+
+Rectangle center_rect(Rectangle inner, Rectangle outer) {
+	Rectangle result = inner;
+	result.x = (outer.w-inner.w)/2.0f;
+	result.y = (outer.h-inner.h)/2.0f;
+
+	return result;	
+}
+
 Poly2D rect_to_poly2D(Rectangle rect) {
 	Poly2D result = {
 		.vert_count = 4,

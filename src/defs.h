@@ -53,9 +53,9 @@ union {						\
 
 typedef struct Rectangle {
 	float x;
-    float y;
-    float w;
-    float h;
+	float y;
+	float w;
+	float h;
 } Rectangle;
 
 #define MAX_POLY2D_VERTS 8
@@ -222,6 +222,7 @@ typedef struct Game_State {
 	Game_Input input;
 
 	int world_w, world_h;
+	bool fit_world_to_screen;
 
 	Entity* entities;
 	Uint32 entity_count;

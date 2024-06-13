@@ -126,6 +126,7 @@ void draw_ui_element(Game_State* game, ui_element* e) {
 	}
 
 	for (int i = 0; i < e->num_children; i++) {
+		(e->children+i)->pos = add_vector2(e->pos, (e->children+i)->pos);
 		draw_ui_element(game, e->children+i);
 	}
 }
@@ -194,8 +195,7 @@ void score_timer_hud_proc(ui_element* e) {
 	e->type = 0; // Skip default draw_ui
 }
 
-void draw_HUD(Game_State* game) {
-	iVector2 screen = platform_get_window_size();
+void draw_HUD(Game_State* game, Rectangle bounds) {
 	Poly2D meter_bg = {
 		.vertices = {
 			{ .x =  -125, .y =   22 },
@@ -217,7 +217,7 @@ void draw_HUD(Game_State* game) {
 
 	ui_element score_hud = {
 		.type = UI_TYPE_POLY,
-		.pos = {100, screen.y-30},
+		.pos = {bounds.x+100, (bounds.y+bounds.h)-30},
 		.polygon = weapon_and_score_bg,
 		.color = MENU_COLOR,
 	};
@@ -229,7 +229,7 @@ void draw_HUD(Game_State* game) {
 				.size = 20
 			},
 			.val = game->score.total,
-			.pos = {8, screen.y-8},
+			.pos = {-92, 22},
 			.color = WHITE,
 		},
 		{
@@ -239,12 +239,12 @@ void draw_HUD(Game_State* game) {
 				.size = 20,
 			},
 			.val = game->score.multiplier,
-			.pos = {186, screen.y-36},
+			.pos = {86, -6},
 			.color = WHITE,
 		},
 		{
-			.type = UI_TYPE_RECT,		
-			.pos = {8, screen.y-56},
+			.type = UI_TYPE_RECT,
+			.pos = {-92, -26},
 			.rect = {0,0, 26, 26},
 			.color = {125, 125, 125, 255},
 			.val = game->score.timer,
@@ -256,14 +256,14 @@ void draw_HUD(Game_State* game) {
 
 	ui_element meter_hud = {
 		.type = UI_TYPE_POLY,
-		.pos = {(float)screen.x / 2, screen.y - 22},
+		.pos = {bounds.x + (bounds.w / 2), (bounds.y+bounds.h) - 22},
 		.polygon = meter_bg,
 		.color = MENU_COLOR,
 	};
 	ui_element meter_children[] = {
 		{
 			.type = UI_TYPE_POLY,
-			.pos = {(float)screen.x/2.0f+1.0f, screen.y-20},
+			.pos = {1,-2},
 			.color = SD_BLUE,
 			.polygon = {
 				.vertices = {
@@ -276,7 +276,7 @@ void draw_HUD(Game_State* game) {
 		},
 		{
 			.type = UI_TYPE_TEXTURE,
-			.pos = {(float)screen.x/2.0f+1, screen.y-15},
+			.pos = {1, 7},
 			.angle = -90,
 			.texture = {
 				.name = "Player Ship",
@@ -287,19 +287,19 @@ void draw_HUD(Game_State* game) {
 			.type = UI_TYPE_TEXT,
 			.val = game->player_state.lives,
 			.text = {.size = 34, .align = "center" },
-			.pos = {(float)screen.x/2.0f+1.0f, screen.y-6},
+			.pos = {1, 16},
 			.color = BLACK,
 		},
 		{
 			.type = UI_TYPE_TEXT,
 			.val = game->player_state.lives,
 			.text = {.size = 30, .align = "center" },
-			.pos = {(float)screen.x/2.0f+1.0f, screen.y-7},
+			.pos = {1, 15},
 			.color = WHITE,
 		},
 		{
 			.type = UI_TYPE_TEXT,
-			.pos = {(float)screen.x/2-64,screen.y-30},
+			.pos = {-64,-8},
 			.text = {
 				.str = "Thrust Power",
 				.size = 14,
@@ -309,7 +309,7 @@ void draw_HUD(Game_State* game) {
 		},
 		{
 			.type = UI_TYPE_TEXT,
-			.pos = {screen.x/2.0f+64, screen.y-30},
+			.pos = {64, -8},
 			.text = {
 				.str = "Weapon Temp",
 				.size = 14,
@@ -319,7 +319,7 @@ void draw_HUD(Game_State* game) {
 		},
 		{
 			.type = UI_TYPE_POLY,
-			.pos = {(float)screen.x/2.0f - 60, screen.y-16},
+			.pos = {-60, 6},
 			.color = {17, 17, 17, 255},
 			.polygon = {
 				.vertices = {
@@ -333,7 +333,7 @@ void draw_HUD(Game_State* game) {
 		},
 		{
 			.type = UI_TYPE_POLY,
-			.pos = {(float)screen.x/2.0f - 60, screen.y-16},
+			.pos = {-60, 6},
 			.color = SD_BLUE,
 			.polygon = {
 				.vertices = {
@@ -350,7 +350,7 @@ void draw_HUD(Game_State* game) {
 
 		{
 			.type = UI_TYPE_POLY,
-			.pos = {((float)screen.x / 2) + 60, screen.y-16},
+			.pos = {60, 6},
 			.val = game->player_state.weapon_heat,
 			.polygon = {
 				.vertices = {
@@ -366,7 +366,7 @@ void draw_HUD(Game_State* game) {
 		},
 		{
 			.type = UI_TYPE_POLY,
-			.pos = {((float)screen.x / 2) + 60, screen.y-16},
+			.pos = {60, 6},
 			.val = game->player_state.weapon_heat,
 			.polygon = {
 				.vertices = {
@@ -388,7 +388,7 @@ void draw_HUD(Game_State* game) {
 
 	ui_element weapon_hud = {
 		.type = UI_TYPE_POLY,
-		.pos = {screen.x-100, screen.y-30},
+		.pos = {(bounds.x+bounds.w)-100, (bounds.y+bounds.h)-30},
 		.polygon = weapon_and_score_bg,
 		.color = MENU_COLOR,
 	};
@@ -400,7 +400,7 @@ void draw_HUD(Game_State* game) {
 				.size = 16,
 				.align = "center",
 			},
-			.pos = {screen.x-160, screen.y - 48},
+			.pos = (Vector2){-60, -18},
 			.color = WHITE,
 		},
 		{
@@ -410,7 +410,7 @@ void draw_HUD(Game_State* game) {
 				.align = "center",
 			},
 			.val = game->player_state.ammo,
-			.pos = {screen.x-160, screen.y-16},
+			.pos = {-60, 18},
 			.color = SD_BLUE,
 		},
 		{
@@ -419,14 +419,14 @@ void draw_HUD(Game_State* game) {
 				.size = 16,
 				.align = "center",
 			},
-			.pos = {screen.x-60, screen.y-48},
+			.pos = {40, -18},
 			.color = WHITE,
 			.val = game->player ? game->player->type_data : 0,
 			.draw = weapon_label_proc
 		},
 		{
 			.type = UI_TYPE_TEXTURE,
-			.pos = {screen.x-60, screen.y-24},
+			.pos = {40, 6},
 			.val = game->player ? game->player->type_data : 0,
 			.draw = weapon_icon_proc,
 		}

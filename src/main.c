@@ -1,5 +1,7 @@
 #include "SDL.h"
+#include "defs.h"
 #include "game.h"
+#include "game_math.h"
 
 static SDL_Window *	window = 0;
 static SDL_Renderer * 	renderer = 0;
@@ -244,13 +246,13 @@ int main(int argc, char* argv[]) {
 	SDL_memset(game->entities, 0, sizeof(Entity) * game->entities_size);
 
 	init_game(game);
+	game->fit_world_to_screen = 1;
 
 	world_buffer = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB32, SDL_TEXTUREACCESS_TARGET, game->world_w, game->world_h);
 	if (!world_buffer) {
 		SDL_Log("Creating world buffer failed. %s", SDL_GetError());
 	}
 
-	SDL_bool fit_world_to_screen = 1;
 	double target_fps = (double)TARGET_FPS;
 	double target_frame_time = 1000.0/target_fps;
 	Uint64 last_count = SDL_GetPerformanceCounter();
@@ -286,7 +288,7 @@ int main(int argc, char* argv[]) {
 
 #ifdef DEBUG
 		if (is_key_released(&game->input, SDL_SCANCODE_EQUALS)) {
-			fit_world_to_screen = !fit_world_to_screen;
+			game->fit_world_to_screen = !game->fit_world_to_screen;
 		}
 		
 		if (is_key_released(&game->input, SDL_SCANCODE_GRAVE)) {
@@ -310,32 +312,19 @@ int main(int argc, char* argv[]) {
 
 		SDL_GetWindowSize(window, &screen_w, &screen_h);
 
-		float world_scale = 1;
-		int world_offset_x = 1, world_offset_y = 1;
-
-		if (fit_world_to_screen) {
+		Rectangle world_rect = {0,0, game->world_w, game->world_h};
+		if (game->fit_world_to_screen) {
 			SDL_SetTextureScaleMode(world_buffer, SDL_ScaleModeBest);
-			if (screen_h < screen_w) {
-				world_scale = (float)screen_h / (float)game->world_h;
-				world_offset_y = 0;
-			} else {
-				world_scale = (float)screen_w / (float)game->world_w;
-				world_offset_x = 0;
-			}
+			world_rect = fit_rect(world_rect, (Rectangle){0,0, screen_w, screen_h});
 		} else {
 			SDL_SetTextureScaleMode(world_buffer, SDL_ScaleModeNearest);
 		}
-		int world_w, world_h;
-		SDL_QueryTexture(world_buffer, 0, 0, &world_w, &world_h);
-
-		int scaled_world_w = (int)((float)world_w * world_scale);
-		int scaled_world_h = (int)((float)world_h * world_scale);
-		world_offset_x *= (screen_w - scaled_world_w)/2;
-		world_offset_y *= (screen_h - scaled_world_h)/2;
+		world_rect.x = (screen_w - world_rect.w)/2;
+		world_rect.y = (screen_h - world_rect.h)/2;
 
 		SDL_Rect world_draw_rect = {
-			world_offset_x, world_offset_y,
-			scaled_world_w, scaled_world_h,
+			world_rect.x, world_rect.y,
+			world_rect.w, world_rect.h,
 		};
 		
 		SDL_RenderCopy(renderer, world_buffer, 0, &world_draw_rect);
