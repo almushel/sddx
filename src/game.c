@@ -349,7 +349,7 @@ void draw_scene_ui(Game_State* game, Game_Scene scene) {
 				world_rect = fit_rect(world_rect, screen_rect);
 			}
 			world_rect = center_rect(world_rect, screen_rect);
-			draw_HUD(game, world_rect);
+			draw_HUD(game, world_rect, world_rect.w/(float)game->world_w);
 		} break;
 
 		case GAME_SCENE_GAME_OVER: {

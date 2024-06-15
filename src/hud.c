@@ -181,7 +181,7 @@ void score_timer_hud_proc(ui_element* e) {
 	int combo_decay_seconds = SCORE_COMBO_DECAY/TICK_RATE;
 	float timer_seconds = (e->val/(float)TICK_RATE);
 
-	const int padding = 32;
+	const int padding = (int)(e->rect.w+0.5f)/4;
 	Vector2 offset = e->pos;
 	for (int t = 0; t < combo_decay_seconds; t++) {
 		platform_set_render_draw_color(
@@ -190,12 +190,12 @@ void score_timer_hud_proc(ui_element* e) {
 			e->color
 		);
 		platform_render_fill_rect(translate_rect(e->rect, offset));
-		offset.x += padding;
+		offset.x += e->rect.w+padding;
 	}
 	e->type = 0; // Skip default draw_ui
 }
 
-void draw_HUD(Game_State* game, Rectangle bounds) {
+void draw_HUD(Game_State* game, Rectangle bounds, float scale) {
 	Poly2D meter_bg = {
 		.vertices = {
 			{ .x =  -125, .y =   22 },
@@ -205,22 +205,24 @@ void draw_HUD(Game_State* game, Rectangle bounds) {
 		},
 		.vert_count = 4,
 	};
-	Poly2D weapon_and_score_bg = {
+	Poly2D weapon_bg = {
 		.vertices = {
 			{ .x =  -125, .y =   32 },
 			{ .x =  -113, .y =  -32 },
-			{ .x =   113, .y =  -32 },
-			{ .x =   125, .y =   32 }
+			{ .x =   100, .y =  -32 },
+			{ .x =   100, .y =   32 }
 		},
 		.vert_count = 4,
 	};
 
 	ui_element score_hud = {
 		.type = UI_TYPE_POLY,
-		.pos = {bounds.x+100, (bounds.y+bounds.h)-30},
-		.polygon = weapon_and_score_bg,
+		.pos = {100*scale,-30*scale},
+		.polygon = scale_poly2d(weapon_bg, (Vector2){-1, 1}),
 		.color = MENU_COLOR,
 	};
+	score_hud.x += bounds.x;
+	score_hud.y += (bounds.y+bounds.h);
 	ui_element score_children[] = {
 		{
 			.type = UI_TYPE_TEXT,
@@ -256,10 +258,13 @@ void draw_HUD(Game_State* game, Rectangle bounds) {
 
 	ui_element meter_hud = {
 		.type = UI_TYPE_POLY,
-		.pos = {bounds.x + (bounds.w / 2), (bounds.y+bounds.h) - 22},
+		.pos = {0, -22*scale},
 		.polygon = meter_bg,
 		.color = MENU_COLOR,
 	};
+	meter_hud.x += bounds.x + (bounds.w / 2);
+	meter_hud.y += (bounds.y+bounds.h);
+
 	ui_element meter_children[] = {
 		{
 			.type = UI_TYPE_POLY,
@@ -388,10 +393,12 @@ void draw_HUD(Game_State* game, Rectangle bounds) {
 
 	ui_element weapon_hud = {
 		.type = UI_TYPE_POLY,
-		.pos = {(bounds.x+bounds.w)-100, (bounds.y+bounds.h)-30},
-		.polygon = weapon_and_score_bg,
+		.pos = {-100*scale, -30*scale},
+		.polygon = weapon_bg,
 		.color = MENU_COLOR,
 	};
+	weapon_hud.x += (bounds.x+bounds.w);
+	weapon_hud.y += (bounds.y+bounds.h);
 	ui_element weapon_children[] = {
 		{
 			.type = UI_TYPE_TEXT,
@@ -441,6 +448,29 @@ void draw_HUD(Game_State* game, Rectangle bounds) {
 	};
 
 	for (int i = 0; i < array_length(hud); i++) {
+		hud[i].polygon = scale_poly2d(hud[i].polygon, (Vector2){scale, scale});
+		for (ui_element* child = hud[i].children; child != hud[i].children+hud[i].num_children; child++) {
+			child->pos = scale_vector2(child->pos, scale);
+			switch(child->type) {
+				case UI_TYPE_TEXT: {
+					child->text.size *= scale;
+				} break;
+
+				case UI_TYPE_POLY: {
+					child->polygon = scale_poly2d(child->polygon, (Vector2){scale, scale});
+				} break;
+
+				case UI_TYPE_RECT: {
+					child->rect = scale_rect(child->rect, (Vector2){scale, scale});
+				} break;
+
+				case UI_TYPE_TEXTURE: {
+					child->texture.dest = scale_rect(child->texture.dest, (Vector2){scale, scale});
+				} break;
+
+				default: {} break;
+			}
+		}
 		draw_ui_element(game, hud+i);
 	}
 

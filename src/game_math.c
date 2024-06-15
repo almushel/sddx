@@ -114,6 +114,18 @@ Rectangle translate_rect(Rectangle rect, Vector2 translation) {
 	return result;
 }
 
+Rectangle scale_rect(Rectangle rect, Vector2 scale) {
+	Rectangle result = {
+		.x = rect.x*scale.x,
+		.w = rect.w*scale.x,
+
+		.y = rect.y*scale.y,
+		.h = rect.h*scale.y,
+	};
+
+	return result;
+}
+
 Rectangle fit_rect(Rectangle inner, Rectangle outer) {
 	Rectangle result = inner;
 	float scale;
