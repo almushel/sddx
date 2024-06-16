@@ -45,16 +45,16 @@ typedef union Game_Player_Controller {
 	};
 } Game_Player_Controller;
 
-#define valid_scancode(key) 	 		(key > SDL_SCANCODE_UNKNOWN && key < SDL_NUM_SCANCODES)
+#define valid_scancode(key) 	 	(key > SDL_SCANCODE_UNKNOWN && key < SDL_NUM_SCANCODES)
 #define valid_controller_button(button) (button > SDL_CONTROLLER_BUTTON_INVALID && button < SDL_CONTROLLER_BUTTON_MAX)
 #define valid_controller_axis(axis)   	(axis > SDL_CONTROLLER_AXIS_INVALID && axis < SDL_CONTROLLER_AXIS_MAX)
 
-void poll_input						(Game_Input* input);
+void poll_input				(Game_Input* input);
 
-void process_key_event				(Game_Input* input, SDL_KeyboardEvent* event);
-bool is_key_pressed					(Game_Input* input, SDL_Scancode key);
-bool is_key_held					(Game_Input* input, SDL_Scancode key);
-bool is_key_released				(Game_Input* input,  SDL_Scancode key);
+void process_key_event			(Game_Input* input, SDL_KeyboardEvent* event);
+bool is_key_pressed			(Game_Input* input, SDL_Scancode key);
+bool is_key_held			(Game_Input* input, SDL_Scancode key);
+bool is_key_released			(Game_Input* input,  SDL_Scancode key);
 
 void process_controller_event		(Game_Input* input, SDL_Event* event);
 bool is_controller_button_pressed	(Game_Input* input, SDL_GameControllerButton button);
@@ -62,8 +62,8 @@ bool is_controller_button_held		(Game_Input* input, SDL_GameControllerButton but
 bool is_controller_button_released	(Game_Input* input, SDL_GameControllerButton button);
 
 bool is_game_control_pressed		(Game_Input* input, Game_Control* control);
-bool is_game_control_held			(Game_Input* input, Game_Control* control);
+bool is_game_control_held		(Game_Input* input, Game_Control* control);
 bool is_game_control_released		(Game_Input* input, Game_Control* control);
-float get_game_control_axis			(Game_Input* input, Game_Control* control);
+float get_game_control_axis		(Game_Input* input, Game_Control* control);
 
 #endif

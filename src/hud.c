@@ -13,7 +13,10 @@ typedef struct ui_element {
 	Vec2_Union(pos, x, y);
 	float angle;
 	RGBA_Color color;
-	int val;
+	union {
+		int* i;
+		float* f;
+	} val;
 
 	enum UI_Types {
 		UI_TYPE_UNDEFINED = 0,
@@ -37,7 +40,7 @@ typedef struct ui_element {
 } ui_element;
 
 void thrust_meter_proc(ui_element* e) {
-	float thrust_energy = SDL_clamp(e->val, 0, PLAYER_THRUST_MAX);
+	float thrust_energy = e->val.f ? SDL_clamp(*(e->val.f), 0, PLAYER_THRUST_MAX) : 0;
 
 	e->color = (RGBA_Color){
 		(209 - (thrust_energy)),
@@ -54,7 +57,7 @@ void thrust_meter_proc(ui_element* e) {
 }
 
 void weapon_heat_outer_proc(ui_element* e) {
-	float weapon_heat = SDL_clamp(e->val, 0, PLAYER_WEAPON_HEAT_MAX);
+	float weapon_heat = e->val.f ? SDL_clamp(*(e->val.f), 0, PLAYER_WEAPON_HEAT_MAX) : 0;
 	e->color = 
 		(weapon_heat < 100) ?
 		(RGBA_Color){17, 17, 17, 255} :
@@ -62,7 +65,7 @@ void weapon_heat_outer_proc(ui_element* e) {
 }
 
 void weapon_heat_inner_proc(ui_element* e) {
-	float weapon_heat = weapon_heat = SDL_clamp(e->val, 0, PLAYER_WEAPON_HEAT_MAX);
+	float weapon_heat = e->val.f ? SDL_clamp(*(e->val.f), 0, PLAYER_WEAPON_HEAT_MAX) : 0;
 
 	e->color = (RGBA_Color){
 		SDL_clamp(109 +		weapon_heat, 0, 255),
@@ -72,8 +75,10 @@ void weapon_heat_inner_proc(ui_element* e) {
 	};
 
 	float heatDelta = weapon_heat / PLAYER_WEAPON_HEAT_MAX;
-	e->polygon.vertices[2].x = e->polygon.vertices[1].x+(int)(heatDelta * 90);
-	e->polygon.vertices[3].x = e->polygon.vertices[0].x+(int)(heatDelta * 90);
+	float width1 = e->polygon.vertices[2].x - e->polygon.vertices[1].x;
+	float width2 = e->polygon.vertices[3].x - e->polygon.vertices[0].x;
+	e->polygon.vertices[2].x = e->polygon.vertices[1].x+(int)(heatDelta * width1);
+	e->polygon.vertices[3].x = e->polygon.vertices[0].x+(int)(heatDelta * width2);
 }
 
 
@@ -106,7 +111,9 @@ void draw_ui_element(Game_State* game, ui_element* e) {
 			if (e->text.str != 0 && e->text.str[0] != '\0') {
 				len = SDL_strlcpy(buf, e->text.str, array_length(buf));
 			}
-			SDL_itoa(e->val, buf+len, 10);
+			if (e->val.i) {
+				SDL_itoa(*(e->val.i), buf+len, 10);
+			}
 			platform_set_render_draw_color(e->color);
 			render_text_aligned(game->font, e->text.size, e->pos.x, e->pos.y, buf, e->text.align);
 		} break;
@@ -135,7 +142,7 @@ void weapon_label_proc(ui_element* e) {
 	if (e->type != UI_TYPE_TEXT) {
 		return;
 	}
-	switch (e->val) {
+	switch (*(e->val.i)) {
 		case PLAYER_WEAPON_MG: {
 			e->text.str = "Machine Gun";
 		} break;
@@ -152,15 +159,16 @@ void weapon_label_proc(ui_element* e) {
 			e->text.str = "Unknown";
 		} break;
 	}
+	e->val.i = 0;
 }
 
 //TODO: Icon for "Unknown"
 void weapon_icon_proc(ui_element* e) {
-	if (e->type != UI_TYPE_TEXTURE || e->val == 0) {
+	if (e->type != UI_TYPE_TEXTURE || e->val.i == 0) {
 		return;
 	}
 
-	switch (e->val) {
+	switch (*(e->val.i)) {
 		case PLAYER_WEAPON_MG: {
 			e->texture.name = "HUD MG";
 		} break;
@@ -178,8 +186,9 @@ void weapon_icon_proc(ui_element* e) {
 }
 
 void score_timer_hud_proc(ui_element* e) {
+	float timer = e->val.f ? *(e->val.f) : 0;
 	int combo_decay_seconds = SCORE_COMBO_DECAY/TICK_RATE;
-	float timer_seconds = (e->val/(float)TICK_RATE);
+	float timer_seconds = (timer/(float)TICK_RATE);
 
 	const int padding = (int)(e->rect.w+0.5f)/4;
 	Vector2 offset = e->pos;
@@ -230,7 +239,7 @@ void draw_HUD(Game_State* game, Rectangle bounds, float scale) {
 				.str = "Score: ",
 				.size = 20
 			},
-			.val = game->score.total,
+			.val.i = &(game->score.total),
 			.pos = {-92, 22},
 			.color = WHITE,
 		},
@@ -238,10 +247,10 @@ void draw_HUD(Game_State* game, Rectangle bounds, float scale) {
 			.type = UI_TYPE_TEXT,
 			.text = {
 				.str = "x",
-				.size = 20,
+				.size = 32,
 			},
-			.val = game->score.multiplier,
-			.pos = {86, -6},
+			.val.i = &(game->score.multiplier),
+			.pos = {74, -4},
 			.color = WHITE,
 		},
 		{
@@ -249,7 +258,7 @@ void draw_HUD(Game_State* game, Rectangle bounds, float scale) {
 			.pos = {-92, -26},
 			.rect = {0,0, 26, 26},
 			.color = {125, 125, 125, 255},
-			.val = game->score.timer,
+			.val.f = &(game->score.timer),
 			.draw = score_timer_hud_proc,
 		}
 	};
@@ -290,14 +299,14 @@ void draw_HUD(Game_State* game, Rectangle bounds, float scale) {
 		},
 		{
 			.type = UI_TYPE_TEXT,
-			.val = game->player_state.lives,
+			.val.i = &(game->player_state.lives),
 			.text = {.size = 34, .align = "center" },
 			.pos = {1, 16},
 			.color = BLACK,
 		},
 		{
 			.type = UI_TYPE_TEXT,
-			.val = game->player_state.lives,
+			.val.i = &(game->player_state.lives),
 			.text = {.size = 30, .align = "center" },
 			.pos = {1, 15},
 			.color = WHITE,
@@ -349,14 +358,14 @@ void draw_HUD(Game_State* game, Rectangle bounds, float scale) {
 				},
 				.vert_count = 4,
 			},
-			.val = game->player_state.thrust_energy,
+			.val.f = &(game->player_state.thrust_energy),
 			.draw = thrust_meter_proc,
 		},
 
 		{
 			.type = UI_TYPE_POLY,
 			.pos = {60, 6},
-			.val = game->player_state.weapon_heat,
+			.val.f = &(game->player_state.weapon_heat),
 			.polygon = {
 				.vertices = {
 					{ .x =  -44, .y =   10 },
@@ -372,7 +381,7 @@ void draw_HUD(Game_State* game, Rectangle bounds, float scale) {
 		{
 			.type = UI_TYPE_POLY,
 			.pos = {60, 6},
-			.val = game->player_state.weapon_heat,
+			.val.f = &(game->player_state.weapon_heat),
 			.polygon = {
 				.vertices = {
 					{ .x =  -42, .y =   8 },
@@ -399,6 +408,7 @@ void draw_HUD(Game_State* game, Rectangle bounds, float scale) {
 	};
 	weapon_hud.x += (bounds.x+bounds.w);
 	weapon_hud.y += (bounds.y+bounds.h);
+	int current_weapon = (game->player) ? (int)(game->player->type_data) : 0;
 	ui_element weapon_children[] = {
 		{
 			.type = UI_TYPE_TEXT,
@@ -416,7 +426,7 @@ void draw_HUD(Game_State* game, Rectangle bounds, float scale) {
 				.size = 36,
 				.align = "center",
 			},
-			.val = game->player_state.ammo,
+			.val = &(game->player_state.ammo),
 			.pos = {-60, 18},
 			.color = SD_BLUE,
 		},
@@ -428,13 +438,13 @@ void draw_HUD(Game_State* game, Rectangle bounds, float scale) {
 			},
 			.pos = {40, -18},
 			.color = WHITE,
-			.val = game->player ? game->player->type_data : 0,
+			.val = &current_weapon, 
 			.draw = weapon_label_proc
 		},
 		{
 			.type = UI_TYPE_TEXTURE,
 			.pos = {40, 6},
-			.val = game->player ? game->player->type_data : 0,
+			.val = &current_weapon,
 			.draw = weapon_icon_proc,
 		}
 	};
