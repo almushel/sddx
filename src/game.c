@@ -1,10 +1,13 @@
-#include "defs.h"
+#include "SDL_log.h"
 #include "platform.h"
-#include "game_input.c"
+#include "defs.h"
 #include "assets.h"
+
+#include "game_input.c"
 #include "graphics.c"
 #include "particles.c"
 #include "entities.c"
+#include "ui.c"
 #include "hud.c"
 #include "score.c"
 
@@ -336,35 +339,64 @@ void draw_main_menu(Game_State* game) {
 }
 
 void draw_scene_ui(Game_State* game, Game_Scene scene) {
+	iVector2 screen = platform_get_window_size();
+	Rectangle screen_rect = {0,0,screen.x, screen.y};
+	Rectangle world_rect = {0,0,game->world_w, game->world_h};
+	if (game->fit_world_to_screen) {
+		world_rect = fit_rect(world_rect, screen_rect);
+	}
+	world_rect = center_rect(world_rect, screen_rect);
+	float scale = world_rect.w/(float)game->world_w;
+	
 	switch(scene) {
 		case GAME_SCENE_MAIN_MENU: {
 			draw_main_menu(game);
 		} break;
 
 		case GAME_SCENE_GAMEPLAY: {
-			iVector2 screen = platform_get_window_size();
-			Rectangle screen_rect = {0,0,screen.x, screen.y};
-			Rectangle world_rect = {0,0,game->world_w, game->world_h};
-			if (game->fit_world_to_screen) {
-				world_rect = fit_rect(world_rect, screen_rect);
-			}
-			world_rect = center_rect(world_rect, screen_rect);
-			draw_HUD(game, world_rect, world_rect.w/(float)game->world_w);
+			draw_HUD(game, world_rect, scale);
 		} break;
 
 		case GAME_SCENE_GAME_OVER: {
-			char score_buf[24];
-			SDL_itoa(game->score.total, score_buf, 10);
-			iVector2 screen = platform_get_window_size();
-			Vector2 offset = {(float)screen.x/2.0f, (float)screen.y/2.0f - 96};
+			ui_element game_over = {0};
+			ui_element children[] = {
+				{
+					.type = UI_TYPE_TEXT,
+					.pos = {0, -64},
+					.color = RED,
+					.text = {
+						.str = "GAME_OVER",
+						.size = 64,
+						.align = "center",
+					}
+				},
+				{
+					.type = UI_TYPE_TEXT,
+					.pos = {0, 0},
+					.color = WHITE,
+					.text = {
+						.str = "Final Score:",
+						.size = 48,
+						.align = "center",
+					}
+				},
+				{
+					.type = UI_TYPE_TEXT,
+					.pos = {0, 48},
+					.color = WHITE,
+					.val.i = &(game->score.total),
+					.text = {
+						.size = 32,
+						.align = "center",
+					}
+				},
+			};
+			game_over.children = children;
+			game_over.num_children = array_length(children);
 
-			platform_set_render_draw_color(RED);
-			render_text_aligned(game->font, 64, offset.x, offset.y - 96, "GAME OVER", "center");
-			offset.y += 64;
-			platform_set_render_draw_color(WHITE);
-			render_text_aligned(game->font, 48, offset.x, offset.y, "Final Score:", "center");
-			offset.y += 48;
-			render_text_aligned(game->font, 32, offset.x, offset.y, score_buf, "center");
+			scale_ui_element(&game_over, scale);
+			game_over.pos = (Vector2){world_rect.x+(world_rect.w/2.0f), world_rect.y+(world_rect.h/2.0f)},
+			draw_ui_element(game, &game_over);
 		} break;
 
 		case GAME_SCENE_HIGH_SCORES: {

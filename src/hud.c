@@ -1,43 +1,10 @@
-#include "SDL_render.h"
 #include "SDL_stdinc.h"
 #include "platform.h"
 #include "defs.h"
-#include "assets.h"
-#include "graphics.h"
 #include "game_math.h"
-#include <stddef.h>
+#include "ui.h"
 
 #define MENU_COLOR (RGBA_Color){56, 56, 56, 255}
-
-typedef struct ui_element {
-	Vec2_Union(pos, x, y);
-	float angle;
-	RGBA_Color color;
-	union {
-		int* i;
-		float* f;
-	} val;
-
-	enum UI_Types {
-		UI_TYPE_UNDEFINED = 0,
-		UI_TYPE_TEXT,
-		UI_TYPE_RECT,
-		UI_TYPE_POLY,
-		UI_TYPE_TEXTURE
-	} type;
-
-	union {
-		Poly2D polygon;
-		Rectangle rect;
-		struct {Rectangle dest; char* name; } texture;
-		struct {int size; char* str; char* align; } text;
-	};
-
-	void (*draw)(struct ui_element* element);
-	
-	int num_children;
-	struct ui_element* children;
-} ui_element;
 
 void thrust_meter_proc(ui_element* e) {
 	float thrust_energy = e->val.f ? SDL_clamp(*(e->val.f), 0, PLAYER_THRUST_MAX) : 0;
@@ -79,63 +46,6 @@ void weapon_heat_inner_proc(ui_element* e) {
 	float width2 = e->polygon.vertices[3].x - e->polygon.vertices[0].x;
 	e->polygon.vertices[2].x = e->polygon.vertices[1].x+(int)(heatDelta * width1);
 	e->polygon.vertices[3].x = e->polygon.vertices[0].x+(int)(heatDelta * width2);
-}
-
-
-void draw_ui_element(Game_State* game, ui_element* e) {
-	if (e->draw != 0) {
-		e->draw(e);
-	}
-
-	switch(e->type) {
-		case UI_TYPE_TEXTURE: {
-			SDL_Texture* texture = game_get_texture(game, e->texture.name);
-			if (texture) {
-				Rectangle dest = e->texture.dest;
-				if (dest.w == 0 && dest.h == 0) {
-					int w, h;
-					SDL_QueryTexture(texture, NULL, NULL, &w, &h);
-					dest.w = w;
-					dest.h = h;
-				}
-				Vector2 pos = {e->pos.x-dest.w/2.0f, e->pos.y-dest.h/2.0f};
-				dest = translate_rect(dest, pos);
-
-				platform_render_copy(texture, 0, &dest, e->angle, 0, 0);
-			}
-		} break;
-
-		case UI_TYPE_TEXT: {
-			char buf[64];
-			size_t len = 0;
-			if (e->text.str != 0 && e->text.str[0] != '\0') {
-				len = SDL_strlcpy(buf, e->text.str, array_length(buf));
-			}
-			if (e->val.i) {
-				SDL_itoa(*(e->val.i), buf+len, 10);
-			}
-			platform_set_render_draw_color(e->color);
-			render_text_aligned(game->font, e->text.size, e->pos.x, e->pos.y, buf, e->text.align);
-		} break;
-
-		case UI_TYPE_POLY: {
-			Poly2D p = translate_poly2d(e->polygon, e->pos);
-			render_fill_polygon(p.vertices, p.vert_count, e->color);
-		} break;
-
-		case UI_TYPE_RECT: {
-			Rectangle rect = translate_rect(e->rect, e->pos);
-			platform_set_render_draw_color(e->color);
-			platform_render_draw_rect(rect);
-		} break;
-
-		default: break;
-	}
-
-	for (int i = 0; i < e->num_children; i++) {
-		(e->children+i)->pos = add_vector2(e->pos, (e->children+i)->pos);
-		draw_ui_element(game, e->children+i);
-	}
 }
 
 void weapon_label_proc(ui_element* e) {
@@ -460,26 +370,7 @@ void draw_HUD(Game_State* game, Rectangle bounds, float scale) {
 	for (int i = 0; i < array_length(hud); i++) {
 		hud[i].polygon = scale_poly2d(hud[i].polygon, (Vector2){scale, scale});
 		for (ui_element* child = hud[i].children; child != hud[i].children+hud[i].num_children; child++) {
-			child->pos = scale_vector2(child->pos, scale);
-			switch(child->type) {
-				case UI_TYPE_TEXT: {
-					child->text.size *= scale;
-				} break;
-
-				case UI_TYPE_POLY: {
-					child->polygon = scale_poly2d(child->polygon, (Vector2){scale, scale});
-				} break;
-
-				case UI_TYPE_RECT: {
-					child->rect = scale_rect(child->rect, (Vector2){scale, scale});
-				} break;
-
-				case UI_TYPE_TEXTURE: {
-					child->texture.dest = scale_rect(child->texture.dest, (Vector2){scale, scale});
-				} break;
-
-				default: {} break;
-			}
+			scale_ui_element(child, scale);
 		}
 		draw_ui_element(game, hud+i);
 	}
