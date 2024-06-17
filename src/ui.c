@@ -4,6 +4,66 @@
 #include "platform.h"
 #include "ui.h"
 
+ui_element new_ui_text(Vector2 pos, int* val, RGBA_Color color, char* str, int size, const char* align) {
+	ui_element result = {
+		.type = UI_TYPE_TEXT,
+		.pos = pos,
+		.color = color,
+		.val.i = val,
+		.text = {
+			.str = str,
+			.size = size,
+			.align = (char*)align,
+		}
+	};
+
+	return result;
+}
+
+inline ui_element new_ui_text_proc(Vector2 pos, int* val, RGBA_Color color, ui_proc proc, char* str, int size, const char* align) {
+	ui_element result = new_ui_text(pos, val, color, str, size, align);
+	result.draw = proc;
+
+	return result;
+}
+
+ui_element new_ui_rect(Vector2 pos, float* val, RGBA_Color color, Rectangle rect) {
+	ui_element result = {
+		.type = UI_TYPE_RECT,
+		.pos = pos,
+		.rect = rect,
+		.color = color,
+		.val.f = val,
+	};
+
+	return result;
+}
+
+ui_element new_ui_rect_proc(Vector2 pos, float* val, ui_proc proc, RGBA_Color color, Rectangle rect) {
+	ui_element result = new_ui_rect(pos, val, color, rect);
+	result.draw = proc;
+
+	return result;
+}
+
+ui_element new_ui_poly(Vector2 pos, RGBA_Color color, Poly2D polygon) {
+	ui_element result = {
+		.type = UI_TYPE_POLY,
+		.pos = pos,
+		.color = color,
+		.polygon = polygon,
+	};
+
+	return result;
+}
+
+ui_element new_ui_poly_proc(Vector2 pos, RGBA_Color color, ui_proc proc, Poly2D polygon) {
+	ui_element result = new_ui_poly(pos, color, polygon);
+	result.draw = proc;
+
+	return result;
+}
+
 void draw_ui_element(Game_State* game, ui_element* e) {
 	if (e->draw != 0) {
 		e->draw(e);

@@ -133,71 +133,37 @@ void draw_HUD(Game_State* game, Rectangle bounds, float scale) {
 		},
 		.vert_count = 4,
 	};
+	Poly2D score_bg = scale_poly2d(weapon_bg, (Vector2){-1, 1});
 
-	ui_element score_hud = {
-		.type = UI_TYPE_POLY,
-		.pos = {100*scale,-30*scale},
-		.polygon = scale_poly2d(weapon_bg, (Vector2){-1, 1}),
-		.color = MENU_COLOR,
-	};
+	ui_element score_hud = new_ui_poly((Vector2){100*scale,-30*scale}, MENU_COLOR, score_bg);
 	score_hud.x += bounds.x;
 	score_hud.y += (bounds.y+bounds.h);
 	ui_element score_children[] = {
-		{
-			.type = UI_TYPE_TEXT,
-			.text = {
-				.str = "Score: ",
-				.size = 20
-			},
-			.val.i = &(game->score.total),
-			.pos = {-92, 22},
-			.color = WHITE,
-		},
-		{
-			.type = UI_TYPE_TEXT,
-			.text = {
-				.str = "x",
-				.size = 32,
-			},
-			.val.i = &(game->score.multiplier),
-			.pos = {74, -4},
-			.color = WHITE,
-		},
-		{
-			.type = UI_TYPE_RECT,
-			.pos = {-92, -26},
-			.rect = {0,0, 26, 26},
-			.color = {125, 125, 125, 255},
-			.val.f = &(game->score.timer),
-			.draw = score_timer_hud_proc,
-		}
+		new_ui_text((Vector2){-92, 22}, &(game->score.total), WHITE, "Score: ", 20, "left"),
+		new_ui_text((Vector2){74, -4}, &(game->score.multiplier), WHITE, "x", 32, "left"),
+		new_ui_rect_proc(
+			(Vector2){-92, -26}, &(game->score.timer), score_timer_hud_proc, 
+			(RGBA_Color){125, 125, 125, 255}, (Rectangle){0,0, 26, 26}
+		)
 	};
 	score_hud.children = score_children;
 	score_hud.num_children = array_length(score_children);
 
-	ui_element meter_hud = {
-		.type = UI_TYPE_POLY,
-		.pos = {0, -22*scale},
-		.polygon = meter_bg,
-		.color = MENU_COLOR,
-	};
+	ui_element meter_hud = new_ui_poly((Vector2){0, -22*scale}, MENU_COLOR, meter_bg);
 	meter_hud.x += bounds.x + (bounds.w / 2);
 	meter_hud.y += (bounds.y+bounds.h);
 
 	ui_element meter_children[] = {
-		{
-			.type = UI_TYPE_POLY,
-			.pos = {1,-2},
-			.color = SD_BLUE,
-			.polygon = {
+		new_ui_poly((Vector2){1,-2}, SD_BLUE,
+			(Poly2D){
 				.vertices = {
 					{ .x =  0 , .y = -20 },
 					{ .x =  13, .y =  20 },
 					{ .x = -13, .y =  20 },
 				},
 				.vert_count = 3,
-			},
-		},
+			}
+		),
 		{
 			.type = UI_TYPE_TEXTURE,
 			.pos = {1, 7},
@@ -207,45 +173,12 @@ void draw_HUD(Game_State* game, Rectangle bounds, float scale) {
 				.dest = {0,0,27,30},
 			},
 		},
-		{
-			.type = UI_TYPE_TEXT,
-			.val.i = &(game->player_state.lives),
-			.text = {.size = 34, .align = "center" },
-			.pos = {1, 16},
-			.color = BLACK,
-		},
-		{
-			.type = UI_TYPE_TEXT,
-			.val.i = &(game->player_state.lives),
-			.text = {.size = 30, .align = "center" },
-			.pos = {1, 15},
-			.color = WHITE,
-		},
-		{
-			.type = UI_TYPE_TEXT,
-			.pos = {-64,-8},
-			.text = {
-				.str = "Thrust Power",
-				.size = 14,
-				.align = "center",
-			},
-			.color = WHITE,
-		},
-		{
-			.type = UI_TYPE_TEXT,
-			.pos = {64, -8},
-			.text = {
-				.str = "Weapon Temp",
-				.size = 14,
-				.align = "center",
-			},
-			.color = WHITE,
-		},
-		{
-			.type = UI_TYPE_POLY,
-			.pos = {-60, 6},
-			.color = {17, 17, 17, 255},
-			.polygon = {
+		new_ui_text((Vector2){1,16}, &(game->player_state.lives), BLACK, "", 34, "center"),
+		new_ui_text((Vector2){1,15}, &(game->player_state.lives), WHITE, "", 30, "center"),
+		new_ui_text((Vector2){-64,-8}, NULL, WHITE, "Thrust Power", 14, "center"),
+		new_ui_text((Vector2){64,-8}, NULL, WHITE, "Weapon Temp", 14, "center"),
+		new_ui_poly((Vector2){-60, 6}, (RGBA_Color){17, 17, 17, 255},
+			(Poly2D){
 				.vertices = {
 					{ .x =  -50, .y =   10 },
 					{ .x =  -44, .y =  -10 },
@@ -253,8 +186,8 @@ void draw_HUD(Game_State* game, Rectangle bounds, float scale) {
 					{ .x =   46, .y =   10 }
 				},
 				.vert_count = 4,
-			},
-		},
+			}
+		),
 		{
 			.type = UI_TYPE_POLY,
 			.pos = {-60, 6},
@@ -304,53 +237,18 @@ void draw_HUD(Game_State* game, Rectangle bounds, float scale) {
 			.color = {255, 0, 0, 255},
 			.draw = weapon_heat_inner_proc,
 		}
-
-
 	};
 	meter_hud.children = meter_children;
 	meter_hud.num_children = array_length(meter_children);
 
-	ui_element weapon_hud = {
-		.type = UI_TYPE_POLY,
-		.pos = {-100*scale, -30*scale},
-		.polygon = weapon_bg,
-		.color = MENU_COLOR,
-	};
+	ui_element weapon_hud = new_ui_poly((Vector2){-100*scale, -30*scale}, MENU_COLOR, weapon_bg);
 	weapon_hud.x += (bounds.x+bounds.w);
 	weapon_hud.y += (bounds.y+bounds.h);
 	int current_weapon = (game->player) ? (int)(game->player->type_data) : 0;
 	ui_element weapon_children[] = {
-		{
-			.type = UI_TYPE_TEXT,
-			.text = {
-				.str = "Ammo",
-				.size = 16,
-				.align = "center",
-			},
-			.pos = (Vector2){-60, -18},
-			.color = WHITE,
-		},
-		{
-			.type = UI_TYPE_TEXT,
-			.text ={
-				.size = 36,
-				.align = "center",
-			},
-			.val = &(game->player_state.ammo),
-			.pos = {-60, 18},
-			.color = SD_BLUE,
-		},
-		{
-			.type = UI_TYPE_TEXT,
-			.text = {
-				.size = 16,
-				.align = "center",
-			},
-			.pos = {40, -18},
-			.color = WHITE,
-			.val = &current_weapon, 
-			.draw = weapon_label_proc
-		},
+		new_ui_text((Vector2){-60, -18}, 0, WHITE, "Ammo", 16, "center"),
+		new_ui_text((Vector2){-60, 18}, &(game->player_state.ammo), SD_BLUE, "", 36, "center"),
+		new_ui_text_proc((Vector2){40, -18}, &current_weapon, WHITE, weapon_label_proc, "", 16, "center"),
 		{
 			.type = UI_TYPE_TEXTURE,
 			.pos = {40, 6},

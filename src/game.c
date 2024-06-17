@@ -10,6 +10,7 @@
 #include "ui.c"
 #include "hud.c"
 #include "score.c"
+#include "ui.h"
 
 #define clamp(value, min, max) (value > max) ? max : (value < min) ? min : value;
 
@@ -254,6 +255,8 @@ void update_game(Game_State* game, float dt) {
 				Mix_PauseMusic();
 				Mix_PlayChannel(-1, game_get_sfx(game, "Game Over"), 0);
 			} break;
+
+			default: { break; }
 		}
 
 		current_scene = next_scene;
@@ -291,46 +294,47 @@ void draw_game_world(Game_State* game) {
 	draw_entities(game);
 }
 
-void draw_main_menu(Game_State* game) {
-	iVector2 offset = platform_get_window_size();
-	offset.x = (float)offset.x / 2.0f;
-	offset.y = (float)offset.y / 2.5f;
+void draw_main_menu(Game_State* game, Rectangle bounds, float scale) {
+	Vector2 origin = {
+		.x = bounds.x+(bounds.w/2.0f),
+		.y = bounds.y+(bounds.h/2.5f)
+	};
 
 	bool controller_enabled = (SDL_NumJoysticks() > 0);
 
 	platform_set_render_draw_color(SD_BLUE);
-	render_text_aligned(game->font, 64, offset.x, offset.y, "Space Drifter", "center");
+	render_text_aligned(game->font, 64, origin.x, origin.y, "Space Drifter", "center");
 	char* press_start_str = controller_enabled ? "Press FIRE to begin!" : "Press START to begin!";
 	platform_set_render_draw_color((RGBA_Color){255, 165, 0, 255});
-	render_text_aligned(game->font, 20, offset.x, offset.y + 50, press_start_str, "center");
+	render_text_aligned(game->font, 20, origin.x, origin.y + 50, press_start_str, "center");
 
 	platform_set_render_draw_color((RGBA_Color){105, 105, 105, 128});
-	platform_render_fill_rect((Rectangle){offset.x - 130, offset.y + 75, 260, 145});
+	platform_render_fill_rect((Rectangle){origin.x - 130, origin.y + 75, 260, 145});
 
-	platform_set_render_draw_color((RGBA_Color){255,255,255,255});
+	platform_set_render_draw_color(WHITE);
 
-	offset.x -= 110;
-	render_text(game->font, 15, offset.x, offset.y + 100, "<");
-	render_text(game->font, 15, offset.x, offset.y + 120, ">");
-	render_text(game->font, 15, offset.x, offset.y + 140, "^");
+	origin.x -= 110;
+	render_text(game->font, 15, origin.x, origin.y + 100, "<");
+	render_text(game->font, 15, origin.x, origin.y + 120, ">");
+	render_text(game->font, 15, origin.x, origin.y + 140, "^");
 
 	if (controller_enabled) {
-		render_text(game->font, 15, offset.x, offset.y + 160,"A" );
-		render_text(game->font, 15, offset.x, offset.y + 180,"LB");
-		render_text(game->font, 15, offset.x, offset.y + 200,"RB");
+		render_text(game->font, 15, origin.x, origin.y + 160,"A" );
+		render_text(game->font, 15, origin.x, origin.y + 180,"LB");
+		render_text(game->font, 15, origin.x, origin.y + 200,"RB");
 	} else {
-		render_text(game->font, 15, offset.x, offset.y + 160, "Spacebar");
-		render_text(game->font, 15, offset.x, offset.y + 180, "Q");
-		render_text(game->font, 15, offset.x, offset.y + 200, "E");
+		render_text(game->font, 15, origin.x, origin.y + 160, "Spacebar");
+		render_text(game->font, 15, origin.x, origin.y + 180, "Q");
+		render_text(game->font, 15, origin.x, origin.y + 200, "E");
 	}
 
-	offset.x += 220;
-	render_text_aligned(game->font, 15, offset.x, offset.y + 100,	"Rotate Left"	, "right");
-	render_text_aligned(game->font, 15, offset.x, offset.y + 120,	"Rotate Right"	, "right");
-	render_text_aligned(game->font, 15, offset.x, offset.y + 140,	"Accelerate"	, "right");
-	render_text_aligned(game->font, 15, offset.x, offset.y + 160,	"Fire"			, "right");
-	render_text_aligned(game->font, 15, offset.x, offset.y + 180,	"Thrust Left"	, "right");
-	render_text_aligned(game->font, 15, offset.x, offset.y + 200,	"Thrust Right"	, "right");
+	origin.x += 220;
+	render_text_aligned(game->font, 15, origin.x, origin.y + 100,	"Rotate Left"	, "right");
+	render_text_aligned(game->font, 15, origin.x, origin.y + 120,	"Rotate Right"	, "right");
+	render_text_aligned(game->font, 15, origin.x, origin.y + 140,	"Accelerate"	, "right");
+	render_text_aligned(game->font, 15, origin.x, origin.y + 160,	"Fire"			, "right");
+	render_text_aligned(game->font, 15, origin.x, origin.y + 180,	"Thrust Left"	, "right");
+	render_text_aligned(game->font, 15, origin.x, origin.y + 200,	"Thrust Right"	, "right");
 
 	if (controller_enabled) {
 		platform_set_render_draw_color((RGBA_Color){255, 0, 0, 255});
@@ -350,7 +354,7 @@ void draw_scene_ui(Game_State* game, Game_Scene scene) {
 	
 	switch(scene) {
 		case GAME_SCENE_MAIN_MENU: {
-			draw_main_menu(game);
+			draw_main_menu(game, world_rect, scale);
 		} break;
 
 		case GAME_SCENE_GAMEPLAY: {
@@ -360,36 +364,9 @@ void draw_scene_ui(Game_State* game, Game_Scene scene) {
 		case GAME_SCENE_GAME_OVER: {
 			ui_element game_over = {0};
 			ui_element children[] = {
-				{
-					.type = UI_TYPE_TEXT,
-					.pos = {0, -64},
-					.color = RED,
-					.text = {
-						.str = "GAME_OVER",
-						.size = 64,
-						.align = "center",
-					}
-				},
-				{
-					.type = UI_TYPE_TEXT,
-					.pos = {0, 0},
-					.color = WHITE,
-					.text = {
-						.str = "Final Score:",
-						.size = 48,
-						.align = "center",
-					}
-				},
-				{
-					.type = UI_TYPE_TEXT,
-					.pos = {0, 48},
-					.color = WHITE,
-					.val.i = &(game->score.total),
-					.text = {
-						.size = 32,
-						.align = "center",
-					}
-				},
+				new_ui_text((Vector2){0, -64}, 0, RED, "GAME_OVER", 64, "center"),
+				new_ui_text((Vector2){0,   0}, 0, WHITE, "Final Score", 48, "center"),
+				new_ui_text((Vector2){0,  48}, &(game->score.total), WHITE, "", 32, "center"),
 			};
 			game_over.children = children;
 			game_over.num_children = array_length(children);
@@ -400,29 +377,24 @@ void draw_scene_ui(Game_State* game, Game_Scene scene) {
 		} break;
 
 		case GAME_SCENE_HIGH_SCORES: {
-			char score_buf[24];
-			SDL_itoa(game->score.total, score_buf, 10);
-			iVector2 screen = platform_get_window_size();
-			Vector2 offset = {(float)screen.x/2.0f, (float)screen.y/4.0f};
-			platform_set_render_draw_color(WHITE);
-			render_text_aligned(game->font, 48, offset.x, offset.y, "HIGH SCORES", "center");
-			offset.y += 64.0f;
+			ui_element high_score = new_ui_text((Vector2){0}, NULL, WHITE, "HIGH_SCORES", 48, "center");
+			ui_element score_list[10];
+			high_score.children = score_list;
+			high_score.num_children = array_length(score_list);
 
-			Vector2 line[2] = {
-				{screen.x*0.25f, offset.y},
-				{screen.x*0.75f, offset.y}
-			};
-			for (int i = 0; i < 10; i++) {
-				line[0].y = line[1].y = offset.y-30;
-				platform_render_draw_lines(line, 2);
-
-				render_text_aligned(game->font, 32, offset.x, offset.y, score_buf, 0);
-				offset.y += 40;
+			float padding = 40;
+			Vector2 pos = {0, padding};
+			for (int i = 0; i < array_length(score_list); i++) {
+				score_list[i] = new_ui_text(pos, &(game->score.total), WHITE, 0, 32, "center");
+				pos.y += padding;
 			}
 
-			line[0].y = line[1].y = offset.y-30;
-			platform_render_draw_lines(line, 2);
-			
+			scale_ui_element(&high_score, scale);
+			high_score.pos = (Vector2) {
+				world_rect.x+(world_rect.w/2.0f),
+				world_rect.y+(world_rect.h/4.0f)
+			};
+			draw_ui_element(game, &high_score);
 		} break;
 		
 		default: {}

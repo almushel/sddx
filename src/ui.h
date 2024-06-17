@@ -3,7 +3,11 @@
 
 #include "defs.h"
 
-typedef struct ui_element {
+typedef struct ui_element ui_element;
+
+typedef void (ui_proc) (ui_element* element);
+
+struct ui_element {
 	Vec2_Union(pos, x, y);
 	float angle;
 	RGBA_Color color;
@@ -31,8 +35,15 @@ typedef struct ui_element {
 	
 	int num_children;
 	struct ui_element* children;
-} ui_element;
+};
 
+
+ui_element new_ui_text(Vector2 pos, int* val, RGBA_Color color, char* str, int size, const char* align);
+ui_element new_ui_text_proc(Vector2 pos, int* val, RGBA_Color color, ui_proc proc, char* str, int size, const char* align);
+ui_element new_ui_rect(Vector2 pos, float* val, RGBA_Color color, Rectangle rect);
+ui_element new_ui_rect_proc(Vector2 pos, float* val, ui_proc proc, RGBA_Color color, Rectangle rect);
+ui_element new_ui_poly(Vector2 pos, RGBA_Color color, Poly2D polygon);
+ui_element new_ui_poly_proc(Vector2 pos, RGBA_Color color, ui_proc proc, Poly2D polygon);
 
 void draw_ui_element(Game_State* game, ui_element* e);
 void scale_ui_element(ui_element* e, float scale);
