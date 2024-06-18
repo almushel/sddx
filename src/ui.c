@@ -1,3 +1,4 @@
+#include "SDL_render.h"
 #include "assets.h"
 #include "game_math.h"
 #include "graphics.h"
@@ -71,7 +72,7 @@ void draw_ui_element(Game_State* game, ui_element* e) {
 
 	switch(e->type) {
 		case UI_TYPE_TEXTURE: {
-			SDL_Texture* texture = game_get_texture(game, e->texture.name);
+			SDL_Texture* texture = e->texture.texture;
 			if (texture) {
 				Rectangle dest = e->texture.dest;
 				if (dest.w == 0 && dest.h == 0) {
@@ -108,7 +109,7 @@ void draw_ui_element(Game_State* game, ui_element* e) {
 		case UI_TYPE_RECT: {
 			Rectangle rect = translate_rect(e->rect, e->pos);
 			platform_set_render_draw_color(e->color);
-			platform_render_draw_rect(rect);
+			platform_render_fill_rect(rect);
 		} break;
 
 		default: break;
@@ -136,6 +137,15 @@ void scale_ui_element(ui_element* e, float scale) {
 		} break;
 
 		case UI_TYPE_TEXTURE: {
+			Rectangle* dest = &(e->texture.dest);
+			if ( (dest->x+dest->y+dest->w+dest->h) == 0 ) {
+				int width, height;
+				SDL_QueryTexture(e->texture.texture, 0, 0, &width, &height);
+
+				e->texture.dest.w = (float)width;
+				e->texture.dest.h = (float)height;
+			}
+
 			e->texture.dest = scale_rect(e->texture.dest, (Vector2){scale, scale});
 		} break;
 

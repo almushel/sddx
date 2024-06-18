@@ -302,39 +302,39 @@ void draw_main_menu(Game_State* game, Rectangle bounds, float scale) {
 
 	bool controller_enabled = (SDL_NumJoysticks() > 0);
 
-	platform_set_render_draw_color(SD_BLUE);
-	render_text_aligned(game->font, 64, origin.x, origin.y, "Space Drifter", "center");
-	char* press_start_str = controller_enabled ? "Press FIRE to begin!" : "Press START to begin!";
-	platform_set_render_draw_color((RGBA_Color){255, 165, 0, 255});
-	render_text_aligned(game->font, 20, origin.x, origin.y + 50, press_start_str, "center");
+	ui_element main_menu = new_ui_text(origin, 0, SD_BLUE, "Space Drifter", 64, "center");
+	ui_element children[] = {
+		new_ui_text(
+			(Vector2){0, 50}, 0,(RGBA_Color){255, 165, 0, 255},  
+			controller_enabled ? "Press START to begin!" : "Press FIRE to begin!",
+			20, "center"
+		),
+		new_ui_rect((Vector2){-130, 75}, 0,(RGBA_Color){105, 105, 105, 128}, (Rectangle){0,0,260,145}),
 
-	platform_set_render_draw_color((RGBA_Color){105, 105, 105, 128});
-	platform_render_fill_rect((Rectangle){origin.x - 130, origin.y + 75, 260, 145});
+		new_ui_text((Vector2){-110,100}, 0, WHITE, "<", 15, ""),
+		new_ui_text((Vector2){-110,120}, 0, WHITE, ">", 15, ""),
+		new_ui_text((Vector2){-110,140}, 0, WHITE, "^", 15, ""),
 
-	platform_set_render_draw_color(WHITE);
+		new_ui_text((Vector2){-110,160}, 0, WHITE, controller_enabled ? "A" : "Spacebar", 15, ""),
+		new_ui_text((Vector2){-110,180}, 0, WHITE, controller_enabled ? "LB" : "Q", 15, ""),
+		new_ui_text((Vector2){-110,200}, 0, WHITE, controller_enabled ? "RB" : "E", 15, ""),
+		
+		new_ui_text((Vector2){110,100}, 0, WHITE, "Rotate Left", 15, "right"),
+		new_ui_text((Vector2){110,120}, 0, WHITE, "Rotate Right", 15, "right"),
+		new_ui_text((Vector2){110,140}, 0, WHITE, "Accelerate", 15, "right"),
 
-	origin.x -= 110;
-	render_text(game->font, 15, origin.x, origin.y + 100, "<");
-	render_text(game->font, 15, origin.x, origin.y + 120, ">");
-	render_text(game->font, 15, origin.x, origin.y + 140, "^");
+		new_ui_text((Vector2){110,160}, 0, WHITE, "Fire", 15, "right"),
+		new_ui_text((Vector2){110,180}, 0, WHITE, "Thrust Left", 15, "right"),
+		new_ui_text((Vector2){110,200}, 0, WHITE, "Thrust Right", 15, "right"),
 
-	if (controller_enabled) {
-		render_text(game->font, 15, origin.x, origin.y + 160,"A" );
-		render_text(game->font, 15, origin.x, origin.y + 180,"LB");
-		render_text(game->font, 15, origin.x, origin.y + 200,"RB");
-	} else {
-		render_text(game->font, 15, origin.x, origin.y + 160, "Spacebar");
-		render_text(game->font, 15, origin.x, origin.y + 180, "Q");
-		render_text(game->font, 15, origin.x, origin.y + 200, "E");
-	}
+	};
+	main_menu.children = children;
+	main_menu.num_children = array_length(children);
 
-	origin.x += 220;
-	render_text_aligned(game->font, 15, origin.x, origin.y + 100,	"Rotate Left"	, "right");
-	render_text_aligned(game->font, 15, origin.x, origin.y + 120,	"Rotate Right"	, "right");
-	render_text_aligned(game->font, 15, origin.x, origin.y + 140,	"Accelerate"	, "right");
-	render_text_aligned(game->font, 15, origin.x, origin.y + 160,	"Fire"			, "right");
-	render_text_aligned(game->font, 15, origin.x, origin.y + 180,	"Thrust Left"	, "right");
-	render_text_aligned(game->font, 15, origin.x, origin.y + 200,	"Thrust Right"	, "right");
+	scale_ui_element(&main_menu, scale);
+	main_menu.pos = origin;
+
+	draw_ui_element(game,&main_menu);
 
 	if (controller_enabled) {
 		platform_set_render_draw_color((RGBA_Color){255, 0, 0, 255});

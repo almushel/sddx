@@ -4,7 +4,6 @@
 #include "defs.h"
 
 typedef struct ui_element ui_element;
-
 typedef void (ui_proc) (ui_element* element);
 
 struct ui_element {
@@ -27,16 +26,15 @@ struct ui_element {
 	union {
 		Poly2D polygon;
 		Rectangle rect;
-		struct {Rectangle dest; char* name; } texture;
+		struct {Rectangle dest; SDL_Texture* texture; } texture;
 		struct {int size; char* str; char* align; } text;
 	};
 
-	void (*draw)(struct ui_element* element);
+	ui_proc* draw;
 	
 	int num_children;
-	struct ui_element* children;
+	ui_element* children;
 };
-
 
 ui_element new_ui_text(Vector2 pos, int* val, RGBA_Color color, char* str, int size, const char* align);
 ui_element new_ui_text_proc(Vector2 pos, int* val, RGBA_Color color, ui_proc proc, char* str, int size, const char* align);

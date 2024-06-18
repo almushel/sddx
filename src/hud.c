@@ -1,10 +1,60 @@
+#include "SDL_render.h"
 #include "SDL_stdinc.h"
 #include "platform.h"
 #include "defs.h"
+#include "assets.h"
 #include "game_math.h"
 #include "ui.h"
 
-#define MENU_COLOR (RGBA_Color){56, 56, 56, 255}
+#define MENU_COLOR (RGBA_Color){56, 56, 56, 160}
+
+const char* get_weapon_label(Game_State* game) {
+	const char* result;
+	if (game->player) {
+		switch (game->player->type_data) {
+			case PLAYER_WEAPON_MG: {
+				result = "Machine Gun";
+			} break;
+
+			case PLAYER_WEAPON_MISSILE: {
+				result = "Missiles";
+			} break;
+
+			case PLAYER_WEAPON_LASER: {
+				result = "Laser";
+			} break;
+
+			default: {
+				result = "Unknown";
+			} break;
+		}
+	}
+	return result;
+}
+
+//TODO: Icon for "Unknown"
+SDL_Texture* get_weapon_icon(Game_State* game) {
+	SDL_Texture* result = 0;
+	if (game->player) {
+		switch (game->player->type_data) {
+			case PLAYER_WEAPON_MG: {
+				result = game_get_texture(game, "HUD MG");
+			} break;
+
+			case PLAYER_WEAPON_MISSILE: {
+				result = game_get_texture(game, "HUD Missile");
+			} break;
+
+			case PLAYER_WEAPON_LASER: {
+				result = game_get_texture(game, "HUD Laser");
+			} break;
+
+			default: {} break;
+		}
+	}
+
+	return result;
+}
 
 void thrust_meter_proc(ui_element* e) {
 	float thrust_energy = e->val.f ? SDL_clamp(*(e->val.f), 0, PLAYER_THRUST_MAX) : 0;
@@ -48,52 +98,6 @@ void weapon_heat_inner_proc(ui_element* e) {
 	e->polygon.vertices[3].x = e->polygon.vertices[0].x+(int)(heatDelta * width2);
 }
 
-void weapon_label_proc(ui_element* e) {
-	if (e->type != UI_TYPE_TEXT) {
-		return;
-	}
-	switch (*(e->val.i)) {
-		case PLAYER_WEAPON_MG: {
-			e->text.str = "Machine Gun";
-		} break;
-
-		case PLAYER_WEAPON_MISSILE: {
-			e->text.str = "Missiles";
-		} break;
-
-		case PLAYER_WEAPON_LASER: {
-			e->text.str = "Laser";
-		} break;
-
-		default: {
-			e->text.str = "Unknown";
-		} break;
-	}
-	e->val.i = 0;
-}
-
-//TODO: Icon for "Unknown"
-void weapon_icon_proc(ui_element* e) {
-	if (e->type != UI_TYPE_TEXTURE || e->val.i == 0) {
-		return;
-	}
-
-	switch (*(e->val.i)) {
-		case PLAYER_WEAPON_MG: {
-			e->texture.name = "HUD MG";
-		} break;
-
-		case PLAYER_WEAPON_MISSILE: {
-			e->texture.name = "HUD Missile";
-		} break;
-
-		case PLAYER_WEAPON_LASER: {
-			e->texture.name = "HUD Laser";
-		} break;
-
-		default: {} break;
-	}
-}
 
 void score_timer_hud_proc(ui_element* e) {
 	float timer = e->val.f ? *(e->val.f) : 0;
@@ -169,7 +173,7 @@ void draw_HUD(Game_State* game, Rectangle bounds, float scale) {
 			.pos = {1, 7},
 			.angle = -90,
 			.texture = {
-				.name = "Player Ship",
+				.texture = game_get_texture(game, "Player Ship"),
 				.dest = {0,0,27,30},
 			},
 		},
@@ -248,12 +252,12 @@ void draw_HUD(Game_State* game, Rectangle bounds, float scale) {
 	ui_element weapon_children[] = {
 		new_ui_text((Vector2){-60, -18}, 0, WHITE, "Ammo", 16, "center"),
 		new_ui_text((Vector2){-60, 18}, &(game->player_state.ammo), SD_BLUE, "", 36, "center"),
-		new_ui_text_proc((Vector2){40, -18}, &current_weapon, WHITE, weapon_label_proc, "", 16, "center"),
+		new_ui_text((Vector2){40, -18}, 0, WHITE, (char*)get_weapon_label(game), 16, "center"),
 		{
 			.type = UI_TYPE_TEXTURE,
 			.pos = {40, 6},
 			.val = &current_weapon,
-			.draw = weapon_icon_proc,
+			.texture.texture = get_weapon_icon(game),
 		}
 	};
 	weapon_hud.children = weapon_children;
