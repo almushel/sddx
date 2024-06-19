@@ -9,7 +9,7 @@
 #define MENU_COLOR (RGBA_Color){56, 56, 56, 160}
 
 const char* get_weapon_label(Game_State* game) {
-	const char* result;
+	const char* result = "Unknown";
 	if (game->player) {
 		switch (game->player->type_data) {
 			case PLAYER_WEAPON_MG: {
@@ -24,9 +24,7 @@ const char* get_weapon_label(Game_State* game) {
 				result = "Laser";
 			} break;
 
-			default: {
-				result = "Unknown";
-			} break;
+			default: {} break;
 		}
 	}
 	return result;

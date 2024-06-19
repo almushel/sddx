@@ -8,6 +8,7 @@ set link_options=-SUBSYSTEM:CONSOLE -LIBPATH:%1\VisualC\x64\Debug -LIBPATH:%2\Vi
 set src_files=..\src\main.c ..\src\game.c ..\src\assets.c ..\src\game_math.c
 set libs=SDL2.lib SDL2main.lib SDL2_mixer.lib winmm.lib version.lib Imm32.lib Setupapi.lib
 
+if not exist "bin" mkdir bin
 if exist %1 (
 	if not "%~3"=="" ( if "%~3"=="true" (
 		pushd %1\VisualC
@@ -16,7 +17,7 @@ if exist %1 (
 		if not errorlevel == 0 exit
 
 		echo Copying SDL2.dll...
-		copy %1\VisualC\x64\Debug\SDL2.dll SDL2.dll
+		copy %1\VisualC\x64\Debug\SDL2.dll bin\SDL2.dll
 	))
 
 	if exist %2 (
@@ -27,10 +28,9 @@ if exist %1 (
 			if not errorlevel == 0 exit
 
 			echo Copying SDL2_mixer.dll...
-			copy %2\VisualC\x64\Debug\SDL2_mixer.dll SDL2_mixer.dll
+			copy %2\VisualC\x64\Debug\SDL2_mixer.dll bin\SDL2_mixer.dll
 		))
 		
-		if not exist "bin" mkdir bin
 		pushd bin
 		cl %options% %src_files% /link %link_options% %libs%
 		popd

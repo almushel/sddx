@@ -7,6 +7,7 @@
 #include "graphics.c"
 #include "particles.c"
 #include "entities.c"
+#include "score.h"
 #include "ui.c"
 #include "hud.c"
 #include "score.c"
@@ -192,6 +193,9 @@ void update_game(Game_State* game, float dt) {
 		if (is_key_released(&game->input, SDL_SCANCODE_R)) {
 			next_scene = GAME_SCENE_MAIN_MENU;
 		}
+		if (is_key_released(&game->input, SDL_SCANCODE_H)) {
+			next_scene = GAME_SCENE_HIGH_SCORES;
+		}
 #endif
 	if (next_scene == current_scene) {
 		switch(current_scene) {
@@ -216,6 +220,7 @@ void update_game(Game_State* game, float dt) {
 			
 			case GAME_SCENE_GAME_OVER: {
 				if (is_game_control_pressed(&game->input, &game->player_controller.fire)) {
+					push_to_score_table(game->score.total);
 					switch_game_scene(GAME_SCENE_HIGH_SCORES);
 				}
 			} break;
@@ -305,7 +310,7 @@ void draw_main_menu(Game_State* game, Rectangle bounds, float scale) {
 	ui_element main_menu = new_ui_text(origin, 0, SD_BLUE, "Space Drifter", 64, "center");
 	ui_element children[] = {
 		new_ui_text(
-			(Vector2){0, 50}, 0,(RGBA_Color){255, 165, 0, 255},  
+			(Vector2){20, 50}, 0,(RGBA_Color){255, 165, 0, 255},  
 			controller_enabled ? "Press START to begin!" : "Press FIRE to begin!",
 			20, "center"
 		),
@@ -377,15 +382,18 @@ void draw_scene_ui(Game_State* game, Game_Scene scene) {
 		} break;
 
 		case GAME_SCENE_HIGH_SCORES: {
+			//TODO: Highlight new high score
+			int* scores = get_score_table();
+
 			ui_element high_score = new_ui_text((Vector2){0}, NULL, WHITE, "HIGH_SCORES", 48, "center");
-			ui_element score_list[10];
+			ui_element score_list[SCORE_TABLE_LENGTH];
 			high_score.children = score_list;
 			high_score.num_children = array_length(score_list);
 
 			float padding = 40;
 			Vector2 pos = {0, padding};
 			for (int i = 0; i < array_length(score_list); i++) {
-				score_list[i] = new_ui_text(pos, &(game->score.total), WHITE, 0, 32, "center");
+				score_list[i] = new_ui_text(pos, &(scores[i]), WHITE, 0, 32, "center");
 				pos.y += padding;
 			}
 
@@ -395,6 +403,8 @@ void draw_scene_ui(Game_State* game, Game_Scene scene) {
 				world_rect.y+(world_rect.h/4.0f)
 			};
 			draw_ui_element(game, &high_score);
+
+			SDL_free(scores);
 		} break;
 		
 		default: {}
