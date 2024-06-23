@@ -1,4 +1,3 @@
-#include "SDL_log.h"
 #include "platform.h"
 #include "defs.h"
 #include "assets.h"
@@ -36,61 +35,68 @@ static void spawn_player(Game_State* game) {
 	
 	game->player->type_data = PLAYER_WEAPON_MG;
 	game->player_state.ammo = 0;
-	Mix_PlayChannel(-1, game_get_sfx(game, "Player Spawn"), 0);
+	Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Player Spawn"), 0);
 }
 
 void load_game_assets(Game_State* game) {
-	game_load_texture(game, "assets/images/player.png", "Player Ship");
+	if (game->assets == 0) {
+		game->assets = new_game_assets();
+	}
+
+	assets_load_texture(game->assets, "assets/images/player.png", "Player Ship");
 
 	// Projectiles
-	game_load_texture(game, "assets/images/missile.png", "Projectile Missile");
+	assets_load_texture(game->assets, "assets/images/missile.png", "Projectile Missile");
 
 	// Enemies
-	game_load_texture(game, "assets/images/grappler_hook.png", "Grappler Hook");
-	game_load_texture(game, "assets/images/grappler.png", "Enemy Grappler");
-	game_load_texture(game, "assets/images/ufo.png", "Enemy UFO");
-//	SDL_SetTextureAlphaMod(game_get_texture(game, "Enemy UFO"), (Uint8)(255.0f * 0.7f));
-	game_load_texture(game, "assets/images/tracker.png", "Enemy Tracker");
-	game_load_texture(game, "assets/images/turret_base.png", "Enemy Turret Base");
-	game_load_texture(game, "assets/images/turret_cannon.png", "Enemy Turret Cannon");
+	assets_load_texture(game->assets, "assets/images/grappler_hook.png", "Grappler Hook");
+	assets_load_texture(game->assets, "assets/images/grappler.png", "Enemy Grappler");
+	assets_load_texture(game->assets, "assets/images/ufo.png", "Enemy UFO");
+//	SDL_SetTextureAlphaMod(assets_get_texture(game->assets, "Enemy UFO"), (Uint8)(255.0f * 0.7f));
+	assets_load_texture(game->assets, "assets/images/tracker.png", "Enemy Tracker");
+	assets_load_texture(game->assets, "assets/images/turret_base.png", "Enemy Turret Base");
+	assets_load_texture(game->assets, "assets/images/turret_cannon.png", "Enemy Turret Cannon");
 
 	// HUD
-	game_load_texture(game, "assets/images/hud_missile.png", "HUD Missile");
-	game_load_texture(game, "assets/images/hud_laser.png", "HUD Laser");
-	game_load_texture(game, "assets/images/hud_mg.png", "HUD MG");
+	assets_load_texture(game->assets, "assets/images/hud_missile.png", "HUD Missile");
+	assets_load_texture(game->assets, "assets/images/hud_laser.png", "HUD Laser");
+	assets_load_texture(game->assets, "assets/images/hud_mg.png", "HUD MG");
 
 	//Generative textures
-	game_store_texture(game, generate_item_texture(game, game_get_texture(game, "Projectile Missile")), "Item Missile");
-	game_store_texture(game, generate_item_texture(game, game_get_texture(game, "Player Ship")), "Item LifeUp");
-	game_store_texture(game, generate_item_texture(game, 0), "Item Laser");
+	assets_store_texture(game->assets, generate_item_texture(assets_get_texture(game->assets, "Projectile Missile")), "Item Missile");
+	assets_store_texture(game->assets, generate_item_texture(assets_get_texture(game->assets, "Player Ship")), "Item LifeUp");
+	assets_store_texture(game->assets, generate_item_texture(0), "Item Laser");
 
-	game_load_music(game, "assets/audio/music_wrapping_action.mp3", "Wrapping Action");
-	game_load_music(game, "assets/audio/music_space_drifter.mp3", "Space Drifter");
-	game_load_music(game, "assets/audio/music_game_over.mp3", "Game Over");
+	assets_load_music(game->assets, "assets/audio/music_wrapping_action.mp3", "Wrapping Action");
+	assets_load_music(game->assets, "assets/audio/music_space_drifter.mp3", "Space Drifter");
+	assets_load_music(game->assets, "assets/audio/music_game_over.mp3", "Game Over");
 
-	game_load_sfx(game, "assets/audio/menu_confirm.mp3", "Menu Confirm");
+	assets_load_sfx(game->assets, "assets/audio/menu_confirm.mp3", "Menu Confirm");
 
-	game_load_sfx(game, "assets/audio/weapon_pickup.mp3", "Weapon Pickup");
-	game_load_sfx(game, "assets/audio/player_shot.mp3", "Player Shot");
-	game_load_sfx(game, "assets/audio/player_spawn.mp3", "Player Spawn");
-	game_load_sfx(game, "assets/audio/player_laser.mp3", "Player Laser");
-	game_load_sfx(game, "assets/audio/player_missile.mp3", "Player Missile");
-	game_load_sfx(game, "assets/audio/player_death.mp3", "Player Death");
+	assets_load_sfx(game->assets, "assets/audio/weapon_pickup.mp3", "Weapon Pickup");
+	assets_load_sfx(game->assets, "assets/audio/player_shot.mp3", "Player Shot");
+	assets_load_sfx(game->assets, "assets/audio/player_spawn.mp3", "Player Spawn");
+	assets_load_sfx(game->assets, "assets/audio/player_laser.mp3", "Player Laser");
+	assets_load_sfx(game->assets, "assets/audio/player_missile.mp3", "Player Missile");
+	assets_load_sfx(game->assets, "assets/audio/player_death.mp3", "Player Death");
 	
-	game_load_sfx(game, "assets/audio/enemy_death.mp3", "Enemy Death");
-	game_load_sfx(game, "assets/audio/turret_fire.mp3", "Turret Fire");
-	game_load_sfx(game, "assets/audio/grappler_fire.mp3", "Grappler Fire");
-	game_load_sfx(game, "assets/audio/hook_impact.mp3", "Hook Impact");
+	assets_load_sfx(game->assets, "assets/audio/enemy_death.mp3", "Enemy Death");
+	assets_load_sfx(game->assets, "assets/audio/turret_fire.mp3", "Turret Fire");
+	assets_load_sfx(game->assets, "assets/audio/grappler_fire.mp3", "Grappler Fire");
+	assets_load_sfx(game->assets, "assets/audio/hook_impact.mp3", "Hook Impact");
 
-	Mix_VolumeChunk(game_get_sfx(game, "Player Laser"), 64);
-	Mix_VolumeChunk(game_get_sfx(game, "Player Missile"), 64);
+	Mix_VolumeChunk(assets_get_sfx(game->assets, "Player Laser"), 64);
+	Mix_VolumeChunk(assets_get_sfx(game->assets, "Player Missile"), 64);
 }
 
 void init_game(Game_State* game) {
 	game->world_w = 800;
 	game->world_h = 600;
 
+	game->assets = new_game_assets();
+	game->particle_system = new_particle_system();
 	game->font = load_stbtt_font("assets/Orbitron-Regular.ttf", 64);
+
 	load_game_assets(game);
 
 	{ // Generate star field
@@ -158,9 +164,6 @@ void init_game(Game_State* game) {
 
 	game->entity_count = 1;
 	game->enemy_count = 0;
-	game->particle_system.particle_count = 0;
-	game->particle_system.dead_emitter_count = 0;
-	game->particle_system.emitter_count = 1;
 	spawn_entity(game, ENTITY_TYPE_DEMOSHIP, (Vector2){game->world_w/2.0f, game->world_h});
 }
 
@@ -202,7 +205,7 @@ void update_game(Game_State* game, float dt) {
 			case GAME_SCENE_MAIN_MENU: {
 				// TO-DO: trigger transition to gameplay scene AFTER demo ship has finished despawning
 				if (is_game_control_pressed(&game->input, &game->player_controller.fire)) {
-					Mix_PlayChannel(-1, game_get_sfx(game, "Menu Confirm"), 0);
+					Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Menu Confirm"), 0);
 					switch_game_scene(GAME_SCENE_GAMEPLAY);
 				}
 			} break;
@@ -243,7 +246,7 @@ void update_game(Game_State* game, float dt) {
 				game->enemy_count = 1; // Prevent the spawn system from triggering in menu
 
 				spawn_entity(game, ENTITY_TYPE_DEMOSHIP, (Vector2){game->world_w/2.0f, game->world_h});
-				Mix_PlayMusic(game_get_music(game, "Space Drifter"), -1);
+				Mix_PlayMusic(assets_get_music(game->assets, "Space Drifter"), -1);
 			} break;
 
 			case GAME_SCENE_GAMEPLAY: {				
@@ -253,12 +256,12 @@ void update_game(Game_State* game, float dt) {
 				}
 
 				restart_game(game);
-				Mix_PlayMusic(game_get_music(game, "Wrapping Action"), -1);
+				Mix_PlayMusic(assets_get_music(game->assets, "Wrapping Action"), -1);
 			} break;
 		
 			case GAME_SCENE_GAME_OVER: {
 				Mix_PauseMusic();
-				Mix_PlayChannel(-1, game_get_sfx(game, "Game Over"), 0);
+				Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Game Over"), 0);
 			} break;
 
 			default: { break; }
@@ -276,8 +279,8 @@ void update_game(Game_State* game, float dt) {
 
 	update_score_timer(&game->score, dt);
 	update_entities(game, dt);
-	update_particle_emitters(&game->particle_system, dt);
-	update_particles(&game->particle_system, dt);
+	update_particle_emitters(game->particle_system, dt);
+	update_particles(game->particle_system, dt);
 
 	poll_input(&game->input); // Clear held and released states
 }
@@ -295,7 +298,7 @@ void draw_game_world(Game_State* game) {
 		platform_render_draw_points(game->starfield.positions + star_index, 1);
 	}
 
-	draw_particles(game);
+	draw_particles(game->particle_system, game->assets);
 	draw_entities(game);
 }
 

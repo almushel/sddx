@@ -156,7 +156,7 @@ static void generate_drifter_verts(Game_Shape* shape, float radius) {
 	shape->type = SHAPE_TYPE_POLY2D;
 }
 
-SDL_Texture* generate_item_texture(Game_State* game, SDL_Texture* icon) {
+SDL_Texture* generate_item_texture(SDL_Texture* icon) {
 	SDL_Texture* result = 0;
 	
 	int result_size = ITEM_RADIUS*2 + 4;
@@ -300,13 +300,15 @@ Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 				entity->emitter_count = 3;
 
 				for (int i = 0; i < entity->emitter_count; i++) {
-					entity->particle_emitters[i] = get_new_particle_emitter(&game->particle_system);
-					Particle_Emitter* thruster = get_particle_emitter(&game->particle_system, entity->particle_emitters[i]);
-					thruster->shape = SHAPE_TYPE_RECT;
-					thruster->speed = PLAYER_THRUST_PARTICLE_SPEED;
-					thruster->density = 2.0f;
-					thruster->colors[0] = SD_BLUE;
-					thruster->color_count = 1;
+					entity->particle_emitters[i] = get_new_particle_emitter(game->particle_system);
+					Particle_Emitter* thruster = get_particle_emitter(game->particle_system, entity->particle_emitters[i]);
+					if (thruster) {
+						thruster->shape = SHAPE_TYPE_RECT;
+						thruster->speed = PLAYER_THRUST_PARTICLE_SPEED;
+						thruster->density = 2.0f;
+						thruster->colors[0] = SD_BLUE;
+						thruster->color_count = 1;
+					}
 				}
 			} break;
 
@@ -327,14 +329,16 @@ Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 				entity->shape.polygon = rect_to_poly2D(rect);
 				entity->color = SD_BLUE;
 
-				entity->particle_emitters[0] = get_new_particle_emitter(&game->particle_system);
+				entity->particle_emitters[0] = get_new_particle_emitter(game->particle_system);
 				entity->emitter_count = 1;
-				Particle_Emitter* thruster = get_particle_emitter(&game->particle_system, entity->particle_emitters[0]);
-				thruster->shape= SHAPE_TYPE_RECT,
-				thruster->speed = 1.0f;
-				thruster->colors[0] = WHITE;
-				thruster->color_count = 1;
-				thruster->density = 1.0f;
+				Particle_Emitter* thruster = get_particle_emitter(game->particle_system, entity->particle_emitters[0]);
+				if (thruster) {
+					thruster->shape= SHAPE_TYPE_RECT,
+					thruster->speed = 1.0f;
+					thruster->colors[0] = WHITE;
+					thruster->color_count = 1;
+					thruster->density = 1.0f;
+				}
 
 			} break;
 			
@@ -366,14 +370,16 @@ Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position) {
 				entity->sprites[0].rotation_enabled = 1;
 				entity->sprite_count = 1;
 
-				entity->particle_emitters[0] = get_new_particle_emitter(&game->particle_system);
+				entity->particle_emitters[0] = get_new_particle_emitter(game->particle_system);
 				entity->emitter_count = 1;
-				Particle_Emitter* thruster = get_particle_emitter(&game->particle_system, entity->particle_emitters[0]);
-				thruster->shape= SHAPE_TYPE_RECT,
-				thruster->speed = PARTICLE_SPEED/2.0f;
-				thruster->density = 1.0f;
-				thruster->colors[0] = RED;
-				thruster->color_count = 1;
+				Particle_Emitter* thruster = get_particle_emitter(game->particle_system, entity->particle_emitters[0]);
+				if (thruster) {
+					thruster->shape= SHAPE_TYPE_RECT,
+					thruster->speed = PARTICLE_SPEED/2.0f;
+					thruster->density = 1.0f;
+					thruster->colors[0] = RED;
+					thruster->color_count = 1;
+				}
 			} break;
 
 			case ENTITY_TYPE_ENEMY_TURRET: {
@@ -496,25 +502,28 @@ void update_entities(Game_State* game, float dt) {
 			if (entity->type == ENTITY_TYPE_PLAYER) {
 				float t = (entity->y - game->world_h) / (game->world_h/2.0f - game->world_h);
 				float ts = sin_deg(t * 90.0f);
-				
 
-				Particle_Emitter* thrusters[] = {
-					get_particle_emitter(&game->particle_system, entity->particle_emitters[0]),
-					get_particle_emitter(&game->particle_system, entity->particle_emitters[1]),
-					get_particle_emitter(&game->particle_system, entity->particle_emitters[2]),
-				};
+				Particle_Emitter* thruster;
+				thruster = get_particle_emitter(game->particle_system, entity->particle_emitters[0]);
+				if (thruster) {
+					thruster->state = (entity->sx > 0.4f && entity->sx < 0.9f);
+					thruster->position = entity->position;
+					thruster->angle = normalize_degrees(entity->angle + 180.0f);
+				}
 
-				thrusters[0]->state = (entity->sx > 0.4f && entity->sx < 0.9f);
-				thrusters[0]->position = entity->position;
-				thrusters[0]->angle = normalize_degrees(entity->angle + 180.0f);
+				thruster = get_particle_emitter(game->particle_system, entity->particle_emitters[1]);
+				if (thruster) {
+					thruster->state = (entity->sx > 0.5f);
+					thruster->position = entity->position;
+					thruster->angle = normalize_degrees(entity->angle - 45);
+				}
 
-				thrusters[1]->state = (entity->sx > 0.5f);
-				thrusters[1]->position = entity->position;
-				thrusters[1]->angle = normalize_degrees(entity->angle - 45);
-
-				thrusters[2]->state = (entity->sx > 0.5f);
-				thrusters[2]->position = entity->position;
-				thrusters[2]->angle = normalize_degrees(entity->angle + 45);
+				thruster = get_particle_emitter(game->particle_system, entity->particle_emitters[2]);
+				if (thruster) {
+					thruster->state = (entity->sx > 0.5f);
+					thruster->position = entity->position;
+					thruster->angle = normalize_degrees(entity->angle + 45);
+				}
 
 				force_circle(game->entities, game->entity_count, entity->x, entity->y, entity->sx * PLAYER_SHIP_RADIUS * 3.0f, 1.5f);
 				entity->y -= (8.0f - lerp(0.0f, 6.0f, t)) * dt;
@@ -594,16 +603,18 @@ void update_entities(Game_State* game, float dt) {
 					entity->vx *= 1.0f - 0.15f * dt;
 					entity->vy *= 1.0f - 0.15f * dt;
 
-					Particle_Emitter* thruster = get_particle_emitter(&game->particle_system, entity->particle_emitters[0]);	
-					thruster->state = EMITTER_STATE_ACTIVE * (vert > 0.2);
-					thruster->position = entity->position;
-					thruster->speed = PLAYER_THRUST_PARTICLE_SPEED * vert;
-					thruster->scale.x = thruster->scale.y = vert;
-					thruster->angle = entity->angle - 180.0f;
-					thruster->position = (Vector2) {
-						entity->position.x + cos_deg(thruster->angle) * 16.0f * vert,
-						entity->position.y + sin_deg(thruster->angle) * 16.0f * vert,
-					};
+					Particle_Emitter* thruster = get_particle_emitter(game->particle_system, entity->particle_emitters[0]);	
+					if (thruster) {
+						thruster->state = EMITTER_STATE_ACTIVE * (vert > 0.2);
+						thruster->position = entity->position;
+						thruster->speed = PLAYER_THRUST_PARTICLE_SPEED * vert;
+						thruster->scale.x = thruster->scale.y = vert;
+						thruster->angle = entity->angle - 180.0f;
+						thruster->position = (Vector2) {
+							entity->position.x + cos_deg(thruster->angle) * 16.0f * vert,
+							entity->position.y + sin_deg(thruster->angle) * 16.0f * vert,
+						};
+					}
 
 				} break;
 
@@ -624,7 +635,9 @@ void update_entities(Game_State* game, float dt) {
 					SDL_bool thrusting = 0;
 					float angle_offset = 0.0f;
 					for (int i = 0; i < entity->emitter_count; i++) {
-						Particle_Emitter* thruster = get_particle_emitter(&game->particle_system, entity->particle_emitters[i]);
+						Particle_Emitter* thruster = get_particle_emitter(game->particle_system, entity->particle_emitters[i]);
+						if (thruster == 0) { continue; }
+
 						thruster->state = EMITTER_STATE_INACTIVE;
 						if (i < array_length(thrust_inputs) && thrust_inputs[i]) {
 							thrusting = 1;
@@ -658,7 +671,7 @@ void update_entities(Game_State* game, float dt) {
 									case PLAYER_WEAPON_MG: {
 										game->player_state.weapon_heat += PLAYER_MG_HEAT;
 										// TO-DO: Figure out weird galloping timing problem for multiple SFX calls in a row
-										Mix_PlayChannel(-1, game_get_sfx(game, "Player Shot"), 0);
+										Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Player Shot"), 0);
 										Uint32 bullet_id = spawn_entity(game, ENTITY_TYPE_BULLET, entity->position);
 										if (bullet_id) {
 											Entity* bullet = get_entity(game, bullet_id);
@@ -686,7 +699,7 @@ void update_entities(Game_State* game, float dt) {
 											game->player->type_data = PLAYER_WEAPON_MG;
 											break;	
 										}
-										Mix_PlayChannel(-1, game_get_sfx(game, "Player Missile"), 0);
+										Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Player Missile"), 0);
 
 										game->player_state.weapon_heat += PLAYER_MISSILE_HEAT;
 
@@ -722,7 +735,7 @@ void update_entities(Game_State* game, float dt) {
 											game->player->type_data = PLAYER_WEAPON_MG;
 											break;	
 										}
-										Mix_PlayChannel(-1, game_get_sfx(game, "Player Laser"), 0);
+										Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Player Laser"), 0);
 
 										game->player_state.weapon_heat += PLAYER_LASER_HEAT;
 
@@ -777,7 +790,7 @@ void update_entities(Game_State* game, float dt) {
 				case ENTITY_TYPE_MISSILE: {
 					if (entity->timer <= 0) { entity->state = ENTITY_STATE_DYING; }
 					
-					Particle_Emitter* thruster = get_particle_emitter(&game->particle_system, entity->particle_emitters[0]);
+					Particle_Emitter* thruster = get_particle_emitter(game->particle_system, entity->particle_emitters[0]);
 					thruster->state = 1;
 					thruster->position = entity->position;
 					thruster->angle = entity->angle + 180.0f;
@@ -871,7 +884,7 @@ void update_entities(Game_State* game, float dt) {
 				} break;
 				
 				case ENTITY_TYPE_ENEMY_TRACKER:{
-					Particle_Emitter* thruster = get_particle_emitter(&game->particle_system, entity->particle_emitters[0]);
+					Particle_Emitter* thruster = get_particle_emitter(game->particle_system, entity->particle_emitters[0]);
 					if (thruster) { thruster->state = 0; }
 					Entity* target = get_enemy_target(game);
 					if (target) {
@@ -931,7 +944,7 @@ void update_entities(Game_State* game, float dt) {
 										}
 									}
 
-									Mix_PlayChannel(-1, game_get_sfx(game, "Turret Fire"), 0);
+									Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Turret Fire"), 0);
 
 									entity->timer = TURRET_FIRE_ANIM_SPEED;
 									entity->type_data = TURRET_STATE_FIRING;
@@ -974,7 +987,7 @@ void update_entities(Game_State* game, float dt) {
 								float aim_delta = get_aim_offset(entity->position, target->position, entity->angle, GRAPPLER_AIM_TOLERANCE);
 								if (aim_delta == 0) {
 									entity->type_data = GRAPPLER_STATE_EXTENDING;
-									Mix_PlayChannel(-1, game_get_sfx(game, "Grappler Fire"), 0);
+									Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Grappler Fire"), 0);
 								} else {
 									entity->angle += aim_delta * GRAPPLER_TURN_SPEED * dt;
 								}
@@ -994,7 +1007,7 @@ void update_entities(Game_State* game, float dt) {
 												   			 &overlap.x, &overlap.y)) {
 									
 									entity->type_data = GRAPPLER_STATE_REELING;
-									Mix_PlayChannel(-1, game_get_sfx(game, "Hook Impact"), 0);
+									Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Hook Impact"), 0);
 							} else if (!sc2d_check_point_rect( 	hook_position.x, hook_position.y,
 																0, 0, game->world_w, game->world_h,
 																&overlap.x, &overlap.y)) {
@@ -1097,7 +1110,7 @@ void update_entities(Game_State* game, float dt) {
 							item_entity->state = ENTITY_STATE_DESPAWNING;
 							item_entity->timer = ENTITY_WARP_DELAY/2.0f;
 
-							Mix_PlayChannel(-1, game_get_sfx(game, "Weapon Pickup"), 0);
+							Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Weapon Pickup"), 0);
 
 						
 							switch (item_entity->type) {
@@ -1128,29 +1141,7 @@ void update_entities(Game_State* game, float dt) {
 				}
 			}
 
-			// Entity-to-particle collision
-			Game_Shape entity_shape = scale_game_shape(entity->shape, entity->scale);
-			for (int particle_index = 0; particle_index < game->particle_system.particle_count; particle_index++) {
-				Particle* particle = game->particle_system.particles + particle_index;
-				Vector2 overlap = {0};
-				Game_Shape particle_shape = scale_game_shape(particle->shape, particle->scale);
-
-				if ( check_shape_collision(particle->transform, particle_shape, entity->transform, entity_shape, &overlap)) {
-					particle->x -= overlap.x;
-					particle->y -= overlap.y;
-
-					float magnitude = vector2_length(particle->velocity);
-
-					particle->velocity = normalize_vector2(particle->velocity);
-
-					Vector2 new_v = {-overlap.x, -overlap.y};//subtract_vector2(particle->position, entity->position);
-							new_v = normalize_vector2(new_v);
-							new_v = add_vector2(new_v, particle->velocity);
-							new_v = normalize_vector2(new_v);
-					
-					particle->velocity = scale_vector2(new_v, magnitude / 2.0f);
-				}
-			}
+			displace_particles(game->particle_system, entity->transform, scale_game_shape(entity->shape, entity->scale));
 		} // end of if (entity->state == ENTITY_STATE_ACTIVE)
 	}
 
@@ -1161,14 +1152,14 @@ void update_entities(Game_State* game, float dt) {
 			dead_entity = game->entities + dead_entity_index;
 			
 			for (int i = 0; i < dead_entity->emitter_count; i++) {
-				remove_particle_emitter(&game->particle_system, dead_entity->particle_emitters[i]);
+				remove_particle_emitter(game->particle_system, dead_entity->particle_emitters[i]);
 			}
 			dead_entity->emitter_count = 0;
 
 			if (dead_entity->state == ENTITY_STATE_DYING) { // Skip for despawning entities
 				switch(dead_entity->type) {
 					case ENTITY_TYPE_PLAYER: {
-						Mix_PlayChannel(-1, game_get_sfx(game, "Player Death"), 0);
+						Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Player Death"), 0);
 						
 						game->player = 0;
 						game->player_state.thrust_energy = PLAYER_THRUST_MAX;
@@ -1219,16 +1210,16 @@ void update_entities(Game_State* game, float dt) {
 					game->enemy_count--;
 
 					force_circle(game->entities, game->entity_count, dead_entity->x, dead_entity->y, ENEMY_EXPLOSION_RADIUS, 1.5f);
-					Mix_PlayChannel(-1, game_get_sfx(game, "Enemy Death"), 0);
+					Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Enemy Death"), 0);
 				}
 
 				if (entity_type_explodes(dead_entity->type)) {
 					RGBA_Color entity_color = (dead_entity->color.r || dead_entity->color.g || dead_entity->color.b) ? dead_entity->color : (RGBA_Color){255, 255, 255, 255};
 					RGBA_Color colors[] = {entity_color, {255, 255, 255, 255}};
 
-					explode_at_point(&game->particle_system, dead_entity->x, dead_entity->y, colors, array_length(colors), 0, dead_entity->shape.type);
+					explode_at_point(game->particle_system, dead_entity->x, dead_entity->y, colors, array_length(colors), 0, dead_entity->shape.type);
 					for (int sprite_index = 0; sprite_index < dead_entity->sprite_count; sprite_index++) {
-						explode_sprite(game, dead_entity->sprites+sprite_index, dead_entity->x, dead_entity->y, dead_entity->angle, 6);
+						explode_sprite(game->assets, game->particle_system, dead_entity->sprites+sprite_index, dead_entity->x, dead_entity->y, dead_entity->angle, 6);
 					}
 				}
 			}
@@ -1257,7 +1248,7 @@ Rectangle get_entity_bounding_box(Game_State* game, Entity* entity) {
 
 	if (entity->sprite_count > 0) {
 		shape.type = SHAPE_TYPE_RECT;
-		shape.rectangle = get_sprite_rect(game, &entity->sprites[0]);
+		shape.rectangle = get_sprite_rect(game->assets, &entity->sprites[0]);
 		shape.rectangle.x -= shape.rectangle.w/2.0f;
 		shape.rectangle.y -= shape.rectangle.h/2.0f;
 
@@ -1330,7 +1321,9 @@ void draw_entities(Game_State* game) {
 		for (int i = 0; i < transform_count; i++) {
 			if (entity->sprite_count > 0) {
 				for (int sprite_index = 0; sprite_index < entity->sprite_count; sprite_index++) {
-					if (entity->sprites[sprite_index].texture_name != 0) render_draw_game_sprite(game, &entity->sprites[sprite_index], transforms[i], true);	
+					if (entity->sprites[sprite_index].texture_name != 0) {
+						render_draw_game_sprite(game->assets, &entity->sprites[sprite_index], transforms[i], true);
+					}
 				}
 			}
 			else if (entity->shape.type > SHAPE_TYPE_UNDEFINED && entity->shape.type < SHAPE_TYPE_COUNT) {

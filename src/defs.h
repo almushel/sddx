@@ -104,11 +104,7 @@ typedef struct STBTTF_Font {
 	int baseline;
 } STBTTF_Font;
 
-typedef struct Game_Assets {
-	Mix_Music_Node music[8];
-	Mix_Chunk_Node sfx[16];
-	SDL_Texture_Node textures[16];
-} Game_Assets;
+typedef struct Game_Assets Game_Assets;
 
 typedef struct Particle {
 	Transform2D_Union;
@@ -144,17 +140,7 @@ typedef struct Particle_Emitter {
 	} state;
 } Particle_Emitter;
 
-#define MAX_PARTICLES 512
-#define MAX_PARTICLE_EMITTERS 128
-typedef struct Particle_System {
-	Particle particles[MAX_PARTICLES];
-	Uint32 particle_count;
-
-	Particle_Emitter emitters[MAX_PARTICLE_EMITTERS];
-	Uint32 dead_emitters[MAX_PARTICLE_EMITTERS];
-	Uint32 emitter_count;
-	Uint32 dead_emitter_count;
-} Particle_System;
+typedef struct Particle_System Particle_System;
 
 #define STARFIELD_STAR_COUNT 500
 typedef struct Game_Starfield {
@@ -218,7 +204,7 @@ typedef enum Game_Scene {
 
 typedef struct Game_State {
 	STBTTF_Font* font;
-	Game_Assets assets;
+	Game_Assets* assets;
 	Game_Input input;
 
 	int world_w, world_h;
@@ -231,7 +217,7 @@ typedef struct Game_State {
 	Uint32 enemy_count;
 	
 	Game_Starfield starfield;
-	Particle_System particle_system;
+	Particle_System* particle_system;
 	Score_System score;
 
 	Game_Player_Controller player_controller;

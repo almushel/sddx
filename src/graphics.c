@@ -247,11 +247,11 @@ void render_draw_texture(SDL_Texture* texture, float x, float y, float angle, SD
 	}
 }
 
-void render_draw_game_sprite(Game_State* game, Game_Sprite* sprite, Transform2D transform, SDL_bool centered) {
-	SDL_Texture* texture =  game_get_texture(game, sprite->texture_name);
+void render_draw_game_sprite(Game_Assets* assets, Game_Sprite* sprite, Transform2D transform, SDL_bool centered) {
+	SDL_Texture* texture =  assets_get_texture(assets, sprite->texture_name);
 
 	if (texture) {
-		Rectangle sprite_rect = get_sprite_rect(game, sprite);
+		Rectangle sprite_rect = get_sprite_rect(assets, sprite);
 
 		Rectangle dest_rect;
 		dest_rect.x = transform.x;

@@ -36,15 +36,15 @@ SDL_Texture* get_weapon_icon(Game_State* game) {
 	if (game->player) {
 		switch (game->player->type_data) {
 			case PLAYER_WEAPON_MG: {
-				result = game_get_texture(game, "HUD MG");
+				result = assets_get_texture(game->assets, "HUD MG");
 			} break;
 
 			case PLAYER_WEAPON_MISSILE: {
-				result = game_get_texture(game, "HUD Missile");
+				result = assets_get_texture(game->assets, "HUD Missile");
 			} break;
 
 			case PLAYER_WEAPON_LASER: {
-				result = game_get_texture(game, "HUD Laser");
+				result = assets_get_texture(game->assets, "HUD Laser");
 			} break;
 
 			default: {} break;
@@ -171,7 +171,7 @@ void draw_HUD(Game_State* game, Rectangle bounds, float scale) {
 			.pos = {1, 7},
 			.angle = -90,
 			.texture = {
-				.texture = game_get_texture(game, "Player Ship"),
+				.texture = assets_get_texture(game->assets, "Player Ship"),
 				.dest = {0,0,27,30},
 			},
 		},

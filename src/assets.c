@@ -27,6 +27,12 @@
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "external/stb_truetype.h"
 
+typedef struct Game_Assets {
+	Mix_Music_Node music[8];
+	Mix_Chunk_Node sfx[16];
+	SDL_Texture_Node textures[16];
+} Game_Assets;
+
 double pow(double x, double y) {
 	double result = x;
 
@@ -117,7 +123,7 @@ Uint64 str_hash(unsigned char* str) {
 	Uint64 result = 5381;
 	int c;
 
-	while (c = *str++) {
+	while ( (c=*str++) ) {
 		result = ((result << 5) + result) + c;
 	}
 
@@ -159,51 +165,56 @@ static SDL_Texture* load_texture(const char* file) {
 	return result;
 }
 
-define_game_store_asset(SDL_Texture, textures, texture)
-define_game_store_asset(Mix_Music, music, music)
-define_game_store_asset(Mix_Chunk, sfx, sfx)
+Game_Assets* new_game_assets(void) {
+	Game_Assets* result = SDL_calloc(1, sizeof(Game_Assets));
+	return result;
+}
 
-SDL_bool game_load_texture(Game_State* game, const char* file, const char* name) {
+define_store_asset(SDL_Texture, textures, texture)
+define_store_asset(Mix_Music, music, music)
+define_store_asset(Mix_Chunk, sfx, sfx)
+
+SDL_bool assets_load_texture(Game_Assets* assets, const char* file, const char* name) {
 	SDL_bool result = 0;
 	
 	SDL_Texture* texture = load_texture(file);
 	if (texture) {
 		const char* label = (name && SDL_strlen(name)) ? name : file;
-		game_store_texture(game, texture, label);
+		assets_store_texture(assets, texture, label);
 	}
 
 	return result;
 }
 
-SDL_bool game_load_music(Game_State* game, const char* file, const char* name) {
+SDL_bool assets_load_music(Game_Assets* assets, const char* file, const char* name) {
 	SDL_bool result = 0;
 
 	Mix_Music* music = Mix_LoadMUS(file);
 	if (music) {
 		const char* label = (name && SDL_strlen(name)) ? name : file;
-		game_store_music(game, music, label);
+		assets_store_music(assets, music, label);
 	}
 
 	return result;
 }
 
-SDL_bool game_load_sfx(Game_State* game, const char* file, const char* name) {
+SDL_bool assets_load_sfx(Game_Assets* assets, const char* file, const char* name) {
 	SDL_bool result = 0;
 
 	Mix_Chunk* chunk = Mix_LoadWAV(file);
 	if (chunk) {
 		const char* label = (name && SDL_strlen(name)) ? name : file;
-		game_store_sfx(game, chunk, label);
+		assets_store_sfx(assets, chunk, label);
 	}
 
 	return result;
 }
 
-define_game_get_asset(Mix_Music, music, music)
-define_game_get_asset(Mix_Chunk, sfx, sfx)
-define_game_get_asset(SDL_Texture, textures, texture)
+define_get_asset(Mix_Music, music, music)
+define_get_asset(Mix_Chunk, sfx, sfx)
+define_get_asset(SDL_Texture, textures, texture)
 
-Rectangle get_sprite_rect(Game_State* game, Game_Sprite* sprite) {
+Rectangle get_sprite_rect(Game_Assets* assets, Game_Sprite* sprite) {
 	Rectangle result = {0};
 
 	if (sprite->src_rect.w && sprite->src_rect.h) {
@@ -211,7 +222,7 @@ Rectangle get_sprite_rect(Game_State* game, Game_Sprite* sprite) {
 	} else {
 		SDL_Texture* texture = 0;
 		if (sprite->texture_name) {
-			texture = game_get_texture(game, sprite->texture_name);
+			texture = assets_get_texture(assets, sprite->texture_name);
 		}
 		
 		if (texture) {
@@ -228,7 +239,7 @@ Rectangle get_sprite_rect(Game_State* game, Game_Sprite* sprite) {
 
 // Currently allocates an array of Game_Sprites of length pieces.
 // Should be freed after use.
-Game_Sprite* divide_sprite(Game_State* game, Game_Sprite* sprite, int pieces) {
+Game_Sprite* divide_sprite(Game_Assets* assets, Game_Sprite* sprite, int pieces) {
 	Game_Sprite* result = 0;
 	
 	if (sprite && pieces > 0) {
@@ -237,7 +248,7 @@ Game_Sprite* divide_sprite(Game_State* game, Game_Sprite* sprite, int pieces) {
 
 		result = SDL_malloc(sizeof(Game_Sprite) * (pieces));
 		
-		Rectangle sprite_rect = get_sprite_rect(game, sprite);
+		Rectangle sprite_rect = get_sprite_rect(assets, sprite);
 		
 		int chunk_width =  (int)(sprite_rect.w / columns);
 		int chunk_height = (int)(sprite_rect.h / rows);

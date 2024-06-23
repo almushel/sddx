@@ -13,6 +13,31 @@
 #define DEFAULT_PARTICLE_COLOR (RGBA_Color){255, 255, 255, 255}
 #define DEAD_PARTICLE_MAX 16
 
+#define MAX_PARTICLES 512
+#define MAX_PARTICLE_EMITTERS 128
+
+struct Particle_System {
+	Particle particles[MAX_PARTICLES];
+	Uint32 particle_count;
+
+	Particle_Emitter emitters[MAX_PARTICLE_EMITTERS];
+	Uint32 dead_emitters[MAX_PARTICLE_EMITTERS];
+	Uint32 emitter_count;
+	Uint32 dead_emitter_count;
+};
+
+Particle_System* new_particle_system(void) {
+	Particle_System* result = SDL_calloc(1, sizeof(Particle_System));
+	result->emitter_count = 1;
+	return result;
+}
+
+void reset_particle_system(Particle_System* ps) {
+	ps->particle_count = 0;
+	ps->dead_emitter_count = 0;
+	ps->emitter_count = 1;
+}
+
 void update_particles(Particle_System* ps, float dt) {
 	Uint32 dead_particles[DEAD_PARTICLE_MAX];
 	Uint32 dead_particle_count = 0;
@@ -41,8 +66,30 @@ void update_particles(Particle_System* ps, float dt) {
 	}
 }
 
-void draw_particles(Game_State* game) {
-	Particle_System* ps = &game->particle_system;
+void displace_particles(Particle_System* ps, Transform2D transform, Game_Shape shape) {
+	for (Particle* p = ps->particles; p != ps->particles+ps->particle_count; p++) {
+		Vector2 overlap = {0};
+		Game_Shape particle_shape = scale_game_shape(p->shape, p->scale);
+
+		if ( check_shape_collision(p->transform, particle_shape, transform, shape, &overlap)) {
+			p->x -= overlap.x;
+			p->y -= overlap.y;
+
+			float magnitude = vector2_length(p->velocity);
+
+			p->velocity = normalize_vector2(p->velocity);
+
+			Vector2 new_v = {-overlap.x, -overlap.y};//subtract_vector2(p->position, entity->position);
+					new_v = normalize_vector2(new_v);
+					new_v = add_vector2(new_v, p->velocity);
+					new_v = normalize_vector2(new_v);
+			
+			p->velocity = scale_vector2(new_v, magnitude / 2.0f);
+		}
+	}
+}
+
+void draw_particles(Particle_System* ps, Game_Assets* assets) {
 	Particle* particle;
 	for (int p = 0; p < ps->particle_count; p++) {
 		particle = ps->particles + p;
@@ -54,7 +101,7 @@ void draw_particles(Game_State* game) {
 		particle->sy = scale;
 
 		if (particle->sprite.texture_name) {
-			render_draw_game_sprite(game, &particle->sprite, particle->transform, 1);
+			render_draw_game_sprite(assets, &particle->sprite, particle->transform, 1);
 		} else {
 			Game_Shape 	shape = particle->shape;
 			shape = scale_game_shape(shape, particle->scale);
@@ -262,20 +309,20 @@ void update_particle_emitters(Particle_System* ps, float dt) {
 	}
 }
 
-void explode_sprite(Game_State* game, Game_Sprite* sprite, float x, float y, float angle, int pieces) {
+void explode_sprite(Game_Assets* assets, Particle_System* ps, Game_Sprite* sprite, float x, float y, float angle, int pieces) {
 	float angle_division = 360.0f / (float)pieces;
 	float random_deviation = 0;//angle_division * 1.8;
 
 	Vector2 sprite_offset = rotate_vector2(sprite->offset, angle);
 
-	Game_Sprite* chunks = divide_sprite(game, sprite, pieces);
+	Game_Sprite* chunks = divide_sprite(assets, sprite, pieces);
 
 	float radius = (chunks[0].src_rect.w + chunks[0].src_rect.h) / 2;
 	int cHalf = pieces / 2;
 
 	// Create explosion using chunks as particle sprites
 	for (int chunk_index = 0; chunk_index < pieces; chunk_index++) {
-		Uint32 particle_id = spawn_particle(&game->particle_system, chunks + chunk_index, SHAPE_TYPE_CIRCLE);
+		Uint32 particle_id = spawn_particle(ps, chunks + chunk_index, SHAPE_TYPE_CIRCLE);
 		if (particle_id) {
 			const float random_deviation = 30.0f;
 
@@ -284,7 +331,7 @@ void explode_sprite(Game_State* game, Game_Sprite* sprite, float x, float y, flo
 			float vx = cos_deg(chunk_angle) * (float)PARTICLE_SPEED;
 			float vy = sin_deg(chunk_angle) * (float)PARTICLE_SPEED;
 
-			Particle* particle = game->particle_system.particles + particle_id;
+			Particle* particle = ps->particles + particle_id;
 			randomize_particle(particle, 0, 0);
 			particle->timer = PARTICLE_LIFETIME;
 			particle->angle = angle;
