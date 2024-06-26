@@ -193,7 +193,11 @@ typedef struct Entity {
 	Uint8 state;
 	Uint8 team;
 	Uint8 type_data;
+
+	struct Entity* next;
 } Entity;
+
+typedef struct Entity_System Entity_System;
 
 typedef enum Game_Scene {
 	GAME_SCENE_MAIN_MENU,
@@ -210,18 +214,15 @@ typedef struct Game_State {
 	int world_w, world_h;
 	bool fit_world_to_screen;
 
-	Entity* entities;
-	Uint32 entity_count;
-	Uint32 entities_size;
-
+	Entity_System* entities;
 	Uint32 enemy_count;
-	
+
 	Game_Starfield starfield;
 	Particle_System* particle_system;
 	Score_System score;
 
 	Game_Player_Controller player_controller;
-	Entity* player;
+	Uint32 player;
 	struct {
 		int lives;
 		int ammo;

@@ -1,5 +1,6 @@
 #include "SDL_rwops.h"
 #include "defs.h"
+#include "game_math.h"
 #include "entities.h"
 #include "score.h"
 
@@ -26,7 +27,11 @@ void add_score(Game_State* game, float score_value) {
 
     int new_score = score->total + (int)(score_value * 100.0f * (float)score->multiplier);
     if (new_score / LIFE_UP_MILESTONE > score->total / LIFE_UP_MILESTONE) {
-	spawn_entity(game, ENTITY_TYPE_ITEM_LIFEUP, (Vector2){randomf() * game->world_w, randomf() * game->world_h});
+	spawn_entity(
+	    game->entities, game->particle_system,
+	    ENTITY_TYPE_ITEM_LIFEUP,
+	    (Vector2){randomf() * game->world_w, randomf() * game->world_h}
+	);
     }
     score->total = new_score;
     score->timer = SCORE_COMBO_DECAY;

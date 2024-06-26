@@ -10,8 +10,9 @@
 
 const char* get_weapon_label(Game_State* game) {
 	const char* result = "Unknown";
-	if (game->player) {
-		switch (game->player->type_data) {
+	Entity* player = get_entity(game->entities, game->player);
+	if (player) {
+		switch (player->type_data) {
 			case PLAYER_WEAPON_MG: {
 				result = "Machine Gun";
 			} break;
@@ -33,8 +34,9 @@ const char* get_weapon_label(Game_State* game) {
 //TODO: Icon for "Unknown"
 SDL_Texture* get_weapon_icon(Game_State* game) {
 	SDL_Texture* result = 0;
-	if (game->player) {
-		switch (game->player->type_data) {
+	Entity* player = get_entity(game->entities, game->player);
+	if (player) {
+		switch (player->type_data) {
 			case PLAYER_WEAPON_MG: {
 				result = assets_get_texture(game->assets, "HUD MG");
 			} break;
@@ -246,7 +248,7 @@ void draw_HUD(Game_State* game, Rectangle bounds, float scale) {
 	ui_element weapon_hud = new_ui_poly((Vector2){-100*scale, -30*scale}, MENU_COLOR, weapon_bg);
 	weapon_hud.x += (bounds.x+bounds.w);
 	weapon_hud.y += (bounds.y+bounds.h);
-	int current_weapon = (game->player) ? (int)(game->player->type_data) : 0;
+
 	ui_element weapon_children[] = {
 		new_ui_text((Vector2){-60, -18}, 0, WHITE, "Ammo", 16, "center"),
 		new_ui_text((Vector2){-60, 18}, &(game->player_state.ammo), SD_BLUE, "", 36, "center"),
@@ -254,7 +256,6 @@ void draw_HUD(Game_State* game, Rectangle bounds, float scale) {
 		{
 			.type = UI_TYPE_TEXTURE,
 			.pos = {40, 6},
-			.val = &current_weapon,
 			.texture.texture = get_weapon_icon(game),
 		}
 	};

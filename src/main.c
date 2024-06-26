@@ -221,14 +221,14 @@ int main(int argc, char* argv[]) {
 	window = SDL_CreateWindow("Space Drifter DX", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, screen_w, screen_h, SDL_WINDOW_RESIZABLE);
 	if (window == NULL) {
 		SDL_LogError(0, "%s", SDL_GetError());
-		exit(1);
+		SDL_Quit();
 	}
 
 	SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
 	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC); 
 	if (renderer == NULL) {
 		SDL_LogError(0, "%s", SDL_GetError());
-		exit(1);
+		SDL_Quit();
 	}
 	SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
@@ -238,19 +238,13 @@ int main(int argc, char* argv[]) {
 		Mix_AllocateChannels(12);
 	}
 
-	Game_State* game = SDL_malloc(sizeof(Game_State));
-	SDL_memset(game, 0, sizeof(Game_State));
-
-	game->entities_size = 256;
-	game->entities = SDL_malloc(sizeof(Entity) * game->entities_size);
-	SDL_memset(game->entities, 0, sizeof(Entity) * game->entities_size);
-
+	Game_State* game = SDL_calloc(1, sizeof(Game_State));
 	init_game(game);
-	game->fit_world_to_screen = 1;
 
 	world_buffer = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB32, SDL_TEXTUREACCESS_TARGET, game->world_w, game->world_h);
 	if (!world_buffer) {
 		SDL_Log("Creating world buffer failed. %s", SDL_GetError());
+		SDL_Quit();
 	}
 
 	double target_fps = (double)TARGET_FPS;

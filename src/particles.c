@@ -38,10 +38,13 @@ void reset_particle_system(Particle_System* ps) {
 	ps->emitter_count = 1;
 }
 
+static void update_particle_emitters(Particle_System* ps, float dt);
+
 void update_particles(Particle_System* ps, float dt) {
+	update_particle_emitters(ps, dt);	
+
 	Uint32 dead_particles[DEAD_PARTICLE_MAX];
 	Uint32 dead_particle_count = 0;
-
 	for (int p = 0; p < ps->particle_count; p++) {
 		Particle* particle = ps->particles + p;
 		
@@ -278,7 +281,7 @@ void remove_particle_emitter(Particle_System* ps, Uint32 index) {
 	}
 }
 
-void update_particle_emitters(Particle_System* ps, float dt) {
+static void update_particle_emitters(Particle_System* ps, float dt) {
 	for (int emitter_index = 1; emitter_index < ps->emitter_count; emitter_index++) {
 		Particle_Emitter* emitter = ps->emitters + emitter_index;
 		if (emitter->state != EMITTER_STATE_ACTIVE) continue;

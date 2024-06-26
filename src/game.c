@@ -1,3 +1,4 @@
+#include "entities.h"
 #include "platform.h"
 #include "defs.h"
 #include "assets.h"
@@ -29,12 +30,20 @@ static void switch_game_scene(Game_Scene new_scene) {
 }
 
 static void spawn_player(Game_State* game) {
-	game->player = get_entity(game,
-		spawn_entity(game, ENTITY_TYPE_PLAYER, (Vector2){(float)(float)game->world_w/2.0f, (float)(float)game->world_h})
-	);
+	game->player = 
+		spawn_entity(
+			game->entities, game->particle_system,
+			ENTITY_TYPE_PLAYER,
+			(Vector2){(float)game->world_w/2.0f, (float)game->world_h}
+		);
 	
-	game->player->type_data = PLAYER_WEAPON_MG;
+	Entity* player = get_entity(game->entities, game->player);
+	if (player) {
+		player->type_data = PLAYER_WEAPON_MG;
+		player->type_data = PLAYER_WEAPON_LASER;
+	}
 	game->player_state.ammo = 0;
+	game->player_state.ammo = 42069;
 	Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Player Spawn"), 0);
 }
 
@@ -90,6 +99,9 @@ void load_game_assets(Game_State* game) {
 }
 
 void init_game(Game_State* game) {
+	game->entities = create_entity_system();
+
+	game->fit_world_to_screen = 1;
 	game->world_w = 800;
 	game->world_h = 600;
 
@@ -162,9 +174,9 @@ void init_game(Game_State* game) {
 		},
 	};
 
-	game->entity_count = 1;
+	reset_entity_system(game->entities);
 	game->enemy_count = 0;
-	spawn_entity(game, ENTITY_TYPE_DEMOSHIP, (Vector2){game->world_w/2.0f, game->world_h});
+	spawn_entity(game->entities, game->particle_system, ENTITY_TYPE_DEMOSHIP, (Vector2){game->world_w/2.0f, game->world_h});
 }
 
 void restart_game(Game_State* game) {
@@ -216,7 +228,7 @@ void update_game(Game_State* game, float dt) {
 						spawn_player(game);
 						game->player_state.lives--;
 					} 
-				} else if (!game->player) {
+				} else if (game->player == 0) {
 					switch_game_scene(GAME_SCENE_GAME_OVER);
 				}
 			} break;
@@ -239,21 +251,15 @@ void update_game(Game_State* game, float dt) {
 	} else {
 		switch(next_scene) {
 			case GAME_SCENE_MAIN_MENU: {
-				for (int i = 1; i < game->entity_count; i++) {
-					game->entities[i].state = ENTITY_STATE_DESPAWNING;
-					game->entities[i].timer = 30.0f;
-				}
+				despawn_entities(game->entities);
 				game->enemy_count = 1; // Prevent the spawn system from triggering in menu
 
-				spawn_entity(game, ENTITY_TYPE_DEMOSHIP, (Vector2){game->world_w/2.0f, game->world_h});
+				spawn_entity(game->entities, game->particle_system, ENTITY_TYPE_DEMOSHIP, (Vector2){game->world_w/2.0f, game->world_h});
 				Mix_PlayMusic(assets_get_music(game->assets, "Space Drifter"), -1);
 			} break;
 
 			case GAME_SCENE_GAMEPLAY: {				
-				for (int i = 1; i < game->entity_count; i++) {
-					game->entities[i].state = ENTITY_STATE_DESPAWNING;
-					game->entities[i].timer = 30.0f;
-				}
+				despawn_entities(game->entities);
 
 				restart_game(game);
 				Mix_PlayMusic(assets_get_music(game->assets, "Wrapping Action"), -1);
@@ -279,8 +285,15 @@ void update_game(Game_State* game, float dt) {
 
 	update_score_timer(&game->score, dt);
 	update_entities(game, dt);
-	update_particle_emitters(game->particle_system, dt);
 	update_particles(game->particle_system, dt);
+
+	//TO-DO: Implement better conditions for this.
+	// If there are as many dead entities as entities minus reserved 0 entity and player (if currently alive)
+	if (game->enemy_count == 0) {
+		game->score.current_wave++;
+		game->score.spawn_points_max++;
+		spawn_wave(game, game->score.current_wave, game->score.spawn_points_max);
+	}
 
 	poll_input(&game->input); // Clear held and released states
 }
@@ -299,7 +312,7 @@ void draw_game_world(Game_State* game) {
 	}
 
 	draw_particles(game->particle_system, game->assets);
-	draw_entities(game);
+	draw_entities(game->entities, game->assets, game->world_w, game->world_h);
 }
 
 void draw_main_menu(Game_State* game, Rectangle bounds, float scale) {

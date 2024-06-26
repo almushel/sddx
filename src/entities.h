@@ -2,6 +2,7 @@
 #define GAME_ENTITIES_H
 
 #include "defs.h"
+#include "particles.h"
 
 typedef enum Entity_Types {
 	ENTITY_TYPE_UNDEFINED,
@@ -37,6 +38,12 @@ typedef enum Entity_Teams {
 	ENTITY_TEAM_ENEMY,
 } Entity_Teams;
 
-Uint32 spawn_entity(Game_State* game, Entity_Types type, Vector2 position);
+
+Entity_System* create_entity_system();
+void reset_entity_system(Entity_System* es);
+
+Uint32 spawn_entity(Entity_System* es, Particle_System* ps, Entity_Types type, Vector2 position);
+
+void force_circle(Entity_System* es, float x, float y, float radius, float force);
 
 #endif
