@@ -291,8 +291,6 @@ void update_game(Game_State* game, Game_Input* input, float dt) {
 		game->score.spawn_points_max++;
 		spawn_wave(game, game->score.current_wave, game->score.spawn_points_max);
 	}
-
-	poll_input(&game->input); // Clear held and released states
 }
 
 void draw_game_world(Game_State* game) {

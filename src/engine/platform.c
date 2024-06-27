@@ -293,11 +293,11 @@ SDL_bool platform_update_and_render(Platform_State* platform, Platform_Game_Stat
 	}
 
 #ifdef DEBUG
-	if (is_key_released(&game->input, SDL_SCANCODE_EQUALS)) {
+	if (is_key_released(input, SDL_SCANCODE_EQUALS)) {
 		game->fit_world_to_screen = !game->fit_world_to_screen;
 	}
 	
-	if (is_key_released(&game->input, SDL_SCANCODE_GRAVE)) {
+	if (is_key_released(input, SDL_SCANCODE_GRAVE)) {
 		SDL_Log("Break");
 	}
 #endif
@@ -306,6 +306,7 @@ SDL_bool platform_update_and_render(Platform_State* platform, Platform_Game_Stat
 	}
 
 	update_game(game, input, dt);
+	poll_input(input); // Clear held and released states
 
 	SDL_SetRenderTarget(renderer, world_buffer);
 	draw_game_world(game);
