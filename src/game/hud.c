@@ -1,10 +1,12 @@
 #include "SDL_render.h"
 #include "SDL_stdinc.h"
-#include "platform.h"
-#include "defs.h"
-#include "assets.h"
-#include "game_math.h"
-#include "ui.h"
+#include "../engine/platform.h"
+#include "../engine/math.h"
+#include "../engine/assets.h"
+#include "../engine/ui.h"
+
+#include "game_types.h"
+#include "entities.h"
 
 #define MENU_COLOR (RGBA_Color){56, 56, 56, 160}
 
@@ -273,7 +275,7 @@ void draw_HUD(Game_State* game, Rectangle bounds, float scale) {
 		for (ui_element* child = hud[i].children; child != hud[i].children+hud[i].num_children; child++) {
 			scale_ui_element(child, scale);
 		}
-		draw_ui_element(game, hud+i);
+		draw_ui_element(hud+i, game->font);
 	}
 
 #ifdef DEBUG

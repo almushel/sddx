@@ -1,5 +1,4 @@
-#include "defs.h"
-#include "game_math.h"
+#include "math.h"
 
 #define sc2d_atan2 SDL_atan2f
 #define sc2d_fabsf SDL_fabsf
@@ -270,8 +269,8 @@ Game_Shape rotate_game_shape(Game_Shape shape, float degrees) {
 	return result;
 }
 
-bool check_shape_collision(Transform2D t1, Game_Shape s1, Transform2D t2, Game_Shape s2, Vector2* overlap) {
-	bool result = false;
+SDL_bool check_shape_collision(Transform2D t1, Game_Shape s1, Transform2D t2, Game_Shape s2, Vector2* overlap) {
+	SDL_bool result = false;
 
 	Transform2D* transforms[2] = {&t1, &t2};
 	Game_Shape* shapes[2] = {&s1, &s2};

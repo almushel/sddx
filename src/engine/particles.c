@@ -1,7 +1,7 @@
 #include "assets.h"
-#include "defs.h"
 #include "graphics.h"
-#include "game_math.h"
+#include "math.h"
+#include "types.h"
 
 #define PARTICLE_LIFETIME 12
 #define PARTICLE_MIN_SCALE 0.01

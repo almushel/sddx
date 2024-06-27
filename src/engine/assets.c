@@ -1,5 +1,4 @@
 #include "platform.h"
-#include "defs.h"
 #include "assets.h"
 
 #define STBI_NO_STDIO

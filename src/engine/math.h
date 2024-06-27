@@ -1,7 +1,7 @@
 #ifndef GAME_MATH_H
 #define GAME_MATH_H
 
-#include "defs.h"
+#include "types.h"
 #include "external/sc2d.h"
 
 #define MATH_PI 3.14159265
@@ -35,7 +35,7 @@ Poly2D scale_poly2d			(Poly2D polygon, Vector2 scale);
 
 Game_Shape scale_game_shape	(Game_Shape shape, Vector2 scale);
 Game_Shape rotate_game_shape	(Game_Shape shape, float degrees);
-bool check_shape_collision	(Transform2D, Game_Shape s1, Transform2D t2, Game_Shape s2, Vector2* overlap);
+SDL_bool check_shape_collision	(Transform2D, Game_Shape s1, Transform2D t2, Game_Shape s2, Vector2* overlap);
 
 float lerp			(float start, float end, float t);
 float randomf			(void);

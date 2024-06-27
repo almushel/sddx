@@ -1,7 +1,7 @@
 #ifndef GAME_SCORE_H
 #define GAME_SCORE_H
 
-#include "defs.h"
+#include "game_types.h"
 
 #define SCORE_COMBO_DECAY (5 * TICK_RATE)
 #define SCORE_TABLE_LENGTH 10

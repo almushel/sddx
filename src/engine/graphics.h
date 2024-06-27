@@ -1,7 +1,7 @@
 #ifndef GAME_GRAPHICS_H
 #define GAME_GRAPHICS_H
 
-#include "defs.h"
+#include "types.h"
 
 float 	measure_text				(STBTTF_Font* font, float size, const char* text);
 void 	render_text				(STBTTF_Font* font, float size, float x, float y, const char* text);

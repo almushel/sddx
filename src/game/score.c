@@ -1,6 +1,7 @@
 #include "SDL_rwops.h"
-#include "defs.h"
-#include "game_math.h"
+#include "../engine/math.h"
+
+#include "game_types.h"
 #include "entities.h"
 #include "score.h"
 

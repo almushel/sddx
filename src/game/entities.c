@@ -1,7 +1,8 @@
-#include "platform.h"
-#include "game_math.h"
-#include "assets.h"
-#include "graphics.h"
+#include "../engine/platform.h"
+#include "../engine/math.h"
+#include "../engine/assets.h"
+#include "../engine/graphics.h"
+
 #include "score.h"
 #include "entities.h"
 
@@ -407,7 +408,7 @@ Uint32 spawn_entity(Entity_System* es, Particle_System* ps, Entity_Types type, V
 			Particle_Emitter* thruster = get_particle_emitter(ps, entity->particle_emitters[0]);
 			if (thruster) {
 				thruster->shape= SHAPE_TYPE_RECT,
-				thruster->speed = PARTICLE_SPEED/2.0f;
+				thruster->speed = 6.0f/2.0f;
 				thruster->density = 1.0f;
 				thruster->colors[0] = RED;
 				thruster->color_count = 1;

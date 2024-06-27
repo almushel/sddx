@@ -1,8 +1,9 @@
 #include "SDL_render.h"
 #include "assets.h"
-#include "game_math.h"
+#include "math.h"
 #include "graphics.h"
 #include "platform.h"
+#include "types.h"
 #include "ui.h"
 
 ui_element new_ui_text(Vector2 pos, int* val, RGBA_Color color, char* str, int size, const char* align) {
@@ -65,7 +66,7 @@ ui_element new_ui_poly_proc(Vector2 pos, RGBA_Color color, ui_proc proc, Poly2D 
 	return result;
 }
 
-void draw_ui_element(Game_State* game, ui_element* e) {
+void draw_ui_element(ui_element* e, STBTTF_Font* font) {
 	if (e->draw != 0) {
 		e->draw(e);
 	}
@@ -89,6 +90,7 @@ void draw_ui_element(Game_State* game, ui_element* e) {
 		} break;
 
 		case UI_TYPE_TEXT: {
+			if (font == NULL) { break; }
 			char buf[64];
 			size_t len = 0;
 			if (e->text.str != 0 && e->text.str[0] != '\0') {
@@ -98,7 +100,7 @@ void draw_ui_element(Game_State* game, ui_element* e) {
 				SDL_itoa(*(e->val.i), buf+len, 10);
 			}
 			platform_set_render_draw_color(e->color);
-			render_text_aligned(game->font, e->text.size, e->pos.x, e->pos.y, buf, e->text.align);
+			render_text_aligned(font, e->text.size, e->pos.x, e->pos.y, buf, e->text.align);
 		} break;
 
 		case UI_TYPE_POLY: {
@@ -117,7 +119,7 @@ void draw_ui_element(Game_State* game, ui_element* e) {
 
 	for (int i = 0; i < e->num_children; i++) {
 		(e->children+i)->pos = add_vector2(e->pos, (e->children+i)->pos);
-		draw_ui_element(game, e->children+i);
+		draw_ui_element(e->children+i, font);
 	}
 }
 

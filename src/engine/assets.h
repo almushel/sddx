@@ -1,7 +1,7 @@
 #ifndef GAME_ASSETS_H
 #define GAME_ASSETS_H
 
-#include "defs.h"
+#include "types.h"
 
 #define declare_store_asset(type, table_name, func_suffix) void assets_store_##func_suffix(Game_Assets* assets, type* asset, const char* label)
 #define define_store_asset(type, table_name, func_suffix) void assets_store_##func_suffix(Game_Assets* assets, type* asset, const char* label) {\

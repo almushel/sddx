@@ -1,8 +1,8 @@
 #ifndef GAME_ENTITIES_H
 #define GAME_ENTITIES_H
 
-#include "defs.h"
-#include "particles.h"
+#include "game_types.h"
+#include "../engine/particles.h"
 
 typedef enum Entity_Types {
 	ENTITY_TYPE_UNDEFINED,
@@ -42,6 +42,8 @@ typedef enum Entity_Teams {
 Entity_System* create_entity_system();
 void reset_entity_system(Entity_System* es);
 
+Uint32 get_new_entity(Entity_System* es);
+Entity* get_entity(Entity_System* es, Uint32 entity_id);
 Uint32 spawn_entity(Entity_System* es, Particle_System* ps, Entity_Types type, Vector2 position);
 
 void force_circle(Entity_System* es, float x, float y, float radius, float force);

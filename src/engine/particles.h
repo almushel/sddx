@@ -1,7 +1,7 @@
 #ifndef PARTICLES_H
 #define PARTICLES_H
 
-#include "defs.h"
+#include "types.h"
 
 Particle_System*	new_particle_system		(void);
 void			reset_particle_system		(Particle_System* ps);

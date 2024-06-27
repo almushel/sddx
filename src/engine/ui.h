@@ -1,7 +1,7 @@
 #ifndef UI_H
 #define UI_H
 
-#include "defs.h"
+#include "types.h"
 
 typedef struct ui_element ui_element;
 typedef void (ui_proc) (ui_element* element);
@@ -43,6 +43,6 @@ ui_element new_ui_rect_proc(Vector2 pos, float* val, ui_proc proc, RGBA_Color co
 ui_element new_ui_poly(Vector2 pos, RGBA_Color color, Poly2D polygon);
 ui_element new_ui_poly_proc(Vector2 pos, RGBA_Color color, ui_proc proc, Poly2D polygon);
 
-void draw_ui_element(Game_State* game, ui_element* e);
+void draw_ui_element(ui_element* e, STBTTF_Font* font);
 void scale_ui_element(ui_element* e, float scale);
 #endif

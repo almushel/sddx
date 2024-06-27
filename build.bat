@@ -5,7 +5,7 @@
 
 set options=-Zi -I %1\include -I %2\include -DSDL_MAIN_HANDLED -DDEBUG
 set link_options=-SUBSYSTEM:CONSOLE -LIBPATH:%1\VisualC\x64\Debug -LIBPATH:%2\VisualC\x64\Debug -OUT:sddx.exe
-set src_files=..\src\main.c ..\src\game.c ..\src\assets.c ..\src\game_math.c
+set src_files=..\src\main.c ..\src\engine\platform.c ..\src\game\game.c
 set libs=SDL2.lib SDL2main.lib SDL2_mixer.lib winmm.lib version.lib Imm32.lib Setupapi.lib
 
 if not exist "bin" mkdir bin

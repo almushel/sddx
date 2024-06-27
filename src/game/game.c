@@ -1,17 +1,15 @@
 #include "entities.h"
-#include "platform.h"
-#include "defs.h"
-#include "assets.h"
+#include "../engine/platform.h"
+#include "../engine/graphics.h"
+#include "../engine/ui.h"
+#include "../engine/assets.h"
 
-#include "game_input.c"
-#include "graphics.c"
-#include "particles.c"
-#include "entities.c"
+#include "game_types.h"
 #include "score.h"
-#include "ui.c"
+
+#include "entities.c"
 #include "hud.c"
 #include "score.c"
-#include "ui.h"
 
 #define clamp(value, min, max) (value > max) ? max : (value < min) ? min : value;
 
@@ -40,10 +38,8 @@ static void spawn_player(Game_State* game) {
 	Entity* player = get_entity(game->entities, game->player);
 	if (player) {
 		player->type_data = PLAYER_WEAPON_MG;
-		player->type_data = PLAYER_WEAPON_LASER;
 	}
 	game->player_state.ammo = 0;
-	game->player_state.ammo = 42069;
 	Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Player Spawn"), 0);
 }
 
@@ -203,7 +199,7 @@ void restart_game(Game_State* game) {
 
 }
 
-void update_game(Game_State* game, float dt) {
+void update_game(Game_State* game, Game_Input* input, float dt) {
 #if DEBUG
 		if (is_key_released(&game->input, SDL_SCANCODE_R)) {
 			next_scene = GAME_SCENE_MAIN_MENU;
@@ -212,6 +208,7 @@ void update_game(Game_State* game, float dt) {
 			next_scene = GAME_SCENE_HIGH_SCORES;
 		}
 #endif
+	game->input = *input;
 	if (next_scene == current_scene) {
 		switch(current_scene) {
 			case GAME_SCENE_MAIN_MENU: {
@@ -355,7 +352,7 @@ void draw_main_menu(Game_State* game, Rectangle bounds, float scale) {
 	scale_ui_element(&main_menu, scale);
 	main_menu.pos = origin;
 
-	draw_ui_element(game,&main_menu);
+	draw_ui_element(&main_menu, game->font);
 
 	if (controller_enabled) {
 		platform_set_render_draw_color((RGBA_Color){255, 0, 0, 255});
@@ -394,7 +391,7 @@ void draw_scene_ui(Game_State* game, Game_Scene scene) {
 
 			scale_ui_element(&game_over, scale);
 			game_over.pos = (Vector2){world_rect.x+(world_rect.w/2.0f), world_rect.y+(world_rect.h/2.0f)},
-			draw_ui_element(game, &game_over);
+			draw_ui_element(&game_over, game->font);
 		} break;
 
 		case GAME_SCENE_HIGH_SCORES: {
@@ -418,7 +415,7 @@ void draw_scene_ui(Game_State* game, Game_Scene scene) {
 				world_rect.x+(world_rect.w/2.0f),
 				world_rect.y+(world_rect.h/4.0f)
 			};
-			draw_ui_element(game, &high_score);
+			draw_ui_element(&high_score, game->font);
 
 			SDL_free(scores);
 		} break;

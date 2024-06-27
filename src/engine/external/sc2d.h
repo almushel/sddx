@@ -4,6 +4,7 @@
 #ifndef SIMPLE_COLLISION_2D_H
 #define SIMPLE_COLLISION_2D_H 
 
+#include <stdbool.h>
 bool sc2d_check_point_circle(float px, float py,
 			     float cx, float xy, float cr,
 			     float* overlap_x, float* overlap_y);

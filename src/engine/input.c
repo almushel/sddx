@@ -1,4 +1,4 @@
-#include "game_input.h"
+#include "input.h"
 
 void process_key_event(Game_Input* input, SDL_KeyboardEvent* event) {
 	if (event->repeat == 0) {
@@ -24,26 +24,28 @@ void poll_input(Game_Input* input) {
 			case GAME_INPUT_RELEASED: {
 				input->keys[i] = GAME_INPUT_NULL;
 			} break;
+
+			default: {} break;
 		}
 	}
 
-//	for (int c = 0; c < GAME_MAX_CONTROLLERS; c++) {
-		for (int b = 0; b < SDL_CONTROLLER_BUTTON_MAX; b++) {
-			switch(input->controller.buttons[b]) {
-				case GAME_INPUT_PRESSED: {
-					input->controller.buttons[b] = GAME_INPUT_HELD;
-				} break;
+	for (int b = 0; b < SDL_CONTROLLER_BUTTON_MAX; b++) {
+		switch(input->controller.buttons[b]) {
+			case GAME_INPUT_PRESSED: {
+				input->controller.buttons[b] = GAME_INPUT_HELD;
+			} break;
 
-				case GAME_INPUT_RELEASED: {
-					input->controller.buttons[b] = GAME_INPUT_NULL;
-				} break;
-			}
+			case GAME_INPUT_RELEASED: {
+				input->controller.buttons[b] = GAME_INPUT_NULL;
+			} break;
+
+			default: {} break;
 		}
-//	}
+	}
 }
 
-bool is_key_pressed(Game_Input* input, SDL_Scancode key) {
-	bool result = ( 
+SDL_bool is_key_pressed(Game_Input* input, SDL_Scancode key) {
+	SDL_bool result = ( 
 		valid_scancode(key) &&
 		input->keys[key] == GAME_INPUT_PRESSED
 	);
@@ -51,8 +53,8 @@ bool is_key_pressed(Game_Input* input, SDL_Scancode key) {
 	return result;
 }
 
-bool is_key_held(Game_Input* input, SDL_Scancode key) {
-	bool result = (
+SDL_bool is_key_held(Game_Input* input, SDL_Scancode key) {
+	SDL_bool result = (
 		valid_scancode(key) &&
 		input->keys[key] == GAME_INPUT_PRESSED) || (input->keys[key] == GAME_INPUT_HELD
 	);
@@ -60,8 +62,8 @@ bool is_key_held(Game_Input* input, SDL_Scancode key) {
 	return result;
 }
 
-bool is_key_released(Game_Input* input,  SDL_Scancode key) {
-	bool result = (
+SDL_bool is_key_released(Game_Input* input,  SDL_Scancode key) {
+	SDL_bool result = (
 		valid_scancode(key) &&
 		input->keys[key] == GAME_INPUT_RELEASED
 	);
@@ -107,8 +109,8 @@ void process_controller_event(Game_Input* input, SDL_Event* event) {
 	}
 }
 
-bool is_controller_button_pressed(Game_Input* input, SDL_GameControllerButton button) {
-	bool result = (
+SDL_bool is_controller_button_pressed(Game_Input* input, SDL_GameControllerButton button) {
+	SDL_bool result = (
 		valid_controller_button(button) &&
 		(input->controller.buttons[button] == GAME_INPUT_PRESSED)
 	);
@@ -116,8 +118,8 @@ bool is_controller_button_pressed(Game_Input* input, SDL_GameControllerButton bu
 	return result;
 }
 
-bool is_controller_button_held(Game_Input* input, SDL_GameControllerButton button) {
-	bool result = (	
+SDL_bool is_controller_button_held(Game_Input* input, SDL_GameControllerButton button) {
+	SDL_bool result = (	
 		valid_controller_button(button) &&
 		(input->controller.buttons[button] == GAME_INPUT_PRESSED) || (input->controller.buttons[button] == GAME_INPUT_HELD)
 	);
@@ -125,8 +127,8 @@ bool is_controller_button_held(Game_Input* input, SDL_GameControllerButton butto
 	return result;
 }
 
-bool is_controller_button_released(Game_Input* input, SDL_GameControllerButton button) {
-	bool result = (	
+SDL_bool is_controller_button_released(Game_Input* input, SDL_GameControllerButton button) {
+	SDL_bool result = (	
 		valid_controller_button(button) &&
 		input->controller.buttons[button] == GAME_INPUT_RELEASED
 	);
@@ -144,16 +146,17 @@ float get_controller_axis(Game_Input* input, int axis) {
 	return result;
 }
 
-bool is_game_control_pressed(Game_Input* input, Game_Control* control){
-	bool result = (
+SDL_bool is_game_control_pressed(Game_Input* input, Game_Control* control){
+	SDL_bool result = (
 		is_key_pressed(input, control->key) ||
 		is_controller_button_pressed(input, control->button)
 	);
 
 	return result;
 }
-bool is_game_control_held(Game_Input* input, Game_Control* control) {
-	bool result = (
+
+SDL_bool is_game_control_held(Game_Input* input, Game_Control* control) {
+	SDL_bool result = (
 		is_key_held(input, control->key) ||
 		is_controller_button_held(input, control->button)
 	);
@@ -161,8 +164,8 @@ bool is_game_control_held(Game_Input* input, Game_Control* control) {
 	return result;
 }
 
-bool is_game_control_released(Game_Input* input, Game_Control* control) {
-	bool result = (
+SDL_bool is_game_control_released(Game_Input* input, Game_Control* control) {
+	SDL_bool result = (
 		is_key_released(input, control->key) ||
 		is_controller_button_released(input, control->button)
 	);

@@ -1,7 +1,6 @@
 #ifndef GAME_INPUT_H
 #define GAME_INPUT_H
 
-#include <stdbool.h>
 #include "SDL_scancode.h"
 #include "SDL_gamecontroller.h"
 #include "SDL_events.h"
@@ -18,7 +17,6 @@ typedef struct Game_Controller {
 	float axes[SDL_CONTROLLER_AXIS_MAX];
 } Game_Controller;
 
-//#define GAME_MAX_CONTROLLERS 4
 typedef struct Game_Input {
 	Game_Input_State keys[SDL_NUM_SCANCODES];
 	Game_Controller controller;
@@ -52,18 +50,18 @@ typedef union Game_Player_Controller {
 void poll_input				(Game_Input* input);
 
 void process_key_event			(Game_Input* input, SDL_KeyboardEvent* event);
-bool is_key_pressed			(Game_Input* input, SDL_Scancode key);
-bool is_key_held			(Game_Input* input, SDL_Scancode key);
-bool is_key_released			(Game_Input* input,  SDL_Scancode key);
+SDL_bool is_key_pressed			(Game_Input* input, SDL_Scancode key);
+SDL_bool is_key_held			(Game_Input* input, SDL_Scancode key);
+SDL_bool is_key_released		(Game_Input* input,  SDL_Scancode key);
 
 void process_controller_event		(Game_Input* input, SDL_Event* event);
-bool is_controller_button_pressed	(Game_Input* input, SDL_GameControllerButton button);
-bool is_controller_button_held		(Game_Input* input, SDL_GameControllerButton button);
-bool is_controller_button_released	(Game_Input* input, SDL_GameControllerButton button);
+SDL_bool is_controller_button_pressed	(Game_Input* input, SDL_GameControllerButton button);
+SDL_bool is_controller_button_held	(Game_Input* input, SDL_GameControllerButton button);
+SDL_bool is_controller_button_released	(Game_Input* input, SDL_GameControllerButton button);
 
-bool is_game_control_pressed		(Game_Input* input, Game_Control* control);
-bool is_game_control_held		(Game_Input* input, Game_Control* control);
-bool is_game_control_released		(Game_Input* input, Game_Control* control);
+SDL_bool is_game_control_pressed	(Game_Input* input, Game_Control* control);
+SDL_bool is_game_control_held		(Game_Input* input, Game_Control* control);
+SDL_bool is_game_control_released	(Game_Input* input, Game_Control* control);
 float get_game_control_axis		(Game_Input* input, Game_Control* control);
 
 #endif
