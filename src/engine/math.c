@@ -31,6 +31,18 @@ float lerp(float start, float end, float t) {
 	return (1.0f - t) * start + (t * end);
 }
 
+float angle_rotation_to_target(Vector2 origin, Vector2 target, float angle, float tolerance) {
+	float result = 0;
+	
+	float target_angle = normalize_degrees( atan2_deg(target.y - origin.y, target.x - origin.x) );
+	float angle_delta = cos_deg(target_angle)*sin_deg(angle) - sin_deg(target_angle)*cos_deg(angle);
+
+	if (angle_delta < -tolerance) result = 1;
+	else if (angle_delta > tolerance) result = -1;
+	
+	return result;
+}
+
 // Returns a pseudo-random value between 0 and 1
 float randomf(void) {
 	float result = (float)(rand() % 1000) / 1000.0f;

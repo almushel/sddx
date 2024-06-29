@@ -12,6 +12,7 @@ float sin_deg  			(float degrees);
 float cos_deg  			(float degrees);
 float atan2_deg			(float y, float x);
 float normalize_degrees		(float degrees);
+float angle_rotation_to_target  (Vector2 origin, Vector2 target, float angle, float tolerance);
 
 float vector2_length		(Vector2 v);
 Vector2 normalize_vector2	(Vector2 v);
