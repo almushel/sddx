@@ -66,8 +66,6 @@ typedef struct Entity {
 	Uint8 state;
 	Uint8 team;
 	Uint8 type_data;
-
-	struct Entity* next;
 } Entity;
 
 typedef struct Entity_System Entity_System;

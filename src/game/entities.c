@@ -1,4 +1,3 @@
-#include "../engine/platform.h"
 #include "../engine/math.h"
 #include "../engine/assets.h"
 #include "../engine/graphics.h"
@@ -19,7 +18,7 @@ struct Entity_System {
 	Entity entities[MAX_ENTITIES];
 	Uint32 num_entities;
 
-	Entity* next_free;
+	Uint32 next;
 };
 
 static inline Entity* get_enemy_target(Game_State* game) {
@@ -48,7 +47,7 @@ Entity_System* create_entity_system() {
 
 void reset_entity_system(Entity_System* es) {
 	es->num_entities = 0;
-	es->next_free = 0;
+	es->next = 0;
 }
 
 void despawn_entities(Entity_System* es) {
@@ -58,12 +57,29 @@ void despawn_entities(Entity_System* es) {
 	}
 }
 
+// Get valid, active entity or null pointer
+Entity* get_entity(Entity_System* es, Uint32 entity_id) {
+	Entity* result = 0;
+
+	if (entity_id > 0 && entity_id <= MAX_ENTITIES) {
+		result = es->entities + (entity_id-1);
+	}
+
+	return result;
+}
+
 Uint32 get_new_entity(Entity_System* es) {
 	Uint32 result = 0;
 
-	if (es->next_free) {
-		result = (es->next_free - es->entities) + 1;
-		es->next_free = es->next_free->next;
+	if (es->next) {
+		result = es->next;
+		es->next = 0;
+		for (int i=result; i < es->num_entities; i++) {
+			if (es->entities[i].state == ENTITY_STATE_UNDEFINED) {
+				es->next = (i+1);
+				break;
+			}
+		}
 	} else if (es->num_entities < MAX_ENTITIES) {
 		es->num_entities++;
 		result = es->num_entities;
@@ -72,12 +88,15 @@ Uint32 get_new_entity(Entity_System* es) {
 	return result;
 }
 
-// Get valid, active entity or null pointer
-Entity* get_entity(Entity_System* es, Uint32 entity_id) {
-	Entity* result = 0;
+Uint32 remove_entity(Entity_System* es, Uint32 id) {
+	Uint32 result = 0;
 
-	if (entity_id > 0 && entity_id <= MAX_ENTITIES) {
-		result = es->entities + (entity_id-1);
+	if (id <= es->num_entities) {
+		es->entities[id-1].state = ENTITY_STATE_UNDEFINED;
+		es->entities[id-1].type = ENTITY_TYPE_UNDEFINED;
+		if (!es->next || id < es->next) {
+			es->next = id;
+		}
 	}
 
 	return result;
@@ -323,10 +342,7 @@ void remove_dead_entity(Game_State* game, Uint32 entity_id) {
 		}
 	}
 
-	dead_entity->state = ENTITY_STATE_UNDEFINED;
-	dead_entity->type = ENTITY_TYPE_UNDEFINED;
-	dead_entity->next = es->next_free;
-	es->next_free = dead_entity;
+	remove_entity(es, entity_id);
 }
 
 void update_entities(Game_State* game, float dt) {
@@ -511,61 +527,47 @@ Rectangle get_entity_bounding_box(Game_Assets* assets, Entity* entity) {
 
 void draw_entities(Entity_System* es, Game_Assets* assets, int world_w, int world_h) {
 	Entity* entity = 0;
-	Transform2D transforms[4] = {0};
-	int transform_count = 0;
+	Rectangle world_rect = {0,0,world_w,world_h};
+	Vector2 wrap_positions[4] = {0};
+	int wrap_count = 0;
 
 	for (int entity_index = 1; entity_index <= es->num_entities; entity_index++) {
 		entity = get_entity(es, entity_index);
 		if (entity == NULL) continue;
 		if (entity->state <= 0 || entity->state >= ENTITY_STATE_DYING) continue;
 
-		transforms[0] = transforms[1] = transforms[2]= transforms[3] = entity->transform;
-		transform_count = 1;
-		Rectangle bounding_box = get_entity_bounding_box(assets, entity);
-
-		int wrap_x = (int)(entity->x + bounding_box.x < 0) - (int)(entity->x + bounding_box.w > world_w);
-		int wrap_y = (int)(entity->y + bounding_box.y < 0) - (int)(entity->y + bounding_box.h > world_h);
-
-		if (wrap_x) {
-			transforms[transform_count].x += world_w * (float)wrap_x;
-			transform_count++;
-		} 
-		
-		if (wrap_y) {
-			transforms[transform_count].y += world_h * (float)wrap_y;
-			transform_count++;
+		if (entity->type == ENTITY_TYPE_ENEMY_GRAPPLER) {
+			draw_grappler(entity);
 		}
 
-		if (wrap_x && wrap_y) {
-			transforms[transform_count].x += world_w * (float)wrap_x;
-			transforms[transform_count].y += world_h * (float)wrap_y;
-			transform_count++;
-		} 
+		Transform2D transform = entity->transform;
+		Rectangle bounding_box = get_entity_bounding_box(assets, entity);
+		wrap_aab(entity->transform.position, bounding_box, world_rect, wrap_positions, &wrap_count);
 
-		for (int i = 0; i < transform_count; i++) {
+		for (int i = 0; i < wrap_count; i++) {
+			transform.position = wrap_positions[i];
+
 			if (entity->sprite_count > 0) {
 				for (int sprite_index = 0; sprite_index < entity->sprite_count; sprite_index++) {
 					if (entity->sprites[sprite_index].texture_name != 0) {
-						render_draw_game_sprite(assets, &entity->sprites[sprite_index], transforms[i], true);
+						render_draw_game_sprite(assets, &entity->sprites[sprite_index], transform, true);
 					}
 				}
 			}
 			else if (entity->shape.type > SHAPE_TYPE_UNDEFINED && entity->shape.type < SHAPE_TYPE_COUNT) {
-				Game_Shape  shape = scale_game_shape(entity->shape, transforms[i].scale);
-							shape = rotate_game_shape(shape, transforms[i].angle);
-				render_fill_game_shape(transforms[i].position, shape, entity->color);
+				Game_Shape  shape = scale_game_shape(entity->shape, transform.scale);
+							shape = rotate_game_shape(shape, transform.angle);
+				render_fill_game_shape(transform.position, shape, entity->color);
 			}
-
-#ifdef DEBUG		
+#ifdef DEBUG
 			Rectangle test = bounding_box;
-			test.x += transforms[i].x;
-			test.y += transforms[i].y;
+			test.x += transform.x;
+			test.y += transform.y;
 			
 			platform_set_render_draw_color((RGBA_Color){255, 255, 0, 255});
 			platform_render_draw_rect(test);
 #endif
 		}
-
 #ifdef DEBUG
 		Game_Shape  shape = scale_game_shape(entity->shape, entity->scale);
 					shape = rotate_game_shape(shape, entity->angle);

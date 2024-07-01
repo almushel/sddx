@@ -236,6 +236,34 @@ Vector2 wrap_world_coords(float x, float y, float min_x, float min_y, float max_
 	return result;
 }
 
+void wrap_aab(const Vector2 position,
+	      const Rectangle aabb,
+	      const Rectangle bounds,
+	      Vector2 wrap_positions[4], int* count) {
+
+	wrap_positions[0] = wrap_positions[1] = wrap_positions[2]= wrap_positions[3] = position;
+	*count = 1;
+
+	int wrap_x = (int)(position.x + aabb.x < bounds.x) - (int)(position.x + aabb.w > bounds.w);
+	int wrap_y = (int)(position.y + aabb.y < bounds.y) - (int)(position.y + aabb.h > bounds.h);
+
+	if (wrap_x) {
+		wrap_positions[*count].x += bounds.w * (float)wrap_x;
+		(*count)++;
+	} 
+	
+	if (wrap_y) {
+		wrap_positions[*count].y += bounds.h * (float)wrap_y;
+		(*count)++;
+	}
+
+	if (wrap_x && wrap_y) {
+		wrap_positions[*count].x += bounds.w * (float)wrap_x;
+		wrap_positions[*count].y += bounds.h * (float)wrap_y;
+		(*count)++;
+	} 
+}
+
 Game_Shape scale_game_shape(Game_Shape shape, Vector2 scale) {
 	Game_Shape result = shape;
 

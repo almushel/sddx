@@ -22,6 +22,8 @@ Vector2 add_vector2		(Vector2 v1, Vector2 v2);
 Vector2 subtract_vector2	(Vector2 v1, Vector2 v2);
 float dot_product_vector2	(Vector2 v1, Vector2 v2);
 Vector2 wrap_world_coords	(float x, float y, float min_x, float min_y, float max_x, float max_y);
+void wrap_aab			(const Vector2 position, const Rectangle aabb, const Rectangle bounds,
+				 Vector2 wrap_positions[4], int* count);
 
 Rectangle translate_rect	(Rectangle rect, Vector2 translation);
 Rectangle scale_rect		(Rectangle rect, Vector2 scale);

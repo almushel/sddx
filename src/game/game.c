@@ -57,7 +57,7 @@ void load_game_assets(Game_State* game) {
 	assets_load_texture(game->assets, "assets/images/grappler_hook.png", "Grappler Hook");
 	assets_load_texture(game->assets, "assets/images/grappler.png", "Enemy Grappler");
 	assets_load_texture(game->assets, "assets/images/ufo.png", "Enemy UFO");
-//	SDL_SetTextureAlphaMod(assets_get_texture(game->assets, "Enemy UFO"), (Uint8)(255.0f * 0.7f));
+	SDL_SetTextureAlphaMod(assets_get_texture(game->assets, "Enemy UFO"), (Uint8)(255.0f * 0.7f));
 	assets_load_texture(game->assets, "assets/images/tracker.png", "Enemy Tracker");
 	assets_load_texture(game->assets, "assets/images/turret_base.png", "Enemy Turret Base");
 	assets_load_texture(game->assets, "assets/images/turret_cannon.png", "Enemy Turret Cannon");
@@ -188,11 +188,15 @@ void restart_game(Game_State* game) {
 
 	spawn_player(game);
 #if 0
-	for (int i = ENTITY_TYPE_PLAYER+1; i < ENTITY_TYPE_SPAWN_WARP; i++) {
-		Uint32 entity_id = spawn_entity(game, ENTITY_TYPE_SPAWN_WARP, (Vector2){randomf() * (float)game->world_w, randomf() * (float)game->world_h});
-		if (entity_id) {
-			Entity* entity = get_entity(game, entity_id);
-			entity->type_data = i;
+	for (int i = ENTITY_TYPE_PLAYER+1; i < ENTITY_TYPE_SPAWN_WARP/2; i++) {
+		Uint32 entity_id = spawn_entity(
+			game->entities, game->particle_system, 
+			ENTITY_TYPE_SPAWN_WARP,
+			(Vector2){randomf() * (float)game->world_w, randomf() * (float)game->world_h}
+		);
+		Entity* entity = get_entity(game->entities, entity_id);
+		if (entity) {
+			entity->type_data = ENTITY_TYPE_ENEMY_GRAPPLER;
 		}
 	}
 #endif

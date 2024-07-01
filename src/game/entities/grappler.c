@@ -1,9 +1,11 @@
+#include "../../engine/platform.h"
 #include "../../engine/assets.h"
 #include "../../engine/math.h"
 #include "../game_types.h"
-#include "../entities.h"
 
-#define GRAPPLER_AIM_TOLERANCE 0.1f
+#define GRAPPLER_COLOR (RGBA_Color){0,255,0,255}
+#define GRAPPLER_RADIUS 15.0f
+#define GRAPPLER_AIM_TOLERANCE 0.09f
 #define GRAPPLER_TURN_SPEED 1.3f
 #define GRAPPLER_SPACE_FRICTION 0.06f
 #define GRAPPLER_ACCEL 0.06f
@@ -20,7 +22,7 @@ typedef enum Grappler_State {
 } Grappler_State;
 
 static inline void init_grappler(Entity* entity) {
-	entity->shape.radius = TURRET_RADIUS;
+	entity->shape.radius = GRAPPLER_RADIUS;
 	entity->sprites[0].texture_name = "Enemy Grappler";
 	entity->sprites[0].rotation_enabled = 1;
 	entity->sprites[1].texture_name = "Grappler Hook";
@@ -34,6 +36,7 @@ static inline void update_grappler(Game_State* game, Entity* entity, float dt) {
 	switch(entity->type_data) {
 		case GRAPPLER_STATE_AIMING: {
 			if (target) {
+				// TODO: Currently fires when target is directly behind as well
 				float aim_delta = angle_rotation_to_target(entity->position, target->position, entity->angle, GRAPPLER_AIM_TOLERANCE);
 				if (aim_delta == 0) {
 					entity->type_data = GRAPPLER_STATE_EXTENDING;
@@ -113,4 +116,25 @@ static inline void update_grappler(Game_State* game, Entity* entity, float dt) {
 			}
 		} break;
 	}
+}
+
+static inline void draw_grappler(Entity* entity) {
+	Vector2 offset = {
+		.x = cos_deg(entity->angle+90.0f)*1.5f,
+		.y = sin_deg(entity->angle+90.0f)*1.5f
+	};
+	Vector2 end = add_vector2(
+		entity->position,
+		rotate_vector2(
+			(Vector2){entity->sprites[1].offset.x-3, 0},
+			entity->angle
+		)
+	);
+
+	platform_set_render_draw_color(GRAPPLER_COLOR);
+	Vector2 line[2] = {add_vector2(entity->position, offset), add_vector2(end, offset)};
+	platform_render_draw_lines(line, 2);
+	line[0] = subtract_vector2(entity->position, offset);
+	line[1] = subtract_vector2(end, offset);
+	platform_render_draw_lines(line, 2);
 }
