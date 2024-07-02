@@ -1,3 +1,4 @@
+#include "SDL_stdinc.h"
 #include "entities.h"
 #include "../engine/platform.h"
 #include "../engine/graphics.h"
@@ -170,9 +171,16 @@ void init_game(Game_State* game) {
 		},
 	};
 
+	int* scores = get_score_table();
+	if (scores) {
+		SDL_memcpy(game->score.high_scores, scores, sizeof(int) * SCORE_TABLE_LENGTH);
+		SDL_free(scores);
+	}
+	game->score.latest_score_index = -1;
+
 	reset_entity_system(game->entities);
-	game->enemy_count = 0;
 	spawn_entity(game->entities, game->particle_system, ENTITY_TYPE_DEMOSHIP, (Vector2){game->world_w/2.0f, game->world_h});
+	game->enemy_count = 0;
 }
 
 void restart_game(Game_State* game) {
@@ -236,7 +244,12 @@ void update_game(Game_State* game, Game_Input* input, float dt) {
 			
 			case GAME_SCENE_GAME_OVER: {
 				if (is_game_control_pressed(&game->input, &game->player_controller.fire)) {
-					push_to_score_table(game->score.total);
+					game->score.latest_score_index = push_to_score_table(game->score.total);
+					int* scores = get_score_table();
+					if (scores) {
+						SDL_memcpy(game->score.high_scores, scores, sizeof(int) * SCORE_TABLE_LENGTH);
+						SDL_free(scores);
+					}
 					switch_game_scene(GAME_SCENE_HIGH_SCORES);
 				}
 			} break;
@@ -397,8 +410,7 @@ void draw_scene_ui(Game_State* game, Game_Scene scene) {
 		} break;
 
 		case GAME_SCENE_HIGH_SCORES: {
-			//TODO: Highlight new high score
-			int* scores = get_score_table();
+			int* scores = game->score.high_scores;
 
 			ui_element high_score = new_ui_text((Vector2){0}, NULL, WHITE, "HIGH_SCORES", 48, "center");
 			ui_element score_list[SCORE_TABLE_LENGTH];
@@ -408,7 +420,21 @@ void draw_scene_ui(Game_State* game, Game_Scene scene) {
 			float padding = 40;
 			Vector2 pos = {0, padding};
 			for (int i = 0; i < array_length(score_list); i++) {
-				score_list[i] = new_ui_text(pos, &(scores[i]), WHITE, 0, 32, "center");
+				if (i == game->score.latest_score_index) {
+					const char* label = "New!  ";
+					char buf[32];
+					SDL_itoa(scores[i], buf, 10);
+					float width = (float)measure_text(game->font, 32, buf)/2.0f;
+					width += (float)measure_text(game->font, 32, label);
+
+					score_list[i] = new_ui_text(
+						(Vector2){pos.x-width, pos.y},
+						(scores+i), 
+						ORANGE, (char*)label, 32, "left"
+					);
+				} else {
+					score_list[i] = new_ui_text(pos, (scores+i), WHITE, "", 32, "center");
+				}
 				pos.y += padding;
 			}
 
@@ -418,8 +444,6 @@ void draw_scene_ui(Game_State* game, Game_Scene scene) {
 				world_rect.y+(world_rect.h/4.0f)
 			};
 			draw_ui_element(&high_score, game->font);
-
-			SDL_free(scores);
 		} break;
 		
 		default: {}

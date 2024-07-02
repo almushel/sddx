@@ -9,6 +9,7 @@
 #define WHITE (RGBA_Color){255,255,255,255}
 #define BLACK (RGBA_Color){0,0,0,255}
 #define RED (RGBA_Color){255, 0, 0, 255}
+#define ORANGE (RGBA_Color){255, 165, 0, 255}
 
 #define array_length(arr) (ptrdiff_t)(sizeof(arr) / sizeof(*(arr)))
 
@@ -23,6 +24,7 @@ typedef struct Game_Starfield {
 	SDL_bool twinkle_direction[STARFIELD_STAR_COUNT];
 } Game_Starfield;
 
+#define SCORE_TABLE_LENGTH 10
 typedef struct Score_System {
 	int total;
 	int combo;
@@ -36,6 +38,9 @@ typedef struct Score_System {
 	// (This is accurate to the original, but is dumb)
 	int current_wave;
 	int spawn_points_max;
+
+	int high_scores[SCORE_TABLE_LENGTH];
+	int latest_score_index;
 
 } Score_System;
 

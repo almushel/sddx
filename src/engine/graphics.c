@@ -6,7 +6,7 @@ float measure_text(STBTTF_Font* font, float size, const char* text) {
 	float result = 0; // width
 	float scale = size / font->size;
 	for (int i = 0; text[i]; i++) {
-		if (text[i] > 32 && text[i] < 128) {
+		if (text[i] >= 32 && text[i] < 128) {
 			stbtt_packedchar* info = &font->chars[text[i] - 32];
 			result += info->xadvance * scale;
 		}

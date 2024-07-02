@@ -74,8 +74,8 @@ void write_score_table(int* db) {
     }
 }
 
-SDL_bool push_to_score_table(int new_score) {
-    SDL_bool result = 0;
+int push_to_score_table(int new_score) {
+    int result = -1;
     int* db = get_score_table();
     
     for (int i = 0; i < SCORE_TABLE_LENGTH; i++) {
@@ -84,12 +84,13 @@ SDL_bool push_to_score_table(int new_score) {
 		db[e] = db[e-1];
 	    }
 	    db[i] = new_score;
-	    result = 1;
+	    result = i;
 	    break;
 	}
     }
 
     write_score_table(db);
     SDL_free(db);
+
     return result;
 }
