@@ -97,6 +97,10 @@ typedef struct Game_State {
 	Particle_System* particle_system;
 	Score_System score;
 
+	Game_Scene scene;
+	Game_Scene next_scene;
+	float scene_timer;
+
 	Game_Player_Controller player_controller;
 	Uint32 player;
 	struct {

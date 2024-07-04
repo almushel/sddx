@@ -120,7 +120,7 @@ void score_timer_hud_proc(ui_element* e) {
 	e->type = 0; // Skip default draw_ui
 }
 
-void draw_HUD(Game_State* game, Rectangle bounds, float scale) {
+void draw_HUD(Game_State* game, Rectangle bounds, float scale, float t) {
 	Poly2D meter_bg = {
 		.vertices = {
 			{ .x =  -125, .y =   22 },
@@ -141,7 +141,7 @@ void draw_HUD(Game_State* game, Rectangle bounds, float scale) {
 	};
 	Poly2D score_bg = scale_poly2d(weapon_bg, (Vector2){-1, 1});
 
-	ui_element score_hud = new_ui_poly((Vector2){100*scale,-30*scale}, MENU_COLOR, score_bg);
+	ui_element score_hud = new_ui_poly((Vector2){(100-225*t)*scale,-30*scale}, MENU_COLOR, score_bg);
 	score_hud.x += bounds.x;
 	score_hud.y += (bounds.y+bounds.h);
 	ui_element score_children[] = {
@@ -155,7 +155,7 @@ void draw_HUD(Game_State* game, Rectangle bounds, float scale) {
 	score_hud.children = score_children;
 	score_hud.num_children = array_length(score_children);
 
-	ui_element meter_hud = new_ui_poly((Vector2){0, -22*scale}, MENU_COLOR, meter_bg);
+	ui_element meter_hud = new_ui_poly((Vector2){0, (64*t-22)*scale}, MENU_COLOR, meter_bg);
 	meter_hud.x += bounds.x + (bounds.w / 2);
 	meter_hud.y += (bounds.y+bounds.h);
 
@@ -247,7 +247,7 @@ void draw_HUD(Game_State* game, Rectangle bounds, float scale) {
 	meter_hud.children = meter_children;
 	meter_hud.num_children = array_length(meter_children);
 
-	ui_element weapon_hud = new_ui_poly((Vector2){-100*scale, -30*scale}, MENU_COLOR, weapon_bg);
+	ui_element weapon_hud = new_ui_poly((Vector2){(225*t-100)*scale, -30*scale}, MENU_COLOR, weapon_bg);
 	weapon_hud.x += (bounds.x+bounds.w);
 	weapon_hud.y += (bounds.y+bounds.h);
 

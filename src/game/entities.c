@@ -52,8 +52,10 @@ void reset_entity_system(Entity_System* es) {
 
 void despawn_entities(Entity_System* es) {
 	for (Entity* e = es->entities; e != es->entities+es->num_entities; e++) {
-		e->state = ENTITY_STATE_DESPAWNING;
-		e->timer = 30.0f;
+		if (e->state > ENTITY_STATE_UNDEFINED && e->state < ENTITY_STATE_COUNT) {
+			e->state = ENTITY_STATE_DESPAWNING;
+			e->timer = 30.0f;
+		}
 	}
 }
 

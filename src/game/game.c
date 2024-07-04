@@ -1,10 +1,11 @@
 #include "SDL_stdinc.h"
-#include "entities.h"
-#include "../engine/platform.h"
-#include "../engine/graphics.h"
-#include "../engine/ui.h"
 #include "../engine/assets.h"
+#include "../engine/graphics.h"
+#include "../engine/math.h"
+#include "../engine/platform.h"
+#include "../engine/ui.h"
 
+#include "entities.h"
 #include "game_types.h"
 #include "score.h"
 
@@ -14,19 +15,9 @@
 
 #define clamp(value, min, max) (value > max) ? max : (value < min) ? min : value;
 
-#define SCENE_TRANSITION_TIME 30.0f
+#define SCENE_TRANSITION_TIME 60.0f
 #define STARTING_LIVES 3
-
 #define STAR_TWINKLE_INTERVAL 180.0f
-
-static Game_Scene current_scene;
-static Game_Scene next_scene;
-static float scene_transition_timer;
-
-static void switch_game_scene(Game_Scene new_scene) {
-	next_scene = new_scene;
-	scene_transition_timer = SCENE_TRANSITION_TIME;
-}
 
 static void spawn_player(Game_State* game) {
 	game->player = 
@@ -135,9 +126,9 @@ void init_game(Game_State* game) {
 		}
 	}
 
-	current_scene = -1;
-	next_scene = GAME_SCENE_MAIN_MENU;
-	scene_transition_timer = 0;
+	game->scene = -1;
+	game->next_scene = GAME_SCENE_MAIN_MENU;
+	game->scene_timer = SCENE_TRANSITION_TIME;
 
 	game->player_controller = (Game_Player_Controller) {
 		.thrust = {
@@ -179,8 +170,8 @@ void init_game(Game_State* game) {
 	game->score.latest_score_index = -1;
 
 	reset_entity_system(game->entities);
-	spawn_entity(game->entities, game->particle_system, ENTITY_TYPE_DEMOSHIP, (Vector2){game->world_w/2.0f, game->world_h});
-	game->enemy_count = 0;
+	//spawn_entity(game->entities, game->particle_system, ENTITY_TYPE_DEMOSHIP, (Vector2){game->world_w/2.0f, game->world_h});
+	game->enemy_count = 1;
 }
 
 void restart_game(Game_State* game) {
@@ -214,20 +205,24 @@ void restart_game(Game_State* game) {
 void update_game(Game_State* game, Game_Input* input, float dt) {
 #if DEBUG
 		if (is_key_released(&game->input, SDL_SCANCODE_R)) {
-			next_scene = GAME_SCENE_MAIN_MENU;
+			game->next_scene = GAME_SCENE_MAIN_MENU;
+			game->scene_timer = SCENE_TRANSITION_TIME;
 		}
 		if (is_key_released(&game->input, SDL_SCANCODE_H)) {
-			next_scene = GAME_SCENE_HIGH_SCORES;
+			game->next_scene = GAME_SCENE_HIGH_SCORES;
+			game->scene_timer = SCENE_TRANSITION_TIME;
 		}
 #endif
 	game->input = *input;
-	if (next_scene == current_scene) {
-		switch(current_scene) {
+	if (game->next_scene == game->scene) {
+		switch(game->scene) {
 			case GAME_SCENE_MAIN_MENU: {
 				// TO-DO: trigger transition to gameplay scene AFTER demo ship has finished despawning
 				if (is_game_control_pressed(&game->input, &game->player_controller.fire)) {
 					Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Menu Confirm"), 0);
-					switch_game_scene(GAME_SCENE_GAMEPLAY);
+					game->next_scene = GAME_SCENE_GAMEPLAY;
+					game->scene_timer = SCENE_TRANSITION_TIME;
+					despawn_entities(game->entities);
 				}
 			} break;
 			
@@ -238,7 +233,8 @@ void update_game(Game_State* game, Game_Input* input, float dt) {
 						game->player_state.lives--;
 					} 
 				} else if (game->player == 0) {
-					switch_game_scene(GAME_SCENE_GAME_OVER);
+					game->next_scene = GAME_SCENE_GAME_OVER;
+					game->scene_timer = SCENE_TRANSITION_TIME;
 				}
 			} break;
 			
@@ -250,31 +246,37 @@ void update_game(Game_State* game, Game_Input* input, float dt) {
 						SDL_memcpy(game->score.high_scores, scores, sizeof(int) * SCORE_TABLE_LENGTH);
 						SDL_free(scores);
 					}
-					switch_game_scene(GAME_SCENE_HIGH_SCORES);
+					game->next_scene = GAME_SCENE_HIGH_SCORES;
+					game->scene_timer = SCENE_TRANSITION_TIME;
 				}
 			} break;
 			
 			case GAME_SCENE_HIGH_SCORES: {
 				if (is_game_control_pressed(&game->input, &game->player_controller.fire)) {
-					switch_game_scene(GAME_SCENE_MAIN_MENU);
+					game->next_scene = GAME_SCENE_MAIN_MENU;
+					game->scene_timer = SCENE_TRANSITION_TIME;
+
+					despawn_entities(game->entities);
+					game->enemy_count = 1; // Prevent the spawn system from triggering in menu
+
 				}
 			} break;
 		}
-	} else if (scene_transition_timer > 0.0f) {
-		scene_transition_timer -= dt;
+	} else if (game->scene_timer > 0.0f) {
+		game->scene_timer -= dt;
 	} else {
-		switch(next_scene) {
+		switch(game->next_scene) {
 			case GAME_SCENE_MAIN_MENU: {
-				despawn_entities(game->entities);
-				game->enemy_count = 1; // Prevent the spawn system from triggering in menu
-
-				spawn_entity(game->entities, game->particle_system, ENTITY_TYPE_DEMOSHIP, (Vector2){game->world_w/2.0f, game->world_h});
+				Uint32 warp_id = spawn_entity(
+					game->entities, game->particle_system, ENTITY_TYPE_SPAWN_WARP, (Vector2){game->world_w/2.0f, game->world_h});
+				Entity* demo_warp = get_entity(game->entities, warp_id);
+				if (demo_warp) {
+					demo_warp->type_data = ENTITY_TYPE_DEMOSHIP;
+				}
 				Mix_PlayMusic(assets_get_music(game->assets, "Space Drifter"), -1);
 			} break;
 
 			case GAME_SCENE_GAMEPLAY: {				
-				despawn_entities(game->entities);
-
 				restart_game(game);
 				Mix_PlayMusic(assets_get_music(game->assets, "Wrapping Action"), -1);
 			} break;
@@ -287,7 +289,7 @@ void update_game(Game_State* game, Game_Input* input, float dt) {
 			default: { break; }
 		}
 
-		current_scene = next_scene;
+		game->scene = game->next_scene;
 	}
 
 	for (int star_index = 0; star_index < STARFIELD_STAR_COUNT; star_index++) {
@@ -375,7 +377,7 @@ void draw_main_menu(Game_State* game, Rectangle bounds, float scale) {
 	}
 }
 
-void draw_scene_ui(Game_State* game, Game_Scene scene) {
+void draw_scene_ui(Game_State* game, Game_Scene scene, float t) {
 	iVector2 screen = platform_get_window_size();
 	Rectangle screen_rect = {0,0,screen.x, screen.y};
 	Rectangle world_rect = {0,0,game->world_w, game->world_h};
@@ -387,11 +389,11 @@ void draw_scene_ui(Game_State* game, Game_Scene scene) {
 	
 	switch(scene) {
 		case GAME_SCENE_MAIN_MENU: {
-			draw_main_menu(game, world_rect, scale);
+			draw_main_menu(game, world_rect, scale*t);
 		} break;
 
 		case GAME_SCENE_GAMEPLAY: {
-			draw_HUD(game, world_rect, scale);
+			draw_HUD(game, world_rect, scale, 1.0f-t);
 		} break;
 
 		case GAME_SCENE_GAME_OVER: {
@@ -404,7 +406,7 @@ void draw_scene_ui(Game_State* game, Game_Scene scene) {
 			game_over.children = children;
 			game_over.num_children = array_length(children);
 
-			scale_ui_element(&game_over, scale);
+			scale_ui_element(&game_over, scale*t);
 			game_over.pos = (Vector2){world_rect.x+(world_rect.w/2.0f), world_rect.y+(world_rect.h/2.0f)},
 			draw_ui_element(&game_over, game->font);
 		} break;
@@ -438,7 +440,7 @@ void draw_scene_ui(Game_State* game, Game_Scene scene) {
 				pos.y += padding;
 			}
 
-			scale_ui_element(&high_score, scale);
+			scale_ui_element(&high_score, scale*t);
 			high_score.pos = (Vector2) {
 				world_rect.x+(world_rect.w/2.0f),
 				world_rect.y+(world_rect.h/4.0f)
@@ -451,38 +453,13 @@ void draw_scene_ui(Game_State* game, Game_Scene scene) {
 }
 
 void draw_game_ui(Game_State* game) {
-	SDL_Texture* target = 0;
+	float t = game->scene != game->next_scene
+		? game->scene_timer/SCENE_TRANSITION_TIME
+		: 1.0f;
+	draw_scene_ui(game, game->scene, smooth_start(t, 2));
 
-	if (current_scene != next_scene) {
-		iVector2 screen = platform_get_window_size();
-		target = platform_create_texture((int)screen.x, (int)screen.y, true);
-		
-		unsigned char alpha = lerp(0.0f, 255.0f, scene_transition_timer/SCENE_TRANSITION_TIME);
-		platform_set_texture_alpha(target, alpha);
-		
-		platform_set_render_target(target);
-		platform_set_render_draw_color((RGBA_Color){0});
-		platform_render_clear();
-	}
-
-	draw_scene_ui(game, current_scene);
-
-	if (target) {
-		platform_set_render_target(0);
-		render_draw_texture(target, 0, 0, 0, false);
-
-		unsigned char alpha = lerp(0.0f, 255.0f, 1.0f - scene_transition_timer/SCENE_TRANSITION_TIME);
-		platform_set_texture_alpha(target, alpha);
-
-		platform_set_render_target(target);
-		
-		platform_set_render_draw_color((RGBA_Color){0});
-		platform_render_clear();		
-		draw_scene_ui(game, next_scene);
-		
-		platform_set_render_target(0);
-		
-		render_draw_texture(target, 0, 0, 0, false);
-		platform_destroy_texture(target);
+	if (game->scene != game->next_scene) {
+		t = 1.0-t;
+		draw_scene_ui(game, game->next_scene, smooth_stop(t, 1));
 	}
 }

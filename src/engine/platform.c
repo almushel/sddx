@@ -335,6 +335,22 @@ SDL_bool platform_update_and_render(Platform_State* platform, Platform_Game_Stat
 	SDL_RenderCopy(renderer, world_buffer, 0, &world_draw_rect);
 	draw_game_ui(game);
 
+	//TODO: Sensibly clip UI to boundaries instead of this black rect draw over hack
+	platform_set_render_draw_color((RGBA_Color){0,0,0,255});
+	if (world_rect.y > 0) {
+		platform_render_fill_rect((Rectangle){0,0, platform->screen.x, world_rect.y});
+		platform_render_fill_rect((Rectangle){0,world_rect.y+world_rect.h, platform->screen.x, world_rect.y});
+	}
+	platform_render_fill_rect((Rectangle){0,0, world_rect.x, platform->screen.y});
+	platform_render_fill_rect(
+		(Rectangle){
+			world_rect.x+world_rect.w,
+			0,
+			platform->screen.x - (world_rect.x+world_rect.w),
+			platform->screen.y
+		}
+	);
+
 	Uint64 frequency = SDL_GetPerformanceFrequency();
 	double time_elapsed = (double)(SDL_GetPerformanceCounter() - platform->current_count) / (double)frequency * 1000.0;
 	precise_delay(platform->target_frame_time - time_elapsed);

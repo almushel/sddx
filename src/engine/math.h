@@ -41,6 +41,8 @@ Game_Shape rotate_game_shape	(Game_Shape shape, float degrees);
 SDL_bool check_shape_collision	(Transform2D, Game_Shape s1, Transform2D t2, Game_Shape s2, Vector2* overlap);
 
 float lerp			(float start, float end, float t);
+float smooth_start		(float t, int magnitude);
+float smooth_stop		(float t, int magnitude);
 float randomf			(void);
 
 #endif

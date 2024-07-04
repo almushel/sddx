@@ -31,6 +31,26 @@ float lerp(float start, float end, float t) {
 	return (1.0f - t) * start + (t * end);
 }
 
+float smooth_start(float t, int magnitude) {
+	t = SDL_clamp(t, 0.0f, 1.0f);
+	float result = t;
+	for (int i = 0; i < magnitude; i++) {
+		result *= t;
+	}
+
+	return result;
+}
+
+float smooth_stop(float t, int magnitude) {
+	t = SDL_clamp(t, 0.0f, 1.0f);
+	float result = 1.0f-t;
+	for (int i = 0; i < magnitude; i++) {
+		result *= (1.0f-t);
+	}
+
+	return 1.0f-result;
+}
+
 float angle_rotation_to_target(Vector2 origin, Vector2 target, float angle, float tolerance) {
 	float result = 0;
 	
