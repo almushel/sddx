@@ -6,6 +6,7 @@
 
 #define CLEAR_COLOR (RGBA_Color){0, 10, 48 , 255}
 #define SD_BLUE (RGBA_Color){109, 194, 255, 255}
+#define MENU_COLOR (RGBA_Color){56, 56, 56, 160}
 #define WHITE (RGBA_Color){255,255,255,255}
 #define BLACK (RGBA_Color){0,0,0,255}
 #define RED (RGBA_Color){255, 0, 0, 255}
@@ -78,9 +79,20 @@ typedef struct Entity_System Entity_System;
 typedef enum Game_Scene {
 	GAME_SCENE_MAIN_MENU,
 	GAME_SCENE_GAMEPLAY,
+	GAME_SCENE_PAUSED,
 	GAME_SCENE_GAME_OVER,
 	GAME_SCENE_HIGH_SCORES,
 } Game_Scene;
+
+typedef struct Game_Player_Controller{
+	Game_Control thrust;
+	Game_Control turn_left;
+	Game_Control turn_right;
+	Game_Control thrust_left;
+	Game_Control thrust_right;
+	Game_Control fire;
+	Game_Control menu;
+} Game_Player_Controller;
 
 typedef struct Game_State {
 	STBTTF_Font* font;

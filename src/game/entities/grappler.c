@@ -1,6 +1,6 @@
-#include "../../engine/platform.h"
 #include "../../engine/assets.h"
 #include "../../engine/math.h"
+#include "../../engine/platform.h"
 #include "../game_types.h"
 
 #define GRAPPLER_COLOR (RGBA_Color){0,255,0,255}

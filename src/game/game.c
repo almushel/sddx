@@ -1,3 +1,5 @@
+#include "SDL_gamecontroller.h"
+#include "SDL_scancode.h"
 #include "SDL_stdinc.h"
 #include "../engine/assets.h"
 #include "../engine/graphics.h"
@@ -15,7 +17,8 @@
 
 #define clamp(value, min, max) (value > max) ? max : (value < min) ? min : value;
 
-#define SCENE_TRANSITION_TIME 60.0f
+// TODO: Store transition time in game state to allow for transition speeds between scenes
+#define SCENE_TRANSITION_TIME 45.0f
 #define STARTING_LIVES 3
 #define STAR_TWINKLE_INTERVAL 180.0f
 
@@ -160,6 +163,11 @@ void init_game(Game_State* game) {
 			.key = SDL_SCANCODE_SPACE,
 			.button = SDL_CONTROLLER_BUTTON_A,
 		},
+
+		.menu = {
+			.key = SDL_SCANCODE_P,
+			.button = SDL_CONTROLLER_BUTTON_START,
+		},
 	};
 
 	int* scores = get_score_table();
@@ -170,7 +178,6 @@ void init_game(Game_State* game) {
 	game->score.latest_score_index = -1;
 
 	reset_entity_system(game->entities);
-	//spawn_entity(game->entities, game->particle_system, ENTITY_TYPE_DEMOSHIP, (Vector2){game->world_w/2.0f, game->world_h});
 	game->enemy_count = 1;
 }
 
@@ -208,16 +215,12 @@ void update_game(Game_State* game, Game_Input* input, float dt) {
 			game->next_scene = GAME_SCENE_MAIN_MENU;
 			game->scene_timer = SCENE_TRANSITION_TIME;
 		}
-		if (is_key_released(&game->input, SDL_SCANCODE_H)) {
-			game->next_scene = GAME_SCENE_HIGH_SCORES;
-			game->scene_timer = SCENE_TRANSITION_TIME;
-		}
 #endif
+
 	game->input = *input;
 	if (game->next_scene == game->scene) {
 		switch(game->scene) {
 			case GAME_SCENE_MAIN_MENU: {
-				// TO-DO: trigger transition to gameplay scene AFTER demo ship has finished despawning
 				if (is_game_control_pressed(&game->input, &game->player_controller.fire)) {
 					Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Menu Confirm"), 0);
 					game->next_scene = GAME_SCENE_GAMEPLAY;
@@ -227,6 +230,7 @@ void update_game(Game_State* game, Game_Input* input, float dt) {
 			} break;
 			
 			case GAME_SCENE_GAMEPLAY: {
+				update_score_timer(&game->score, dt);
 				if (game->player_state.lives > 0) {
 					if (!game->player && is_game_control_pressed(&game->input, &game->player_controller.fire)) {
 						spawn_player(game);
@@ -234,6 +238,19 @@ void update_game(Game_State* game, Game_Input* input, float dt) {
 					} 
 				} else if (game->player == 0) {
 					game->next_scene = GAME_SCENE_GAME_OVER;
+					game->scene_timer = SCENE_TRANSITION_TIME;
+				} 
+				if (is_game_control_pressed(&game->input, &game->player_controller.menu)) {
+					Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Menu Confirm"), 0);
+					game->next_scene = GAME_SCENE_PAUSED;
+					game->scene_timer = SCENE_TRANSITION_TIME;
+				}
+			} break;
+
+			case GAME_SCENE_PAUSED: {
+				if (is_game_control_pressed(&game->input, &game->player_controller.menu)) {
+					Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Menu Confirm"), 0);
+					game->next_scene = GAME_SCENE_GAMEPLAY;
 					game->scene_timer = SCENE_TRANSITION_TIME;
 				}
 			} break;
@@ -277,8 +294,10 @@ void update_game(Game_State* game, Game_Input* input, float dt) {
 			} break;
 
 			case GAME_SCENE_GAMEPLAY: {				
-				restart_game(game);
-				Mix_PlayMusic(assets_get_music(game->assets, "Wrapping Action"), -1);
+				if (game->scene == GAME_SCENE_MAIN_MENU) {
+					restart_game(game);
+					Mix_PlayMusic(assets_get_music(game->assets, "Wrapping Action"), -1);
+				}
 			} break;
 		
 			case GAME_SCENE_GAME_OVER: {
@@ -299,9 +318,10 @@ void update_game(Game_State* game, Game_Input* input, float dt) {
 		else if (game->starfield.timers[star_index] <= 0) game->starfield.twinkle_direction[star_index] = 0;
 	}
 
-	update_score_timer(&game->score, dt);
-	update_entities(game, dt);
-	update_particles(game->particle_system, dt);
+	if (game->scene != GAME_SCENE_PAUSED && game->next_scene != GAME_SCENE_PAUSED) {
+		update_entities(game, dt);
+		update_particles(game->particle_system, dt);
+	}
 
 	//TO-DO: Implement better conditions for this.
 	// If there are as many dead entities as entities minus reserved 0 entity and player (if currently alive)
@@ -396,6 +416,36 @@ void draw_scene_ui(Game_State* game, Game_Scene scene, float t) {
 			draw_HUD(game, world_rect, scale, 1.0f-t);
 		} break;
 
+		case GAME_SCENE_PAUSED: {
+			ui_element paused = {0};
+			Rectangle bg = {
+				.x = -world_rect.w/2.0f,
+				.y = -world_rect.h/2.0f,
+				.w = world_rect.w,
+				.h = world_rect.h
+			};
+			ui_element children[] = {
+				new_ui_rect(
+					(Vector2){0}, 0, 
+					(RGBA_Color){0,0,0,120},
+					bg
+				),
+				new_ui_text(
+					(Vector2) {0},
+					0, ORANGE, "PAUSED", 64, "center"
+				),
+			};
+			paused.children = children;
+			paused.num_children = 2;
+
+			scale_ui_element(&paused, scale*t);
+			paused.pos = (Vector2) {
+				.x = screen_rect.w/2,
+				.y = screen_rect.h/2
+			};
+			draw_ui_element(&paused, game->font);
+		} break;
+
 		case GAME_SCENE_GAME_OVER: {
 			ui_element game_over = {0};
 			ui_element children[] = {
@@ -456,10 +506,9 @@ void draw_game_ui(Game_State* game) {
 	float t = game->scene != game->next_scene
 		? game->scene_timer/SCENE_TRANSITION_TIME
 		: 1.0f;
-	draw_scene_ui(game, game->scene, smooth_start(t, 2));
+	draw_scene_ui(game, game->scene, smooth_start(t, 3));
 
 	if (game->scene != game->next_scene) {
-		t = 1.0-t;
-		draw_scene_ui(game, game->next_scene, smooth_stop(t, 1));
+		draw_scene_ui(game, game->next_scene, smooth_stop(1.0f-t, 2));
 	}
 }

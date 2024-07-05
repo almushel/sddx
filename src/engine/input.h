@@ -32,17 +32,6 @@ typedef struct Game_Control {
 	int axis_id;
 } Game_Control;
 
-typedef union Game_Player_Controller {
-	struct {
-		Game_Control thrust;
-		Game_Control turn_left;
-		Game_Control turn_right;
-		Game_Control thrust_left;
-		Game_Control thrust_right;
-		Game_Control fire;
-	};
-} Game_Player_Controller;
-
 #define valid_scancode(key) 	 	(key > SDL_SCANCODE_UNKNOWN && key < SDL_NUM_SCANCODES)
 #define valid_controller_button(button) (button > SDL_CONTROLLER_BUTTON_INVALID && button < SDL_CONTROLLER_BUTTON_MAX)
 #define valid_controller_axis(axis)   	(axis > SDL_CONTROLLER_AXIS_INVALID && axis < SDL_CONTROLLER_AXIS_MAX)

@@ -8,8 +8,6 @@
 #include "game_types.h"
 #include "entities.h"
 
-#define MENU_COLOR (RGBA_Color){56, 56, 56, 160}
-
 const char* get_weapon_label(Game_State* game) {
 	const char* result = "Unknown";
 	Entity* player = get_entity(game->entities, game->player);
