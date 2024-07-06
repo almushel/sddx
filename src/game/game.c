@@ -1,5 +1,6 @@
 #include "SDL_gamecontroller.h"
 #include "SDL_mixer.h"
+#include "SDL_render.h"
 #include "SDL_scancode.h"
 #include "SDL_stdinc.h"
 #include "../engine/assets.h"
@@ -64,9 +65,12 @@ void load_game_assets(Game_State* game) {
 	assets_load_texture(game->assets, "assets/images/hud_mg.png", "HUD MG");
 
 	//Generative textures
+	// TODO: Figure why these seem to be destroyed on window resize (and fix it)
 	assets_store_texture(game->assets, generate_item_texture(assets_get_texture(game->assets, "Projectile Missile")), "Item Missile");
 	assets_store_texture(game->assets, generate_item_texture(assets_get_texture(game->assets, "Player Ship")), "Item LifeUp");
-	assets_store_texture(game->assets, generate_item_texture(0), "Item Laser");
+	SDL_Texture* laser_icon = generate_laser_icon();
+	assets_store_texture(game->assets, generate_item_texture(laser_icon), "Item Laser");
+	SDL_DestroyTexture(laser_icon);
 
 	assets_load_music(game->assets, "assets/audio/music_wrapping_action.mp3", "Wrapping Action");
 	assets_load_music(game->assets, "assets/audio/music_space_drifter.mp3", "Space Drifter");
@@ -195,7 +199,7 @@ void restart_game(Game_State* game) {
 	game->player_state.thrust_energy = PLAYER_THRUST_MAX;
 
 	spawn_player(game);
-#if 1
+#if DEBUG && 0
 	for (int i = ENTITY_TYPE_PLAYER+1; i < ENTITY_TYPE_SPAWN_WARP; i++) {
 		Uint32 entity_id = spawn_entity(
 			game->entities, game->particle_system, 
@@ -213,10 +217,10 @@ void restart_game(Game_State* game) {
 
 void update_game(Game_State* game, Game_Input* input, float dt) {
 #if DEBUG
-		if (is_key_released(&game->input, SDL_SCANCODE_R)) {
-			game->next_scene = GAME_SCENE_MAIN_MENU;
-			game->scene_timer = game->scene_transition_time = SCENE_TRANSITION_TIME;
-		}
+	if (is_key_released(&game->input, SDL_SCANCODE_R)) {
+		game->next_scene = GAME_SCENE_MAIN_MENU;
+		game->scene_timer = game->scene_transition_time = SCENE_TRANSITION_TIME;
+	}
 #endif
 
 	game->input = *input;

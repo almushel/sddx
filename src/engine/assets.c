@@ -142,7 +142,7 @@ static SDL_Texture* load_texture(const char* file) {
 	SDL_Surface* image_surface;
 	if (image) {
 		image_surface = SDL_CreateRGBSurfaceFrom(image, image_width, image_height, image_components * 8, image_components * image_width, 
-							STBI_MASK_R, STBI_MASK_G, STBI_MASK_B, STBI_MASK_A);
+		STBI_MASK_R, STBI_MASK_G, STBI_MASK_B, STBI_MASK_A);
 	} else {
 		SDL_Log("stbi failed to load %s", file);
 	}
