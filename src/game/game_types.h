@@ -112,6 +112,7 @@ typedef struct Game_State {
 	Game_Scene scene;
 	Game_Scene next_scene;
 	float scene_timer;
+	float scene_transition_time;
 
 	Game_Player_Controller player_controller;
 	Uint32 player;

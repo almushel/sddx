@@ -1,4 +1,5 @@
 #include "SDL_gamecontroller.h"
+#include "SDL_mixer.h"
 #include "SDL_scancode.h"
 #include "SDL_stdinc.h"
 #include "../engine/assets.h"
@@ -17,8 +18,8 @@
 
 #define clamp(value, min, max) (value > max) ? max : (value < min) ? min : value;
 
-// TODO: Store transition time in game state to allow for transition speeds between scenes
 #define SCENE_TRANSITION_TIME 45.0f
+#define PAUSE_TRANSITION_TIME 15.0f
 #define STARTING_LIVES 3
 #define STAR_TWINKLE_INTERVAL 180.0f
 
@@ -131,7 +132,7 @@ void init_game(Game_State* game) {
 
 	game->scene = -1;
 	game->next_scene = GAME_SCENE_MAIN_MENU;
-	game->scene_timer = SCENE_TRANSITION_TIME;
+	game->scene_timer = game->scene_transition_time = SCENE_TRANSITION_TIME;
 
 	game->player_controller = (Game_Player_Controller) {
 		.thrust = {
@@ -189,7 +190,7 @@ void restart_game(Game_State* game) {
 	game->player_state.lives = STARTING_LIVES;
 	game->player_state.ammo = 0;
 	game->player_state.weapon_heat = 0;
-	// TO-DO: Use "heat" units for thrust (like weapon heat) 
+	// TODO: Use "heat" units for thrust (like weapon heat) 
 	game->player_state.thrust_energy = PLAYER_THRUST_MAX;
 
 	spawn_player(game);
@@ -213,7 +214,7 @@ void update_game(Game_State* game, Game_Input* input, float dt) {
 #if DEBUG
 		if (is_key_released(&game->input, SDL_SCANCODE_R)) {
 			game->next_scene = GAME_SCENE_MAIN_MENU;
-			game->scene_timer = SCENE_TRANSITION_TIME;
+			game->scene_timer = game->scene_transition_time = SCENE_TRANSITION_TIME;
 		}
 #endif
 
@@ -224,7 +225,7 @@ void update_game(Game_State* game, Game_Input* input, float dt) {
 				if (is_game_control_pressed(&game->input, &game->player_controller.fire)) {
 					Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Menu Confirm"), 0);
 					game->next_scene = GAME_SCENE_GAMEPLAY;
-					game->scene_timer = SCENE_TRANSITION_TIME;
+					game->scene_timer = game->scene_transition_time = SCENE_TRANSITION_TIME;
 					despawn_entities(game->entities);
 				}
 			} break;
@@ -238,25 +239,28 @@ void update_game(Game_State* game, Game_Input* input, float dt) {
 					} 
 				} else if (game->player == 0) {
 					game->next_scene = GAME_SCENE_GAME_OVER;
-					game->scene_timer = SCENE_TRANSITION_TIME;
+					game->scene_timer = game->scene_transition_time = SCENE_TRANSITION_TIME;
 				} 
 				if (is_game_control_pressed(&game->input, &game->player_controller.menu)) {
+					Mix_PauseMusic();
 					Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Menu Confirm"), 0);
 					game->next_scene = GAME_SCENE_PAUSED;
-					game->scene_timer = SCENE_TRANSITION_TIME;
+					game->scene_timer = game->scene_transition_time = PAUSE_TRANSITION_TIME;
 				}
 			} break;
 
 			case GAME_SCENE_PAUSED: {
 				if (is_game_control_pressed(&game->input, &game->player_controller.menu)) {
+					Mix_ResumeMusic();
 					Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Menu Confirm"), 0);
 					game->next_scene = GAME_SCENE_GAMEPLAY;
-					game->scene_timer = SCENE_TRANSITION_TIME;
+					game->scene_timer = game->scene_transition_time = PAUSE_TRANSITION_TIME;
 				}
 			} break;
 			
 			case GAME_SCENE_GAME_OVER: {
 				if (is_game_control_pressed(&game->input, &game->player_controller.fire)) {
+					Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Menu Confirm"), 0);
 					game->score.latest_score_index = push_to_score_table(game->score.total);
 					int* scores = get_score_table();
 					if (scores) {
@@ -264,14 +268,15 @@ void update_game(Game_State* game, Game_Input* input, float dt) {
 						SDL_free(scores);
 					}
 					game->next_scene = GAME_SCENE_HIGH_SCORES;
-					game->scene_timer = SCENE_TRANSITION_TIME;
+					game->scene_timer = game->scene_transition_time = SCENE_TRANSITION_TIME;
 				}
 			} break;
 			
 			case GAME_SCENE_HIGH_SCORES: {
 				if (is_game_control_pressed(&game->input, &game->player_controller.fire)) {
+					Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Menu Confirm"), 0);
 					game->next_scene = GAME_SCENE_MAIN_MENU;
-					game->scene_timer = SCENE_TRANSITION_TIME;
+					game->scene_timer = game->scene_transition_time = SCENE_TRANSITION_TIME;
 
 					despawn_entities(game->entities);
 					game->enemy_count = 1; // Prevent the spawn system from triggering in menu
@@ -323,7 +328,7 @@ void update_game(Game_State* game, Game_Input* input, float dt) {
 		update_particles(game->particle_system, dt);
 	}
 
-	//TO-DO: Implement better conditions for this.
+	// TODO: Implement better conditions for this.
 	// If there are as many dead entities as entities minus reserved 0 entity and player (if currently alive)
 	if (game->enemy_count == 0) {
 		game->score.current_wave++;
@@ -381,7 +386,6 @@ void draw_main_menu(Game_State* game, Rectangle bounds, float scale) {
 		new_ui_text((Vector2){110,160}, 0, WHITE, "Fire", 15, "right"),
 		new_ui_text((Vector2){110,180}, 0, WHITE, "Thrust Left", 15, "right"),
 		new_ui_text((Vector2){110,200}, 0, WHITE, "Thrust Right", 15, "right"),
-
 	};
 	main_menu.children = children;
 	main_menu.num_children = array_length(children);
@@ -504,7 +508,7 @@ void draw_scene_ui(Game_State* game, Game_Scene scene, float t) {
 
 void draw_game_ui(Game_State* game) {
 	float t = game->scene != game->next_scene
-		? game->scene_timer/SCENE_TRANSITION_TIME
+		? game->scene_timer/game->scene_transition_time
 		: 1.0f;
 	draw_scene_ui(game, game->scene, smooth_start(t, 3));
 
