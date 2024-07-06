@@ -408,9 +408,13 @@ void update_entities(Game_State* game, float dt) {
 				case ENTITY_TYPE_ITEM_LASER:	{ entity->angle += dt; } break;
 
 				case ENTITY_TYPE_SPAWN_WARP: {
-					spawn_entity(es, ps, entity->type_data, entity->position);
 					entity->timer = ENTITY_WARP_DELAY;
 					entity->state = ENTITY_STATE_DESPAWNING;
+					
+					Entity* spawn = get_entity(es, spawn_entity(es, ps, entity->type_data, entity->position));
+					if (spawn) {
+						spawn->transform.scale = (Vector2){0}; // Prevent drawing full size this frame
+					}
 				} break;
 			}
 
@@ -535,8 +539,11 @@ void draw_entities(Entity_System* es, Game_Assets* assets, int world_w, int worl
 
 	for (int entity_index = 1; entity_index <= es->num_entities; entity_index++) {
 		entity = get_entity(es, entity_index);
-		if (entity == NULL) continue;
-		if (entity->state <= 0 || entity->state >= ENTITY_STATE_DYING) continue;
+		if (entity == NULL
+		||  entity->state <= 0
+		||  entity->state >= ENTITY_STATE_DYING
+		||  entity->transform.scale.x+entity->transform.scale.y == 0
+		) { continue; }
 
 		if (entity->type == ENTITY_TYPE_ENEMY_GRAPPLER) {
 			draw_grappler(entity);
