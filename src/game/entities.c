@@ -319,7 +319,7 @@ void remove_dead_entity(Game_State* game, Uint32 entity_id) {
 		switch(dead_entity->type) {
 			case ENTITY_TYPE_PLAYER:	{ destroy_player(game); } break;
 			case ENTITY_TYPE_ENEMY_DRIFTER: { destroy_drifter(game, dead_entity); } break;
-			case ENTITY_TYPE_ITEM_LIFEUP:	{ game->player_state.lives++; } break;
+			default: {} break;
 		}
 
 		if (entity_type_is_enemy(dead_entity->type)) {
@@ -449,20 +449,24 @@ void update_entities(Game_State* game, float dt) {
 							item_entity->state = ENTITY_STATE_DESPAWNING;
 							item_entity->timer = ENTITY_WARP_DELAY/2.0f;
 
-							Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Weapon Pickup"), 0);
-
-						
 							switch (item_entity->type) {
 								case ENTITY_TYPE_ITEM_MISSILE: {
+									Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Weapon Pickup"), 0);
 									game->player_state.ammo *= (int)(player_entity->type_data == PLAYER_WEAPON_MISSILE);
 									player_entity->type_data = PLAYER_WEAPON_MISSILE;
 									game->player_state.ammo += 10;	
 								} break;
 								
 								case ENTITY_TYPE_ITEM_LASER: {
+									Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Weapon Pickup"), 0);
 									game->player_state.ammo *= (int)(player_entity->type_data == PLAYER_WEAPON_LASER);
 									player_entity->type_data = PLAYER_WEAPON_LASER;
 									game->player_state.ammo += 10;
+								} break;
+
+								case ENTITY_TYPE_ITEM_LIFEUP: {
+									Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Life Up"), 0);
+									game->player_state.lives++;
 								} break;
 							}
 						} else if (entity->team && collision_entity->team && entity->team != collision_entity->team) {
@@ -471,10 +475,10 @@ void update_entities(Game_State* game, float dt) {
 						} else {
 							overlap = normalize_vector2(overlap);
 
-							entity 			->vx -= overlap.x/2.0f;
-							entity 			->vy -= overlap.y/2.0f;
-							collision_entity->vx += overlap.x/2.0f;
-							collision_entity->vy += overlap.y/2.0f;
+							entity->vx		-= overlap.x/2.0f;
+							entity->vy		-= overlap.y/2.0f;
+							collision_entity->vx	+= overlap.x/2.0f;
+							collision_entity->vy	+= overlap.y/2.0f;
 						}
 					}
 				}

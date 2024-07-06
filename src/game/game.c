@@ -75,6 +75,7 @@ void load_game_assets(Game_State* game) {
 	assets_load_sfx(game->assets, "assets/audio/menu_confirm.mp3", "Menu Confirm");
 
 	assets_load_sfx(game->assets, "assets/audio/weapon_pickup.mp3", "Weapon Pickup");
+	assets_load_sfx(game->assets, "assets/audio/life_up.mp3", "Life Up");
 	assets_load_sfx(game->assets, "assets/audio/player_shot.mp3", "Player Shot");
 	assets_load_sfx(game->assets, "assets/audio/player_spawn.mp3", "Player Spawn");
 	assets_load_sfx(game->assets, "assets/audio/player_laser.mp3", "Player Laser");
@@ -194,8 +195,8 @@ void restart_game(Game_State* game) {
 	game->player_state.thrust_energy = PLAYER_THRUST_MAX;
 
 	spawn_player(game);
-#if 0
-	for (int i = ENTITY_TYPE_PLAYER+1; i < ENTITY_TYPE_SPAWN_WARP/2; i++) {
+#if 1
+	for (int i = ENTITY_TYPE_PLAYER+1; i < ENTITY_TYPE_SPAWN_WARP; i++) {
 		Uint32 entity_id = spawn_entity(
 			game->entities, game->particle_system, 
 			ENTITY_TYPE_SPAWN_WARP,
@@ -203,7 +204,7 @@ void restart_game(Game_State* game) {
 		);
 		Entity* entity = get_entity(game->entities, entity_id);
 		if (entity) {
-			entity->type_data = ENTITY_TYPE_ENEMY_GRAPPLER;
+			entity->type_data = i;
 		}
 	}
 #endif
