@@ -1,48 +1,22 @@
+#include "SDL_render.h"
+#include "SDL_surface.h"
+
 #include "../../engine/platform.h"
 #include "../../engine/graphics.h"
+#include "../../engine/math.h"
 #include "../entities.h"
 
 #define ITEM_RADIUS 15
 
-SDL_Texture* generate_laser_icon(void) {
-	SDL_Texture* result = 0;
-	
-	int result_size = ITEM_RADIUS*2;
-	Rectangle laser_rect = {
-			.x = ITEM_RADIUS/2.0f+1.0f, .y = -2.5f,
-			.w = ITEM_RADIUS, .h = 5.0f,	
-	};
-
-	result = platform_create_texture(result_size, result_size, SDL_TRUE);
-	if (result) {
-		platform_set_render_target(result);
-
-		platform_set_render_draw_color((RGBA_Color){0});
-		platform_render_clear();
-
-		platform_set_render_draw_color(SD_BLUE);
-		// NOTE: Slightly different offsets to correctly center, likely due to subpixel rounding(?)
-		platform_render_fill_rect(
-			translate_rect(laser_rect, (Vector2){0,(float)ITEM_RADIUS-4.0f})
-		);
-		platform_render_fill_rect(
-			translate_rect(laser_rect, (Vector2){0,(float)ITEM_RADIUS+5.5f})
-		);
-		
-		platform_set_render_target(0);
-	}
-
-	return result;
-}
 
 SDL_Texture* generate_item_texture(SDL_Texture* icon) {
 	SDL_Texture* result = 0;
 	
 	int result_size = ITEM_RADIUS*2 + 4;
 
-	result = platform_create_texture(result_size, result_size, SDL_TRUE);
-	if (result) {
-		platform_set_render_target(result);
+	SDL_Texture* target = platform_create_texture(result_size, result_size, SDL_TRUE);
+	if (target) {
+		platform_set_render_target(target);
 
 		platform_set_render_draw_color((RGBA_Color){0});
 		platform_render_clear();
@@ -60,8 +34,52 @@ SDL_Texture* generate_item_texture(SDL_Texture* icon) {
 			
 			platform_render_copy(icon, NULL, &dest, 0, 0, SDL_FLIP_NONE);
 		}
+
+		// NOTE: Storing as static access texture so it will be recreated
+		// on renderer reset (e.g. window resize) and not destroyed.
+		Uint32 format;
+		int width,height;
+		SDL_QueryTexture(target, &format, 0, &width, &height);
+		SDL_Surface* surface = SDL_CreateRGBSurfaceWithFormat(0, width, height, 32, format);
+		platform_render_read_pixels(0, format, surface->pixels, surface->pitch);
+
+		result = platform_create_texture_from_surface(surface);
+		
 		platform_set_render_target(0);
+		SDL_DestroyTexture(target);
+		SDL_free(surface);
 	}
+
+	return result;
+}
+
+SDL_Texture* generate_laser_item_texture(void) {
+	SDL_Texture* result = 0;
+	
+	int result_size = ITEM_RADIUS*2;
+	Rectangle laser_rect = {
+		.x = ITEM_RADIUS/2.0f+1.0f, .y = -2.5f,
+		.w = ITEM_RADIUS, .h = 5.0f,
+	};
+
+	SDL_Texture* icon = platform_create_texture(result_size, result_size, SDL_TRUE);
+	if (icon) {
+		platform_set_render_target(icon);
+		platform_set_render_draw_color((RGBA_Color){0});
+		platform_render_clear();
+
+		platform_set_render_draw_color(SD_BLUE);
+		// NOTE: Slightly different offsets to correctly center, likely due to subpixel rounding(?)
+		platform_render_fill_rect(
+			translate_rect(laser_rect, (Vector2){0,(float)ITEM_RADIUS-4.0f})
+		);
+		platform_render_fill_rect(
+			translate_rect(laser_rect, (Vector2){0,(float)ITEM_RADIUS+5.5f})
+		);
+	}
+
+	result = generate_item_texture(icon);
+	SDL_DestroyTexture(icon);
 
 	return result;
 }

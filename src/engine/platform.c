@@ -1,3 +1,5 @@
+#include "SDL.h"
+
 #include "platform.h"
 #include "../game/game.h"
 #include "input.h"
@@ -58,6 +60,12 @@ void platform_destroy_texture(SDL_Texture* texture) {
 int platform_set_texture_alpha(SDL_Texture* texture, uint8_t alpha) {
 	int result = SDL_SetTextureAlphaMod(texture, alpha);
 	
+	return result;
+}
+
+int platform_render_read_pixels(const Rectangle* rect, Uint32 format, void* pixels, int pitch) {
+	int result = SDL_RenderReadPixels(renderer, (SDL_Rect*)rect, format, pixels, pitch);
+
 	return result;
 }
 

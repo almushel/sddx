@@ -19,6 +19,7 @@ SDL_bool		platform_update_and_render		(Platform_State* platform,
 
 iVector2		platform_get_window_size		(void);
 int			platform_set_render_target		(SDL_Texture *texture);
+int			platform_render_read_pixels		(const Rectangle* rect, Uint32 format, void* pixels, int pitch);
 
 SDL_Texture*		platform_create_texture			(int w, int h, SDL_bool target);
 SDL_Texture*		platform_create_texture_from_surface	(SDL_Surface* surface);

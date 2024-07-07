@@ -65,12 +65,9 @@ void load_game_assets(Game_State* game) {
 	assets_load_texture(game->assets, "assets/images/hud_mg.png", "HUD MG");
 
 	//Generative textures
-	// TODO: Figure why these seem to be destroyed on window resize (and fix it)
 	assets_store_texture(game->assets, generate_item_texture(assets_get_texture(game->assets, "Projectile Missile")), "Item Missile");
 	assets_store_texture(game->assets, generate_item_texture(assets_get_texture(game->assets, "Player Ship")), "Item LifeUp");
-	SDL_Texture* laser_icon = generate_laser_icon();
-	assets_store_texture(game->assets, generate_item_texture(laser_icon), "Item Laser");
-	SDL_DestroyTexture(laser_icon);
+	assets_store_texture(game->assets, generate_laser_item_texture(), "Item Laser");
 
 	assets_load_music(game->assets, "assets/audio/music_wrapping_action.mp3", "Wrapping Action");
 	assets_load_music(game->assets, "assets/audio/music_space_drifter.mp3", "Space Drifter");
