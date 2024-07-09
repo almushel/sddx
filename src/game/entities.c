@@ -122,7 +122,13 @@ void force_circle(Entity_System* es, float x, float y, float radius, float force
 	Vector2 overlap;
 	for (int i = 1; i <= es->num_entities; i++) {
 		Entity* entity = get_entity(es, i);
-		if (entity == NULL) { continue; }
+		if (
+			entity == NULL
+			|| entity->flags & (ENTITY_FLAG_COLLISION_TRIGGER|ENTITY_FLAG_COLLISION_DISABLED)
+		) { 
+			continue;
+		}
+
 		if (check_shape_collision(force_transform, force_shape, entity->transform, entity->shape, &overlap)) {
 			Vector2 impulse = subtract_vector2(entity->position, (Vector2){x,y});
 					impulse = normalize_vector2(impulse);
@@ -188,15 +194,6 @@ static inline bool entity_is_item(Entity_Types type) {
 	);
 }
 
-static inline bool entity_type_explodes(Entity_Types type) {
-	bool result = (
-		type == ENTITY_TYPE_PLAYER || type == ENTITY_TYPE_MISSILE ||
-		(type >= ENTITY_TYPE_ENEMY_DRIFTER && type <= ENTITY_TYPE_ENEMY_GRAPPLER)
-	);
-
-	return result;
-}
-
 Uint32 spawn_entity(Entity_System* es, Particle_System* ps, Entity_Types type, Vector2 position) {
 	Uint32 result = 0;
 	Entity* entity;
@@ -240,6 +237,7 @@ Uint32 spawn_entity(Entity_System* es, Particle_System* ps, Entity_Types type, V
 			entity->shape.radius = ENTITY_WARP_RADIUS;
 			entity->team = ENTITY_TEAM_UNDEFINED;
 			entity->color = SD_BLUE;
+			entity->flags = ENTITY_FLAG_COLLISION_DISABLED;
 		} break;
 
 		default : {} break;
@@ -329,14 +327,14 @@ void remove_dead_entity(Game_State* game, Uint32 entity_id) {
 			random_item_spawn(game, dead_entity->position, value);
 			game->enemy_count--;
 
-			force_circle(game->entities, dead_entity->x, dead_entity->y, ENEMY_EXPLOSION_RADIUS, 1.5f);
 			Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Enemy Death"), 0);
 		}
 
-		if (entity_type_explodes(dead_entity->type)) {
+		if (dead_entity->flags & ENTITY_FLAG_EXPLOSION_ENABLED) {
 			RGBA_Color entity_color = (dead_entity->color.r || dead_entity->color.g || dead_entity->color.b) ? dead_entity->color : (RGBA_Color){255, 255, 255, 255};
 			RGBA_Color colors[] = {entity_color, {255, 255, 255, 255}};
 
+			force_circle(game->entities, dead_entity->x, dead_entity->y, ENEMY_EXPLOSION_RADIUS, 1.5f);
 			explode_at_point(ps, dead_entity->x, dead_entity->y, colors, array_length(colors), 0, dead_entity->shape.type);
 			for (int sprite_index = 0; sprite_index < dead_entity->sprite_count; sprite_index++) {
 				explode_sprite(game->assets, ps, dead_entity->sprites+sprite_index, dead_entity->x, dead_entity->y, dead_entity->angle, 6);
@@ -345,6 +343,87 @@ void remove_dead_entity(Game_State* game, Uint32 entity_id) {
 	}
 
 	remove_entity(es, entity_id);
+}
+
+void on_enemy_collision(Entity* entity) {
+	// TODO: Make laser less obscenely overpowered.
+	// Original game used small circular hitbox to offset penetration effectiveness.
+	if (entity->type != ENTITY_TYPE_LASER) {
+		entity->state = ENTITY_STATE_DYING;
+	}
+}
+
+void resolve_entity_collision(Game_State* game, Uint32 entity_index, Uint32 collision_entity_index) {
+	Entity_System* es = game->entities;
+
+	Entity* entity = get_entity(es, entity_index);
+	int valid = (
+		(entity != NULL)
+		&& (entity->state == ENTITY_STATE_ACTIVE)
+		&& !(entity->flags & ENTITY_FLAG_COLLISION_DISABLED)
+	);
+
+	Entity* collision_entity = get_entity(es, collision_entity_index);
+	valid = (valid 
+		&& (collision_entity != NULL)
+		&& (collision_entity->state == ENTITY_STATE_ACTIVE)
+		&& !(collision_entity->flags & ENTITY_FLAG_COLLISION_DISABLED)
+	);
+
+	if (!valid) { return; }
+	
+	Vector2 overlap = {0};
+	Entity* item_entity = 	(entity_is_item(entity->type)) ? entity	 :
+				(entity_is_item(collision_entity->type)) ? collision_entity :
+				0;
+
+	Entity* player_entity = (entity->type == ENTITY_TYPE_PLAYER) ? entity :
+				(collision_entity->type == ENTITY_TYPE_PLAYER) ? collision_entity :
+				0;
+	
+	if (check_shape_collision(
+		entity->transform, entity->shape, 
+		collision_entity->transform, collision_entity->shape,
+		&overlap)
+	) {
+		if (item_entity && player_entity) {
+			item_entity->state = ENTITY_STATE_DESPAWNING;
+			item_entity->timer = ENTITY_WARP_DELAY/2.0f;
+
+			switch (item_entity->type) {
+				case ENTITY_TYPE_ITEM_MISSILE: {
+					Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Weapon Pickup"), 0);
+					game->player_state.ammo *= (int)(player_entity->type_data == PLAYER_WEAPON_MISSILE);
+					player_entity->type_data = PLAYER_WEAPON_MISSILE;
+					game->player_state.ammo += 10;	
+				} break;
+				
+				case ENTITY_TYPE_ITEM_LASER: {
+					Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Weapon Pickup"), 0);
+					game->player_state.ammo *= (int)(player_entity->type_data == PLAYER_WEAPON_LASER);
+					player_entity->type_data = PLAYER_WEAPON_LASER;
+					game->player_state.ammo += 10;
+				} break;
+
+				case ENTITY_TYPE_ITEM_LIFEUP: {
+					Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Life Up"), 0);
+					game->player_state.lives++;
+				} break;
+			}
+		} else if (entity->team && collision_entity->team && entity->team != collision_entity->team) {
+			on_enemy_collision(entity);
+			on_enemy_collision(collision_entity);
+		} else if (
+			!((entity->flags|collision_entity->flags) & ENTITY_FLAG_COLLISION_TRIGGER)
+		) {
+			overlap = normalize_vector2(overlap);
+
+			entity->vx		-= overlap.x/2.0f;
+			entity->vy		-= overlap.y/2.0f;
+			collision_entity->vx	+= overlap.x/2.0f;
+			collision_entity->vy	+= overlap.y/2.0f;
+		}
+	}
 }
 
 void update_entities(Game_State* game, float dt) {
@@ -423,69 +502,21 @@ void update_entities(Game_State* game, float dt) {
 			entity->x += entity->vx * dt;
 			entity->y += entity->vy * dt;
 
-			entity->vx *= 1.0 - (PHYSICS_FRICTION*dt);
-			entity->vy *= 1.0 - (PHYSICS_FRICTION*dt);
+			float friction = PHYSICS_FRICTION * (float)!(entity->flags & ENTITY_FLAG_FRICTION_DISABLED);
+			entity->vx *= 1.0 - (friction*dt);
+			entity->vy *= 1.0 - (friction*dt);
 
 			entity->position = wrap_world_coords(entity->x, entity->y, 0, 0, game->world_w, game->world_h);
 		
 			// Entity-to-entity collision
-			if (entity->type  != ENTITY_TYPE_SPAWN_WARP) {
+			if (!(entity->flags & ENTITY_FLAG_COLLISION_DISABLED)) {
 				for (int collision_entity_index = entity_index+1; collision_entity_index <= es->num_entities; collision_entity_index++) {
-					Entity* collision_entity = get_entity(es, collision_entity_index);
-					if (collision_entity == NULL) continue;
-					if (collision_entity->state != ENTITY_STATE_ACTIVE || collision_entity->type == ENTITY_TYPE_SPAWN_WARP) continue;
-					
-					Vector2 overlap = {0};
-					Entity* item_entity = 	(entity_is_item(entity->type)) ? entity	 :
-								(entity_is_item(collision_entity->type)) ? collision_entity :
-								0;
-
-					Entity* player_entity = (entity->type == ENTITY_TYPE_PLAYER) ? entity :
-								(collision_entity->type == ENTITY_TYPE_PLAYER) ? collision_entity :
-								0;
-					
-					if (check_shape_collision(entity->transform, entity->shape, collision_entity->transform, collision_entity->shape, &overlap)) {
-						if (item_entity && player_entity) {
-							item_entity->state = ENTITY_STATE_DESPAWNING;
-							item_entity->timer = ENTITY_WARP_DELAY/2.0f;
-
-							switch (item_entity->type) {
-								case ENTITY_TYPE_ITEM_MISSILE: {
-									Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Weapon Pickup"), 0);
-									game->player_state.ammo *= (int)(player_entity->type_data == PLAYER_WEAPON_MISSILE);
-									player_entity->type_data = PLAYER_WEAPON_MISSILE;
-									game->player_state.ammo += 10;	
-								} break;
-								
-								case ENTITY_TYPE_ITEM_LASER: {
-									Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Weapon Pickup"), 0);
-									game->player_state.ammo *= (int)(player_entity->type_data == PLAYER_WEAPON_LASER);
-									player_entity->type_data = PLAYER_WEAPON_LASER;
-									game->player_state.ammo += 10;
-								} break;
-
-								case ENTITY_TYPE_ITEM_LIFEUP: {
-									Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Life Up"), 0);
-									game->player_state.lives++;
-								} break;
-							}
-						} else if (entity->team && collision_entity->team && entity->team != collision_entity->team) {
-							entity->state  = ENTITY_STATE_DYING;
-							collision_entity->state = ENTITY_STATE_DYING;
-						} else {
-							overlap = normalize_vector2(overlap);
-
-							entity->vx		-= overlap.x/2.0f;
-							entity->vy		-= overlap.y/2.0f;
-							collision_entity->vx	+= overlap.x/2.0f;
-							collision_entity->vy	+= overlap.y/2.0f;
-						}
-					}
+					resolve_entity_collision(game, entity_index, collision_entity_index);
 				}
 			}
 
 			displace_particles(ps, entity->transform, scale_game_shape(entity->shape, entity->scale));
-		} // end of if (entity->state == ENTITY_STATE_ACTIVE)
+		}
 	}
 }
 

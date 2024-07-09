@@ -1,4 +1,3 @@
-#include "../../engine/assets.h"
 #include "../../engine/math.h"
 #include "../game_types.h"
 #include "../entities.h"
@@ -19,6 +18,7 @@ static inline void init_drifter(Entity* entity) {
 	entity->angle = randomf() * 360.0f;
 	entity->velocity.x = cos_deg(entity->angle) * DRIFTER_SPEED;
 	entity->velocity.y = sin_deg(entity->angle) * DRIFTER_SPEED;
+	entity->flags = ENTITY_FLAG_EXPLOSION_ENABLED;
 }
 
 static inline void update_drifter(Game_State* game, Entity* entity, float dt) {

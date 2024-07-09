@@ -1,5 +1,6 @@
 #include "../../engine/particles.h"
 #include "../../engine/math.h"
+#include "../entities.h"
 #include "../game_types.h"
 
 #define TRACKER_ACCEL 0.13f
@@ -24,6 +25,7 @@ static inline void init_tracker(Particle_System* ps, Entity* entity) {
 		thruster->colors[0] = RED;
 		thruster->color_count = 1;
 	}
+	entity->flags = ENTITY_FLAG_EXPLOSION_ENABLED;
 }
 
 static inline void update_tracker(Game_State* game, Entity* entity, float dt) {

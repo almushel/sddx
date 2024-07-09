@@ -47,7 +47,7 @@ SDL_Texture* generate_item_texture(SDL_Texture* icon) {
 		
 		platform_set_render_target(0);
 		SDL_DestroyTexture(target);
-		SDL_free(surface);
+		SDL_FreeSurface(surface);
 	}
 
 	return result;
@@ -90,6 +90,7 @@ static inline void init_item_missile(Entity* entity) {
 	entity->sprites[0].texture_name = "Item Missile";
 	entity->sprites[0].rotation_enabled = 1;
 	entity->sprite_count = 1;
+	entity->flags = ENTITY_FLAG_COLLISION_TRIGGER;
 }
 
 static inline void init_item_lifeup(Entity* entity){
@@ -98,6 +99,7 @@ static inline void init_item_lifeup(Entity* entity){
 	entity->sprites[0].texture_name = "Item LifeUp";
 	entity->sprites[0].rotation_enabled = 1;
 	entity->sprite_count = 1;
+	entity->flags = ENTITY_FLAG_COLLISION_TRIGGER;
 }
 
 static inline void init_item_laser(Entity* entity){
@@ -106,4 +108,5 @@ static inline void init_item_laser(Entity* entity){
 	entity->sprites[0].texture_name = "Item Laser";
 	entity->sprites[0].rotation_enabled = 1;
 	entity->sprite_count = 1;
+	entity->flags = ENTITY_FLAG_COLLISION_TRIGGER;
 }

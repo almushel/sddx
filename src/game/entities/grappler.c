@@ -1,6 +1,7 @@
 #include "../../engine/assets.h"
 #include "../../engine/math.h"
 #include "../../engine/platform.h"
+#include "../entities.h"
 #include "../game_types.h"
 
 #define GRAPPLER_COLOR (RGBA_Color){0,255,0,255}
@@ -28,6 +29,7 @@ static inline void init_grappler(Entity* entity) {
 	entity->sprites[1].texture_name = "Grappler Hook";
 	entity->sprites[1].rotation_enabled = 1;
 	entity->sprite_count = 2;
+	entity->flags = ENTITY_FLAG_EXPLOSION_ENABLED;
 }
 
 static inline void update_grappler(Game_State* game, Entity* entity, float dt) {

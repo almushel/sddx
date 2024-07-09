@@ -1,5 +1,6 @@
 #include "../../engine/math.h"
 #include "../game_types.h"
+#include "../entities.h"
 
 #define UFO_SPEED 1.9f
 #define UFO_DIR_CHANGE_DELAY 120.0f
@@ -11,6 +12,7 @@ static inline void init_ufo(Entity* entity) {
 	entity->angle = entity->target_angle = randomf() * 360.0f;
 	entity->sprites[0].texture_name = "Enemy UFO";
 	entity->sprite_count = 1;
+	entity->flags = ENTITY_FLAG_EXPLOSION_ENABLED;
 }
 
 static inline void update_ufo(Game_State* game, Entity* entity, float dt) {

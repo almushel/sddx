@@ -17,6 +17,9 @@ static inline void init_bullet(Entity* entity) {
 	entity->shape.radius = PLAYER_SHOT_RADIUS;
 	entity->state = ENTITY_STATE_ACTIVE;
 	entity->color = (RGBA_Color){255, 150, 50, 255};
+	entity->flags = 
+		ENTITY_FLAG_FRICTION_DISABLED
+		| ENTITY_FLAG_COLLISION_TRIGGER;
 }
 
 static inline void init_laser(Entity* entity) {
@@ -24,6 +27,9 @@ static inline void init_laser(Entity* entity) {
 	Rectangle rect = {.x = -15, .w = 30, .y = -5, .h = 10,};
 	entity->shape.polygon = rect_to_poly2D(rect);
 	entity->color = SD_BLUE;
+	entity->flags = 
+		ENTITY_FLAG_FRICTION_DISABLED
+		| ENTITY_FLAG_COLLISION_TRIGGER;
 }
 
 static inline void init_missile(Particle_System* ps, Entity* entity) {
@@ -49,6 +55,10 @@ static inline void init_missile(Particle_System* ps, Entity* entity) {
 		thruster->color_count = 1;
 		thruster->density = 1.0f;
 	}
+
+	entity->flags =
+		ENTITY_FLAG_EXPLOSION_ENABLED
+		| ENTITY_FLAG_COLLISION_TRIGGER;
 }
 
 static inline void update_bullet(Game_State* game, Entity* entity, float dt) {
@@ -56,8 +66,6 @@ static inline void update_bullet(Game_State* game, Entity* entity, float dt) {
 		entity->state = ENTITY_STATE_DESPAWNING;
 		entity->timer = BULLET_LIFETIME;
 	}
-	entity->vx *= 1.0f + PHYSICS_FRICTION;
-	entity->vy *= 1.0f + PHYSICS_FRICTION;
 }
 
 static inline void update_missile(Game_State* game, Entity* entity, float dt) {

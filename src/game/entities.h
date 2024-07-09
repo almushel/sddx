@@ -38,6 +38,14 @@ typedef enum Entity_Teams {
 	ENTITY_TEAM_ENEMY,
 } Entity_Teams;
 
+typedef enum Entity_Flags {
+	ENTITY_FLAG_EXPLOSION_ENABLED  = (1<<0),
+	ENTITY_FLAG_FRICTION_DISABLED  = (1<<1),
+	ENTITY_FLAG_COLLISION_TRIGGER  = (1<<2), // Collision is true/false with no physics resolution
+	ENTITY_FLAG_COLLISION_DISABLED = (1<<3),
+
+} Entity_Flags;
+
 
 Entity_System* create_entity_system();
 void reset_entity_system(Entity_System* es);

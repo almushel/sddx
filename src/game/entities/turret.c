@@ -25,6 +25,7 @@ static inline void init_turret(Entity* entity) {
 	entity->sprites[1].texture_name = "Enemy Turret Cannon";
 	entity->sprites[1].rotation_enabled = 1;
 	entity->sprite_count = 2;
+	entity->flags = ENTITY_FLAG_EXPLOSION_ENABLED;
 }
 
 static inline void update_turret(Game_State* game, Entity* entity, float dt) {

@@ -68,6 +68,7 @@ typedef struct Entity {
 	Uint32 particle_emitters[3];
 	Uint8 emitter_count;
 	
+	Uint32 flags;
 	Uint8 type;
 	Uint8 state;
 	Uint8 team;

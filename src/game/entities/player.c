@@ -46,6 +46,7 @@ static inline void init_player(Particle_System* ps, Entity* entity) {
 			thruster->color_count = 1;
 		}
 	}
+	entity->flags = ENTITY_FLAG_EXPLOSION_ENABLED;
 }
 
 static inline void destroy_player(Game_State* game) {
