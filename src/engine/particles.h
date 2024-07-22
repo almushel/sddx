@@ -18,6 +18,7 @@ Particle_Emitter*	get_particle_emitter		(Particle_System* ps, Uint32 index);
 void			remove_particle_emitter		(Particle_System* ps, Uint32 index);
 
 void			displace_particles		(Particle_System* ps, Transform2D transform, Game_Shape shape);
+void			wrap_particles			(Particle_System* ps, Rectangle bounds);
 void			explode_at_point		(Particle_System* ps,
 							 float x, float y, 
 							 RGBA_Color* colors, Uint32 num_colors, 

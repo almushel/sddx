@@ -506,7 +506,7 @@ void update_entities(Game_State* game, float dt) {
 			entity->vx *= 1.0 - (friction*dt);
 			entity->vy *= 1.0 - (friction*dt);
 
-			entity->position = wrap_world_coords(entity->x, entity->y, 0, 0, game->world_w, game->world_h);
+			entity->position = wrap_coords(entity->x, entity->y, 0, 0, game->world_w, game->world_h);
 		
 			// Entity-to-entity collision
 			if (!(entity->flags & ENTITY_FLAG_COLLISION_DISABLED)) {

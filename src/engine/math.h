@@ -21,7 +21,7 @@ Vector2 rotate_vector2		(Vector2 v, float degrees);
 Vector2 add_vector2		(Vector2 v1, Vector2 v2);
 Vector2 subtract_vector2	(Vector2 v1, Vector2 v2);
 float dot_product_vector2	(Vector2 v1, Vector2 v2);
-Vector2 wrap_world_coords	(float x, float y, float min_x, float min_y, float max_x, float max_y);
+Vector2 wrap_coords	(float x, float y, float min_x, float min_y, float max_x, float max_y);
 void wrap_aab			(const Vector2 position, const Rectangle aabb, const Rectangle bounds,
 				 Vector2 wrap_positions[4], int* count);
 
@@ -34,7 +34,7 @@ Poly2D rect_to_poly2D		(Rectangle rect);
 Poly2D generate_poly2D		(int vert_count, float r_min, float r_max);
 Poly2D translate_poly2d		(Poly2D polygon, Vector2 translation);
 Poly2D rotate_poly2d		(Poly2D p, float degrees);
-Poly2D scale_poly2d			(Poly2D polygon, Vector2 scale);
+Poly2D scale_poly2d		(Poly2D polygon, Vector2 scale);
 
 Game_Shape scale_game_shape	(Game_Shape shape, Vector2 scale);
 Game_Shape rotate_game_shape	(Game_Shape shape, float degrees);

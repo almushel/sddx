@@ -2,6 +2,7 @@
 
 #include "platform.h"
 #include "../game/game.h"
+#include "SDL_video.h"
 #include "input.h"
 #include "math.h"
 
@@ -236,7 +237,7 @@ void platform_init(Platform_State* platform) {
 			platform->title,
 			SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
 			platform->screen.x, platform->screen.y,
-			SDL_WINDOW_RESIZABLE
+			SDL_WINDOW_RESIZABLE|SDL_WINDOW_MAXIMIZED
 	);
 
 	if (window == NULL) {

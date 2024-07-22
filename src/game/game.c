@@ -328,6 +328,10 @@ void update_game(Game_State* game, Game_Input* input, float dt) {
 	if (game->scene != GAME_SCENE_PAUSED && game->next_scene != GAME_SCENE_PAUSED) {
 		update_entities(game, dt);
 		update_particles(game->particle_system, dt);
+		wrap_particles(
+			game->particle_system,
+			(Rectangle){0,0, game->world_w, game->world_h}
+		);
 	}
 
 	// TODO: Implement better conditions for this.

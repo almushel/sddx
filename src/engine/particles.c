@@ -69,6 +69,12 @@ void update_particles(Particle_System* ps, float dt) {
 	}
 }
 
+void wrap_particles(Particle_System* ps, Rectangle bounds) {
+	for (Particle* p = ps->particles; p != ps->particles+ps->particle_count; p++) {
+		p->position = wrap_coords(p->x, p->y, bounds.x, bounds.y, bounds.x+bounds.w, bounds.y+bounds.h);
+	}
+}
+
 void displace_particles(Particle_System* ps, Transform2D transform, Game_Shape shape) {
 	for (Particle* p = ps->particles; p != ps->particles+ps->particle_count; p++) {
 		Vector2 overlap = {0};

@@ -244,7 +244,7 @@ Poly2D scale_poly2d(Poly2D polygon, Vector2 scale) {
 	return result;
 }
 
-Vector2 wrap_world_coords(float x, float y, float min_x, float min_y, float max_x, float max_y) {
+Vector2 wrap_coords(float x, float y, float min_x, float min_y, float max_x, float max_y) {
 	Vector2 result = {x, y};
 
 	if (result.x < min_x) result.x = max_x + result.x;
