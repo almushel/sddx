@@ -9,6 +9,7 @@
 #include "assets.c"
 #include "graphics.c"
 #include "input.c"
+#include "lerp.c"
 #include "math.c"
 #include "particles.c"
 #include "ui.c"

@@ -1,5 +1,6 @@
 #include "../../engine/assets.h"
 #include "../../engine/math.h"
+#include "../../engine/lerp.h"
 #include "../game_types.h"
 #include "../entities.h"
 
@@ -37,7 +38,7 @@ static inline void update_turret(Game_State* game, Entity* entity, float dt) {
 			Entity* target = get_enemy_target(game);
 			if (target) {
 				float aim_offset = angle_rotation_to_target(entity->position, target->position, entity->angle, TURRET_AIM_TOLERANCE);
-				if (aim_offset == 0 && entity->timer <= 0) {
+				if (aim_offset == 0 && entity->timer.time <= 0) {
 					Vector2 position = {
 						entity->position.x + cos_deg(entity->angle) * TURRET_RADIUS,
 						entity->position.y + sin_deg(entity->angle) * TURRET_RADIUS
@@ -59,14 +60,14 @@ static inline void update_turret(Game_State* game, Entity* entity, float dt) {
 						new_shot->velocity = velocity;
 						new_shot->shape.type = SHAPE_TYPE_CIRCLE;
 						new_shot->shape.radius = TURRET_SHOT_RADIUS;
-						new_shot->timer = TURRET_SHOT_LIFE;
+						lerp_timer_start(&new_shot->timer, 0, TURRET_SHOT_LIFE, -1);
 
 						shot_offset_angle = normalize_degrees(shot_offset_angle + 180.0f);
 					}
 
 					Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Turret Fire"), 0);
 
-					entity->timer = TURRET_FIRE_ANIM_SPEED;
+					lerp_timer_start(&entity->timer, 0, TURRET_FIRE_ANIM_SPEED, -1);
 					entity->type_data = TURRET_STATE_FIRING;
 				} else {
 					entity->angle += aim_offset * TURRET_TURN_SPEED * dt;
@@ -75,23 +76,24 @@ static inline void update_turret(Game_State* game, Entity* entity, float dt) {
 		} break;
 
 		case TURRET_STATE_FIRING : {
-			float t = entity->timer / (float)TURRET_FIRE_ANIM_SPEED;
+			float t = lerp_timer_get_t(&entity->timer);
 			entity->sprites[1].offset.x = 0.0f;
 			entity->sprites[1].offset.x -= (float)TURRET_RADIUS - lerp(0, TURRET_RADIUS, t);
-			if (entity->timer <= 0) {
+			if (entity->timer.time <= 0) {
 				entity->type_data = TURRET_STATE_RECOVERING;
-				entity->timer = TURRET_RECOVERY_ANIM_SPEED;
+				lerp_timer_start(&entity->timer, 0, TURRET_RECOVERY_ANIM_SPEED, -1);
 			}
 		} break;
 
 		case TURRET_STATE_RECOVERING: {
-			float t = entity->timer / (float)TURRET_RECOVERY_ANIM_SPEED;
+			float t = lerp_timer_get_t(&entity->timer);
 			entity->sprites[1].offset.x = 0;
 			entity->sprites[1].offset.x -= lerp(0, TURRET_RADIUS, t);
-			if (entity->timer <= 0) {
+			if (entity->timer.time <= 0) {
 				entity->sprites[1].offset.x = 0;
 				entity->type_data = TURRET_STATE_AIMING;
-				entity->timer = 0;
+
+				entity->timer = (Lerp_Timer){0};
 			}
 		} break;
 	}

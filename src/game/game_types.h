@@ -57,7 +57,7 @@ typedef struct Entity {
 	float z;
 	float target_angle;
 	Vec2_Union(velocity, vx, vy);
-	float timer;
+	Lerp_Timer timer;
 
 	Game_Sprite sprites[4];
 	Uint32 sprite_count;
@@ -112,8 +112,7 @@ typedef struct Game_State {
 
 	Game_Scene scene;
 	Game_Scene next_scene;
-	float scene_timer;
-	float scene_transition_time;
+	Lerp_Timer scene_timer;
 
 	Game_Player_Controller player_controller;
 	Uint32 player;

@@ -1,4 +1,5 @@
 #include "../../engine/math.h"
+#include "../../engine/lerp.h"
 #include "../game_types.h"
 #include "../entities.h"
 
@@ -21,16 +22,18 @@ static inline void update_ufo(Game_State* game, Entity* entity, float dt) {
 		(sin_deg(entity->target_angle) * cos_deg(entity->angle));
 
 	if (SDL_fabs(angle_delta) > UFO_TURN_PRECISION) {
-		entity->timer += dt;
+		entity->timer.dir = 0;
 		entity->angle += dt * (float)(1 - ((int)(angle_delta < 0) * 2));
 
 		entity->vx += cos_deg(entity->angle) * UFO_SPEED * 0.025;
 		entity->vx += sin_deg(entity->angle) * UFO_SPEED * 0.025;
+	} else {
+		entity->timer.dir = -1;
 	}
 
-	if (entity->timer <= 0) {
+	if (entity->timer.time <= 0) {
 		entity->target_angle = randomf() * 360.0f;
-		entity->timer = UFO_DIR_CHANGE_DELAY;
+		lerp_timer_start(&entity->timer, 0, UFO_DIR_CHANGE_DELAY, -1);
 	}
 
 	float magnitude = SDL_sqrt( (entity->vx * entity->vx) + (entity->vy * entity->vy) );

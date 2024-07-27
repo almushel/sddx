@@ -1,11 +1,11 @@
 #include "../game_types.h"
 #include "../entities.h"
 #include "../../engine/math.h"
+#include "../../engine/lerp.h"
 #include "../../engine/particles.h"
 
 #define PLAYER_SHOT_RADIUS 3.0f
 #define PLAYER_SHOT_SPEED 7.0f
-#define PLAYER_SHOT_LIFE 80.0f
 
 #define BULLET_LIFETIME 26.0f
 
@@ -62,14 +62,14 @@ static inline void init_missile(Particle_System* ps, Entity* entity) {
 }
 
 static inline void update_bullet(Game_State* game, Entity* entity, float dt) {
-	if (entity->timer <= 0) {
+	if (entity->timer.time <= 0) {
 		entity->state = ENTITY_STATE_DESPAWNING;
-		entity->timer = BULLET_LIFETIME;
+		lerp_timer_start(&entity->timer, 0, BULLET_LIFETIME, -1);
 	}
 }
 
 static inline void update_missile(Game_State* game, Entity* entity, float dt) {
-	if (entity->timer <= 0) { 
+	if (entity->timer.time <= 0) { 
 		entity->state = ENTITY_STATE_DYING;
 		return;
 	}

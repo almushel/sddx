@@ -135,7 +135,7 @@ void init_game(Game_State* game) {
 
 	game->scene = -1;
 	game->next_scene = GAME_SCENE_MAIN_MENU;
-	game->scene_timer = game->scene_transition_time = SCENE_TRANSITION_TIME;
+	lerp_timer_start(&game->scene_timer, 0, SCENE_TRANSITION_TIME, -1);
 
 	game->player_controller = (Game_Player_Controller) {
 		.thrust = {
@@ -197,7 +197,7 @@ void restart_game(Game_State* game) {
 	game->player_state.thrust_energy = PLAYER_THRUST_MAX;
 
 	spawn_player(game);
-#if DEBUG && 0
+#if DEBUG && 1
 	for (int i = ENTITY_TYPE_PLAYER+1; i < ENTITY_TYPE_SPAWN_WARP; i++) {
 		Uint32 entity_id = spawn_entity(
 			game->entities, game->particle_system, 
@@ -223,7 +223,8 @@ int update_game(Game_State* game, Game_Input* input, float dt) {
 #if DEBUG
 	if (is_key_pressed(&game->input, SDL_SCANCODE_R)) {
 		game->next_scene = GAME_SCENE_MAIN_MENU;
-		game->scene_timer = game->scene_transition_time = SCENE_TRANSITION_TIME;
+		lerp_timer_start(&game->scene_timer, 0, SCENE_TRANSITION_TIME, -1);
+		despawn_entities(game->entities);
 	}
 #endif
 
@@ -235,7 +236,7 @@ int update_game(Game_State* game, Game_Input* input, float dt) {
 				if (is_game_control_pressed(&game->input, &game->player_controller.fire)) {
 					Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Menu Confirm"), 0);
 					game->next_scene = GAME_SCENE_GAMEPLAY;
-					game->scene_timer = game->scene_transition_time = SCENE_TRANSITION_TIME;
+					lerp_timer_start(&game->scene_timer, 0, SCENE_TRANSITION_TIME, -1);
 					despawn_entities(game->entities);
 				}
 			} break;
@@ -249,13 +250,13 @@ int update_game(Game_State* game, Game_Input* input, float dt) {
 					} 
 				} else if (game->player == 0) {
 					game->next_scene = GAME_SCENE_GAME_OVER;
-					game->scene_timer = game->scene_transition_time = SCENE_TRANSITION_TIME;
+					lerp_timer_start(&game->scene_timer, 0, SCENE_TRANSITION_TIME, -1);
 				} 
 				if (is_game_control_pressed(&game->input, &game->player_controller.menu)) {
 					Mix_PauseMusic();
 					Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Menu Confirm"), 0);
 					game->next_scene = GAME_SCENE_PAUSED;
-					game->scene_timer = game->scene_transition_time = PAUSE_TRANSITION_TIME;
+					lerp_timer_start(&game->scene_timer, 0, PAUSE_TRANSITION_TIME, -1);
 				}
 			} break;
 
@@ -264,7 +265,7 @@ int update_game(Game_State* game, Game_Input* input, float dt) {
 					Mix_ResumeMusic();
 					Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Menu Confirm"), 0);
 					game->next_scene = GAME_SCENE_GAMEPLAY;
-					game->scene_timer = game->scene_transition_time = PAUSE_TRANSITION_TIME;
+					lerp_timer_start(&game->scene_timer, 0, PAUSE_TRANSITION_TIME, -1);
 				}
 			} break;
 			
@@ -278,7 +279,7 @@ int update_game(Game_State* game, Game_Input* input, float dt) {
 						SDL_free(scores);
 					}
 					game->next_scene = GAME_SCENE_HIGH_SCORES;
-					game->scene_timer = game->scene_transition_time = SCENE_TRANSITION_TIME;
+					lerp_timer_start(&game->scene_timer, 0, SCENE_TRANSITION_TIME, -1);
 				}
 			} break;
 			
@@ -286,7 +287,7 @@ int update_game(Game_State* game, Game_Input* input, float dt) {
 				if (is_game_control_pressed(&game->input, &game->player_controller.fire)) {
 					Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Menu Confirm"), 0);
 					game->next_scene = GAME_SCENE_MAIN_MENU;
-					game->scene_timer = game->scene_transition_time = SCENE_TRANSITION_TIME;
+					lerp_timer_start(&game->scene_timer, 0, SCENE_TRANSITION_TIME, -1);
 
 					despawn_entities(game->entities);
 					game->enemy_count = 1; // Prevent the spawn system from triggering in menu
@@ -294,8 +295,8 @@ int update_game(Game_State* game, Game_Input* input, float dt) {
 				}
 			} break;
 		}
-	} else if (game->scene_timer > 0.0f) {
-		game->scene_timer -= dt;
+	} else if (game->scene_timer.time > 0.0f) {
+		lerp_timer_update(&game->scene_timer, dt);
 	} else {
 		switch(game->next_scene) {
 			case GAME_SCENE_MAIN_MENU: {
@@ -524,7 +525,7 @@ void draw_scene_ui(Game_State* game, Game_Scene scene, float t) {
 
 void draw_game_ui(Game_State* game) {
 	float t = game->scene != game->next_scene
-		? game->scene_timer/game->scene_transition_time
+		? lerp_timer_get_t(&game->scene_timer)
 		: 1.0f;
 	draw_scene_ui(game, game->scene, smooth_start(t, 3));
 

@@ -3,6 +3,7 @@
 #include "../score.h"
 #include "../../engine/assets.h"
 #include "../../engine/math.h"
+#include "../../engine/lerp.h"
 #include "../../engine/particles.h"
 
 #define DEMO_DIR_CHANGE 360.0f
@@ -19,6 +20,7 @@
 #define PLAYER_WEAPON_HEAT_MAX 100
 
 
+#define PLAYER_SHOT_LIFE 80.0f
 #define PLAYER_MG_COOLDOWN 200.0f/16.666f
 #define PLAYER_LASER_COOLDOWN 250.0f/16.666f
 #define PLAYER_MISSILE_COOLDOWN 800.0f/16.666f
@@ -94,9 +96,9 @@ static inline void update_spawning_player(Game_State* game, Entity* entity, floa
 	if (entity->y <= game->world_h/2.0f) {
 		entity->state = ENTITY_STATE_ACTIVE;
 		entity->scale = (Vector2){1.0f, 1.0f};
-		entity->shape.radius = PLAYER_SHIP_RADIUS;// * 2.0f;
+		entity->shape.radius = PLAYER_SHIP_RADIUS;
 		entity->velocity = (Vector2){0};
-		entity->timer = 0;
+		entity->timer = (Lerp_Timer){0};
 	}
 }
 
@@ -147,7 +149,7 @@ static inline void update_player_entity(Game_State* game, Entity* entity, float 
 		if (game->player_state.weapon_heat < PLAYER_WEAPON_HEAT_MAX) {
 			game->player_state.weapon_heat -= dt;
 		
-			if (entity->timer <= 0)  {
+			if (entity->timer.time <= 0)  {
 				switch(entity->type_data) {
 
 					case PLAYER_WEAPON_MG: {
@@ -157,7 +159,7 @@ static inline void update_player_entity(Game_State* game, Entity* entity, float 
 						Entity* bullet = get_entity(game->entities, bullet_id);
 						if (bullet == NULL) { break; }
 
-						bullet->timer = PLAYER_SHOT_LIFE;
+						lerp_timer_start(&bullet->timer, 0, PLAYER_SHOT_LIFE, -1);
 						Vector2 angle = {
 							cos_deg(entity->angle),
 							sin_deg(entity->angle)
@@ -171,7 +173,7 @@ static inline void update_player_entity(Game_State* game, Entity* entity, float 
 						bullet->color = SD_BLUE;
 						bullet->team = ENTITY_TEAM_PLAYER;
 						
-						entity->timer = PLAYER_MG_COOLDOWN;
+						lerp_timer_start(&entity->timer, 0, PLAYER_MG_COOLDOWN, -1);
 					} break;
 					
 					case PLAYER_WEAPON_MISSILE: {
@@ -191,7 +193,7 @@ static inline void update_player_entity(Game_State* game, Entity* entity, float 
 							Entity* missile = get_entity(game->entities, missile_id);
 							if (missile == NULL) { break; }
 							
-							missile->timer /= 2.0f;
+							missile->timer.max /= 2.0f;
 
 							missile->x += cos_deg(entity->angle + position_offset) * PLAYER_SHIP_RADIUS;
 							missile->y += sin_deg(entity->angle + position_offset) * PLAYER_SHIP_RADIUS;
@@ -205,7 +207,7 @@ static inline void update_player_entity(Game_State* game, Entity* entity, float 
 						}
 
 						game->player_state.ammo--;
-						entity->timer = PLAYER_MISSILE_COOLDOWN;
+						lerp_timer_start(&entity->timer, 0, PLAYER_MISSILE_COOLDOWN, -1);
 
 					} break;
 					
@@ -226,8 +228,7 @@ static inline void update_player_entity(Game_State* game, Entity* entity, float 
 							Entity* laser = get_entity(game->entities, laser_id);
 							if (laser == NULL) { break; }
 
-							laser->state = ENTITY_STATE_ACTIVE;
-							laser->timer = PLAYER_SHOT_LIFE;
+							lerp_timer_start(&laser->timer, 0, 4, -1);
 							
 							laser->x += cos_deg(entity->angle + position_offset) * PLAYER_SHIP_RADIUS;
 							laser->y += sin_deg(entity->angle + position_offset) * PLAYER_SHIP_RADIUS;
@@ -241,8 +242,7 @@ static inline void update_player_entity(Game_State* game, Entity* entity, float 
 						}
 
 						game->player_state.ammo--;
-						entity->timer = PLAYER_LASER_COOLDOWN;
-
+						lerp_timer_start(&entity->timer, 0, PLAYER_LASER_COOLDOWN, -1);
 					} break;
 				}
 			}
@@ -269,9 +269,9 @@ static inline void update_demo_ship(Game_State* game, Entity* entity, float dt) 
 	entity->transform.scale.x = entity->transform.scale.y = vert;
 	entity->shape.radius = 0;//vert * PLAYER_SHIP_RADIUS * 2;
 
-	if (entity->timer <= 0.0f) {
+	if (entity->timer.time <= 0.0f) {
 		entity->type_data = (uint8_t)(!(SDL_bool)entity->type_data);
-		entity->timer = DEMO_DIR_CHANGE;
+		lerp_timer_start(&entity->timer, 0, DEMO_DIR_CHANGE, -1);
 	}
 
 	entity->angle += (1 + ((float)entity->type_data * -2.0f)) * dt;

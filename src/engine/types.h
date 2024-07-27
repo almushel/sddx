@@ -6,6 +6,10 @@
 
 typedef struct RGBA_Color {uint8_t r, g, b, a;} RGBA_Color;
 
+typedef struct Lerp_Timer {
+	float min, time, max, dir;
+} Lerp_Timer;
+
 typedef enum stbi_masks {
 	STBI_MASK_R = 0x000000FF, 
 	STBI_MASK_G = 0x0000FF00,

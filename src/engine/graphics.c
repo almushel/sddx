@@ -1,4 +1,5 @@
 #include "platform.h"
+#include "lerp.h"
 #include "math.h"
 #include "assets.h"
 

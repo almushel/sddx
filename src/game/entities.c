@@ -54,7 +54,8 @@ void despawn_entities(Entity_System* es) {
 	for (Entity* e = es->entities; e != es->entities+es->num_entities; e++) {
 		if (e->state > ENTITY_STATE_UNDEFINED && e->state < ENTITY_STATE_COUNT) {
 			e->state = ENTITY_STATE_DESPAWNING;
-			e->timer = 30.0f;
+			lerp_timer_start(&e->timer, 0, ENTITY_WARP_DELAY, -1);
+			lerp_timer_set_t(&e->timer, (e->scale.x+e->scale.y)/2.0f);
 		}
 	}
 }
@@ -210,15 +211,15 @@ Uint32 spawn_entity(Entity_System* es, Particle_System* ps, Entity_Types type, V
 		.scale = { 1.0f, 1.0f },
 		.shape.type = SHAPE_TYPE_CIRCLE,
 		.shape.radius = DEFAULT_ENTITY_RADIUS,
-		.timer = ENTITY_WARP_DELAY,
 		.state = ENTITY_STATE_SPAWNING,
 		.team = ENTITY_TEAM_ENEMY,
 	};
+	lerp_timer_start(&entity->timer, 0, ENTITY_WARP_DELAY, -1);
 
 	switch(type) {
 		case ENTITY_TYPE_DEMOSHIP: {
-			entity->timer = 0;
-		}	
+			entity->timer = (Lerp_Timer){0};
+		}
 		case ENTITY_TYPE_PLAYER:	{ init_player(ps, entity); } break;
 		case ENTITY_TYPE_BULLET:	{ init_bullet(entity); } break;
 		case ENTITY_TYPE_MISSILE:	{ init_missile(ps, entity); } break;
@@ -388,7 +389,7 @@ void resolve_entity_collision(Game_State* game, Uint32 entity_index, Uint32 coll
 	) {
 		if (item_entity && player_entity) {
 			item_entity->state = ENTITY_STATE_DESPAWNING;
-			item_entity->timer = ENTITY_WARP_DELAY/2.0f;
+			lerp_timer_start(&item_entity->timer, 0, ENTITY_WARP_DELAY/2.0f, -1);
 
 			switch (item_entity->type) {
 				case ENTITY_TYPE_ITEM_MISSILE: {
@@ -430,46 +431,42 @@ void update_entities(Game_State* game, float dt) {
 	Entity_System* es = game->entities;
 	Particle_System* ps = game->particle_system;
 	Entity* entity = 0;
+
 	for (int entity_index = 1; entity_index <= es->num_entities; entity_index++) {
 		entity = get_entity(game->entities, entity_index);
 		if (entity == NULL) { continue; }
 		
+		lerp_timer_update(&entity->timer, dt);
 		if (entity->state == ENTITY_STATE_SPAWNING) {
 			if (entity->type == ENTITY_TYPE_PLAYER) {
 				update_spawning_player(game, entity, dt);
 			} else {
-				entity->timer -= dt * (float)(int)(entity->timer > 0);
-
-				entity->transform.scale.x = entity->transform.scale.y = 
-					1.0f - SDL_clamp((entity->timer/ENTITY_WARP_DELAY), 0.0f, 1.0f);
+				entity->transform.scale.x = entity->transform.scale.y = 1.0f - lerp_timer_get_t(&entity->timer);
 						
-				if (entity->timer <= 0) {
+				if (entity->timer.time <= 0) {
 					switch(entity->type) {
-						case ENTITY_TYPE_MISSILE: { entity->timer = MISSILE_LIFETIME; }	
-						case ENTITY_TYPE_LASER: { entity->timer = PLAYER_SHOT_LIFE; }
+						case ENTITY_TYPE_MISSILE: { lerp_timer_start(&entity->timer, 0, MISSILE_LIFETIME, -1); } break;
+						case ENTITY_TYPE_LASER: { lerp_timer_start(&entity->timer, 0, PLAYER_SHOT_LIFE*2.0f, -1); } break;
 
 						default: {
-							entity->timer = 100.0f;
+							lerp_timer_start(&entity->timer, 0, 100, -1);
 						} break;
 					}
 					entity->state = ENTITY_STATE_ACTIVE;
 				}
 			}
-		// TO-DO: Movement update for despawning enemies
+		// TODO: Movement update for despawning enemies
 		} else if (entity->state == ENTITY_STATE_DESPAWNING) {
-			entity->timer -= dt * (float)(int)(entity->timer > 0);
-			
 			entity->transform.scale.x = 
 				entity->transform.scale.y = 
-					SDL_clamp(entity->timer/ENTITY_WARP_DELAY, 0.0f, 1.0f);
+					lerp_timer_get_t(&entity->timer);
 
-			if (entity->timer <= 0) {
+			if (entity->timer.time <= 0) {
 				remove_dead_entity(game, entity_index);
 			}
 		} else if (entity->state == ENTITY_STATE_DYING) {
 			remove_dead_entity(game, entity_index);
 		} else if (entity->state == ENTITY_STATE_ACTIVE) {
-			entity->timer -= dt * (float)(int)(entity->timer > 0);
 			switch(entity->type) {
 				case ENTITY_TYPE_DEMOSHIP:	{ update_demo_ship(game, entity, dt); } break;
 				case ENTITY_TYPE_PLAYER:	{ update_player_entity(game, entity, dt); } break;
@@ -487,7 +484,7 @@ void update_entities(Game_State* game, float dt) {
 				case ENTITY_TYPE_ITEM_LASER:	{ entity->angle += dt; } break;
 
 				case ENTITY_TYPE_SPAWN_WARP: {
-					entity->timer = ENTITY_WARP_DELAY;
+					lerp_timer_start(&entity->timer, 0, ENTITY_WARP_DELAY, -1);
 					entity->state = ENTITY_STATE_DESPAWNING;
 					
 					Entity* spawn = get_entity(es, spawn_entity(es, ps, entity->type_data, entity->position));
