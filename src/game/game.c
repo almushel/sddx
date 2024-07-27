@@ -1,4 +1,5 @@
 #include "SDL_gamecontroller.h"
+#include "SDL_keycode.h"
 #include "SDL_mixer.h"
 #include "SDL_render.h"
 #include "SDL_scancode.h"
@@ -212,13 +213,20 @@ void restart_game(Game_State* game) {
 
 }
 
-void update_game(Game_State* game, Game_Input* input, float dt) {
+int update_game(Game_State* game, Game_Input* input, float dt) {
+	int running = 1;
+	if (is_key_pressed(input, SDL_SCANCODE_ESCAPE)) {
+		// TODO: Handle menus and quit confirmation.
+		running = 0;
+	}
+	if (!running) return running;
 #if DEBUG
-	if (is_key_released(&game->input, SDL_SCANCODE_R)) {
+	if (is_key_pressed(&game->input, SDL_SCANCODE_R)) {
 		game->next_scene = GAME_SCENE_MAIN_MENU;
 		game->scene_timer = game->scene_transition_time = SCENE_TRANSITION_TIME;
 	}
 #endif
+
 
 	game->input = *input;
 	if (game->next_scene == game->scene) {
@@ -341,6 +349,8 @@ void update_game(Game_State* game, Game_Input* input, float dt) {
 		game->score.spawn_points_max++;
 		spawn_wave(game, game->score.current_wave, game->score.spawn_points_max);
 	}
+
+	return running;
 }
 
 void draw_game_world(Game_State* game) {

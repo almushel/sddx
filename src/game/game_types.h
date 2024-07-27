@@ -101,7 +101,7 @@ typedef struct Game_State {
 	Game_Input input;
 
 	int world_w, world_h;
-	SDL_bool fit_world_to_screen;
+	int fit_world_to_screen;
 
 	Entity_System* entities;
 	Uint32 enemy_count;

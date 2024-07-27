@@ -29,6 +29,22 @@ iVector2 platform_get_window_size(void) {
 	return result;
 }
 
+int platform_toggle_fullscreen(void) {
+	int result;
+	Uint32 win_flags = SDL_GetWindowFlags(window);
+	if (win_flags & SDL_WINDOW_FULLSCREEN_DESKTOP) {
+		result = SDL_SetWindowFullscreen(window, 0);
+	} else {
+		result = SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+	}
+
+	if (result < 0) {
+		SDL_Log("Error platform_toggle_fullscreen(): %s", SDL_GetError());
+	}
+
+	return result;
+}
+
 SDL_Texture* platform_create_texture(int w, int h, SDL_bool target) {
 	SDL_Texture* result = 0;
 	
@@ -232,7 +248,6 @@ static void precise_delay(double ms) {
 
 void platform_init(Platform_State* platform) {
 	SDL_Init(SDL_INIT_EVERYTHING);
-
 	window = SDL_CreateWindow(
 			platform->title,
 			SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
@@ -259,7 +274,6 @@ void platform_init(Platform_State* platform) {
 		Mix_AllocateChannels(12);
 	}
 
-
 	world_buffer = SDL_CreateTexture(
 		renderer, 
 		SDL_PIXELFORMAT_ARGB32, SDL_TEXTUREACCESS_TARGET, 
@@ -273,8 +287,7 @@ void platform_init(Platform_State* platform) {
 
 #define TICK_RATE 60
 SDL_bool platform_update_and_render(Platform_State* platform, Platform_Game_State* game, Game_Input* input) {
-	SDL_bool running = 1;
-
+	SDL_bool running = true;
 	double dt = (double)(platform->current_count - platform->last_count) / (double)SDL_GetPerformanceFrequency();
 	dt = dt/(1.0 / (double)TICK_RATE);
 
@@ -310,11 +323,19 @@ SDL_bool platform_update_and_render(Platform_State* platform, Platform_Game_Stat
 		SDL_Log("Break");
 	}
 #endif
-	if (is_key_pressed(input, SDL_SCANCODE_ESCAPE)) {
-		running = 0;
+	if (SDL_GetModState() & KMOD_ALT) {
+		if (is_key_pressed(input, SDL_SCANCODE_F4)) {
+			running = false;
+		}
+
+		if (is_key_pressed(input, SDL_SCANCODE_RETURN)) {
+			platform_toggle_fullscreen();
+		}
 	}
 
-	update_game(game, input, dt);
+	running = update_game(game, input, dt);
+	if (!running) return running;
+
 	poll_input(input); // Clear held and released states
 
 	SDL_SetRenderTarget(renderer, world_buffer);

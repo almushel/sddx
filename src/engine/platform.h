@@ -18,6 +18,7 @@ SDL_bool		platform_update_and_render		(Platform_State* platform,
 								 Game_Input* input);
 
 iVector2		platform_get_window_size		(void);
+int			platform_toggle_fullscreen		(void);
 int			platform_set_render_target		(SDL_Texture *texture);
 int			platform_render_read_pixels		(const Rectangle* rect, Uint32 format, void* pixels, int pitch);
 
