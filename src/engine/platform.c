@@ -288,7 +288,6 @@ void platform_init(Platform_State* platform) {
 
 #define TICK_RATE 60
 SDL_bool platform_update_and_render(Platform_State* platform, Platform_Game_State* game, Game_Input* input) {
-	SDL_bool running = true;
 	double dt = (double)(platform->current_count - platform->last_count) / (double)SDL_GetPerformanceFrequency();
 	dt = dt/(1.0 / (double)TICK_RATE);
 
@@ -309,10 +308,9 @@ SDL_bool platform_update_and_render(Platform_State* platform, Platform_Game_Stat
 			} break;
 
 			case SDL_QUIT: {
-				running = 0;
+				return false;
 			} break;
 		}
-		if (!running) break;
 	}
 
 #ifdef DEBUG
@@ -326,7 +324,7 @@ SDL_bool platform_update_and_render(Platform_State* platform, Platform_Game_Stat
 #endif
 	if (SDL_GetModState() & KMOD_ALT) {
 		if (is_key_pressed(input, SDL_SCANCODE_F4)) {
-			running = false;
+			return false;
 		}
 
 		if (is_key_pressed(input, SDL_SCANCODE_RETURN)) {
@@ -334,8 +332,9 @@ SDL_bool platform_update_and_render(Platform_State* platform, Platform_Game_Stat
 		}
 	}
 
-	running = update_game(game, input, dt);
-	if (!running) return running;
+	if (!update_game(game, input, dt)) {
+		return false;
+	}
 
 	poll_input(input); // Clear held and released states
 
@@ -364,23 +363,9 @@ SDL_bool platform_update_and_render(Platform_State* platform, Platform_Game_Stat
 	};
 	
 	SDL_RenderCopy(renderer, world_buffer, 0, &world_draw_rect);
+	SDL_RenderSetClipRect(renderer, &world_draw_rect);
 	draw_game_ui(game);
-
-	//TODO: Sensibly clip UI to boundaries instead of this black rect draw over hack
-	platform_set_render_draw_color((RGBA_Color){0,0,0,255});
-	if (world_rect.y > 0) {
-		platform_render_fill_rect((Rectangle){0,0, platform->screen.x, world_rect.y});
-		platform_render_fill_rect((Rectangle){0,world_rect.y+world_rect.h, platform->screen.x, world_rect.y});
-	}
-	platform_render_fill_rect((Rectangle){0,0, world_rect.x, platform->screen.y});
-	platform_render_fill_rect(
-		(Rectangle){
-			world_rect.x+world_rect.w,
-			0,
-			platform->screen.x - (world_rect.x+world_rect.w),
-			platform->screen.y
-		}
-	);
+	SDL_RenderSetClipRect(renderer, 0);
 
 	Uint64 frequency = SDL_GetPerformanceFrequency();
 	double time_elapsed = (double)(SDL_GetPerformanceCounter() - platform->current_count) / (double)frequency * 1000.0;
@@ -390,5 +375,5 @@ SDL_bool platform_update_and_render(Platform_State* platform, Platform_Game_Stat
 	platform->current_count = SDL_GetPerformanceCounter();
 	SDL_RenderPresent(renderer);
 	
-	return running;
+	return true;
 }
