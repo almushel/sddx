@@ -4,6 +4,8 @@
 #include "SDL.h"
 #include "SDL_mixer.h"
 
+#define array_length(arr) (ptrdiff_t)(sizeof(arr) / sizeof(*(arr)))
+
 typedef struct RGBA_Color {uint8_t r, g, b, a;} RGBA_Color;
 
 typedef struct Lerp_Timer {

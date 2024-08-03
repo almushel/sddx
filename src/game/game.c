@@ -1,5 +1,4 @@
 #include "SDL_gamecontroller.h"
-#include "SDL_keycode.h"
 #include "SDL_mixer.h"
 #include "SDL_render.h"
 #include "SDL_scancode.h"
@@ -46,34 +45,12 @@ void load_game_assets(Game_State* game) {
 		game->assets = new_game_assets();
 	}
 
-	assets_load_texture(game->assets, "assets/images/player.png", "Player Ship");
-
-	// Projectiles
-	assets_load_texture(game->assets, "assets/images/missile.png", "Projectile Missile");
-
-	// Enemies
-	assets_load_texture(game->assets, "assets/images/grappler_hook.png", "Grappler Hook");
-	assets_load_texture(game->assets, "assets/images/grappler.png", "Enemy Grappler");
-	assets_load_texture(game->assets, "assets/images/ufo.png", "Enemy UFO");
-	SDL_SetTextureAlphaMod(assets_get_texture(game->assets, "Enemy UFO"), (Uint8)(255.0f * 0.7f));
-	assets_load_texture(game->assets, "assets/images/tracker.png", "Enemy Tracker");
-	assets_load_texture(game->assets, "assets/images/turret_base.png", "Enemy Turret Base");
-	assets_load_texture(game->assets, "assets/images/turret_cannon.png", "Enemy Turret Cannon");
-
-	// HUD
-	assets_load_texture(game->assets, "assets/images/hud_missile.png", "HUD Missile");
-	assets_load_texture(game->assets, "assets/images/hud_laser.png", "HUD Laser");
-	assets_load_texture(game->assets, "assets/images/hud_mg.png", "HUD MG");
-
-	//Generative textures
-	assets_store_texture(game->assets, generate_item_texture(assets_get_texture(game->assets, "Projectile Missile")), "Item Missile");
-	assets_store_texture(game->assets, generate_item_texture(assets_get_texture(game->assets, "Player Ship")), "Item LifeUp");
-	assets_store_texture(game->assets, generate_laser_item_texture(), "Item Laser");
-
-	assets_load_music(game->assets, "assets/audio/music_wrapping_action.mp3", "Wrapping Action");
+	// Music
 	assets_load_music(game->assets, "assets/audio/music_space_drifter.mp3", "Space Drifter");
+	assets_load_music(game->assets, "assets/audio/music_wrapping_action.mp3", "Wrapping Action");
 	assets_load_music(game->assets, "assets/audio/music_game_over.mp3", "Game Over");
 
+	// Sound effects
 	assets_load_sfx(game->assets, "assets/audio/menu_confirm.mp3", "Menu Confirm");
 
 	assets_load_sfx(game->assets, "assets/audio/weapon_pickup.mp3", "Weapon Pickup");
@@ -89,8 +66,50 @@ void load_game_assets(Game_State* game) {
 	assets_load_sfx(game->assets, "assets/audio/grappler_fire.mp3", "Grappler Fire");
 	assets_load_sfx(game->assets, "assets/audio/hook_impact.mp3", "Hook Impact");
 
-	Mix_VolumeChunk(assets_get_sfx(game->assets, "Player Laser"), 64);
-	Mix_VolumeChunk(assets_get_sfx(game->assets, "Player Missile"), 64);
+	assets_load_texture(game->assets, "assets/images/player.png", "Player Ship");
+	// Projectiles
+	assets_load_texture(game->assets, "assets/images/missile.png", "Projectile Missile");
+
+	// Enemies
+	assets_load_texture(game->assets, "assets/images/grappler_hook.png", "Grappler Hook");
+	assets_load_texture(game->assets, "assets/images/grappler.png", "Enemy Grappler");
+	assets_load_texture(game->assets, "assets/images/ufo.png", "Enemy UFO");
+	assets_load_texture(game->assets, "assets/images/tracker.png", "Enemy Tracker");
+	assets_load_texture(game->assets, "assets/images/turret_base.png", "Enemy Turret Base");
+	assets_load_texture(game->assets, "assets/images/turret_cannon.png", "Enemy Turret Cannon");
+
+	// HUD
+	assets_load_texture(game->assets, "assets/images/hud_missile.png", "HUD Missile");
+	assets_load_texture(game->assets, "assets/images/hud_laser.png", "HUD Laser");
+	assets_load_texture(game->assets, "assets/images/hud_mg.png", "HUD MG");
+	//Generative textures
+	assets_store_texture(game->assets, generate_laser_item_texture(), "Item Laser");
+
+	assets_store_texture(game->assets, 
+		generate_item_texture(
+		      assets_get_texture(game->assets, "Projectile Missile")
+		), 
+		"Item Missile"
+	);
+	assets_store_texture(game->assets, 
+		generate_item_texture(
+		      assets_get_texture(game->assets, "Player Ship")
+		), 
+		"Item LifeUp"
+	);
+
+	// Additional settings for loaded assets	
+	SDL_SetTextureAlphaMod(assets_get_texture(game->assets, "Enemy UFO"), (Uint8)(255.0f * 0.7f));
+	Mix_Chunk* c = 0;
+	while( !(c = assets_get_sfx(game->assets, "Player Laser")) ) {
+		_mm_pause();
+	}
+	Mix_VolumeChunk(c, 64);
+
+	while( !(c = assets_get_sfx(game->assets, "Player Missile")) ) {
+		_mm_pause();
+	}
+	Mix_VolumeChunk(c, 64);
 }
 
 void init_game(Game_State* game) {
@@ -197,7 +216,7 @@ void restart_game(Game_State* game) {
 	game->player_state.thrust_energy = PLAYER_THRUST_MAX;
 
 	spawn_player(game);
-#if DEBUG && 1
+#if DEBUG && 0
 	for (int i = ENTITY_TYPE_PLAYER+1; i < ENTITY_TYPE_SPAWN_WARP; i++) {
 		Uint32 entity_id = spawn_entity(
 			game->entities, game->particle_system, 
@@ -228,11 +247,15 @@ int update_game(Game_State* game, Game_Input* input, float dt) {
 	}
 #endif
 
-
 	game->input = *input;
+	// Update current scene
 	if (game->next_scene == game->scene) {
 		switch(game->scene) {
 			case GAME_SCENE_MAIN_MENU: {
+				// In case the music track had not loaded when the main menu scene starts
+				if (!Mix_PlayingMusic()) {
+					Mix_PlayMusic(assets_get_music(game->assets, "Space Drifter"), -1);
+				}
 				if (is_game_control_pressed(&game->input, &game->player_controller.fire)) {
 					Mix_PlayChannel(-1, assets_get_sfx(game->assets, "Menu Confirm"), 0);
 					game->next_scene = GAME_SCENE_GAMEPLAY;
@@ -295,8 +318,10 @@ int update_game(Game_State* game, Game_Input* input, float dt) {
 				}
 			} break;
 		}
+	// Update scene transition
 	} else if (game->scene_timer.time > 0.0f) {
 		lerp_timer_update(&game->scene_timer, dt);
+	// Start next scene
 	} else {
 		switch(game->next_scene) {
 			case GAME_SCENE_MAIN_MENU: {

@@ -1,3 +1,4 @@
+#include "SDL_thread.h"
 #include "platform.h"
 #include "assets.h"
 
@@ -27,10 +28,52 @@
 #include "external/stb_truetype.h"
 
 typedef struct Game_Assets {
-	Mix_Music_Node music[8];
-	Mix_Chunk_Node sfx[16];
-	SDL_Texture_Node textures[16];
+	struct {
+		Mix_Music_Node table[8];
+		SDL_mutex* mutex;
+	} music;
+	struct {
+		Mix_Chunk_Node table[16];
+		SDL_mutex* mutex;
+	} sfx;
+	struct {
+		SDL_Texture_Node table[16];
+		SDL_mutex* mutex;
+	} textures;
 } Game_Assets;
+
+#define define_store_asset(type, table_name, func_suffix) void assets_store_##func_suffix(Game_Assets* assets, type* asset, const char* label) {\
+	type##_Node* node = &assets->table_name.table[get_hash_index(label, assets->table_name.table)];\
+	SDL_LockMutex(assets->table_name.mutex);\
+	while (node) {\
+		if (!node->data) {\
+			node->data = asset;\
+			node->name = (char*)label;\
+		} else if (*node->name == *label && SDL_strcmp(node->name, label) == 0) {\
+			SDL_Log("Asset name %s already in use", label);\
+		} else if (!node->next) {\
+			type##_Node* new_node = SDL_malloc(sizeof(type##_Node));\
+			SDL_memset(new_node, 0, sizeof(type##_Node));\
+			node->next = new_node;\
+		}\
+		node = node->next;\
+	}\
+	SDL_UnlockMutex(assets->table_name.mutex);\
+}
+
+#define define_get_asset(type, table_name, func_suffix) type* assets_get_##func_suffix(Game_Assets* assets, const char* name) { \
+	type* result = 0;\
+	if (name == 0 || name[0] == '\0') return result;\
+	type##_Node* node = &assets->table_name.table[get_hash_index(name, assets->table_name.table)];\
+	while (node) { \
+		if (node->name && (*node->name == *name) && SDL_strcmp(node->name, name) == 0) {\
+			result = node->data;\
+			break; \
+		}\
+		node = node->next;\
+	}\
+	return result; \
+}
 
 double pow(double x, double y) {
 	double result = x;
@@ -164,8 +207,37 @@ static SDL_Texture* load_texture(const char* file) {
 	return result;
 }
 
+SDL_Surface * create_surface_from_image_file(const char* file) {
+	size_t file_size;
+	int image_width, image_height, image_components;
+	
+	stbi_uc* buf = (stbi_uc*)SDL_LoadFile(file, &file_size);
+	unsigned char* image = stbi_load_from_memory(buf, file_size, &image_width, &image_height, &image_components, 0);
+
+	SDL_Surface* result;
+	if (image) {
+		result = SDL_CreateRGBSurfaceFrom(image, image_width, image_height, image_components * 8, image_components * image_width, 
+		STBI_MASK_R, STBI_MASK_G, STBI_MASK_B, STBI_MASK_A);
+	} else {
+		SDL_Log("stbi failed to load %s", file);
+	}
+	
+	if (!result) {
+		SDL_Log("SDL failed to create Surface from sbti buffer");
+	}
+
+	if (image) stbi_image_free(image);
+	if (buf) SDL_free(buf);
+
+	return result;
+}
+
 Game_Assets* new_game_assets(void) {
 	Game_Assets* result = SDL_calloc(1, sizeof(Game_Assets));
+	result->music.mutex = SDL_CreateMutex();
+	result->textures.mutex = SDL_CreateMutex();
+	result->sfx.mutex = SDL_CreateMutex();
+
 	return result;
 }
 
@@ -173,38 +245,77 @@ define_store_asset(SDL_Texture, textures, texture)
 define_store_asset(Mix_Music, music, music)
 define_store_asset(Mix_Chunk, sfx, sfx)
 
+typedef struct asset_load_data {
+	Game_Assets* assets;
+	char* file;
+	char* name;
+} asset_load_data;
+
+// NOTE: load_texture does not play nice with concurrency.
+// This appears to be because the SDL renderer API is intended
+// to be called only from the main thread.
+// Possible solution could be to create surfaces in
+// concurrent threads then finish loading textures in main.
 SDL_bool assets_load_texture(Game_Assets* assets, const char* file, const char* name) {
-	SDL_bool result = 0;
-	
 	SDL_Texture* texture = load_texture(file);
-	if (texture) {
-		const char* label = (name && SDL_strlen(name)) ? name : file;
-		assets_store_texture(assets, texture, label);
+	if (!texture) {
+		return 0;
 	}
 
-	return result;
+	const char* label = (name && name[0] != '\0') ? name : file;
+	assets_store_texture(assets, texture, label);
+
+	return 1;
+}
+
+static int SDLCALL thread_load_music(void* _data) {
+	asset_load_data* data = (asset_load_data*)_data;
+
+	Mix_Music* music = Mix_LoadMUS(data->file);
+	if (music) {
+		const char* label = (data->name && data->name[0] != '\0') ? data->name : data->file;
+		assets_store_music(data->assets, music, label);
+	}
+
+	free(_data);
+
+	return 1;
 }
 
 SDL_bool assets_load_music(Game_Assets* assets, const char* file, const char* name) {
 	SDL_bool result = 0;
 
-	Mix_Music* music = Mix_LoadMUS(file);
-	if (music) {
-		const char* label = (name && SDL_strlen(name)) ? name : file;
-		assets_store_music(assets, music, label);
-	}
+	asset_load_data* _data = malloc(sizeof(asset_load_data));
+	*_data = (asset_load_data){assets, (char*)file, (char*)name};
+
+	SDL_Thread* thread = SDL_CreateThread(thread_load_music, file, _data);
+	SDL_DetachThread(thread);
 
 	return result;
+}
+
+static int SDLCALL thread_load_sfx(void* _data) {
+	asset_load_data* data = (asset_load_data*)_data;
+
+	Mix_Chunk* chunk = Mix_LoadWAV(data->file);
+	if (chunk) {
+		const char* label = (data->name && data->name[0] != '\0') ? data->name : data->file;
+		assets_store_sfx(data->assets, chunk, label);
+	}
+
+	free(_data);
+
+	return 1;
 }
 
 SDL_bool assets_load_sfx(Game_Assets* assets, const char* file, const char* name) {
 	SDL_bool result = 0;
 
-	Mix_Chunk* chunk = Mix_LoadWAV(file);
-	if (chunk) {
-		const char* label = (name && SDL_strlen(name)) ? name : file;
-		assets_store_sfx(assets, chunk, label);
-	}
+	asset_load_data* _data = malloc(sizeof(asset_load_data));
+	*_data = (asset_load_data){assets, (char*)file, (char*)name};
+
+	SDL_Thread* thread = SDL_CreateThread(thread_load_sfx, file, _data);
+	SDL_DetachThread(thread);
 
 	return result;
 }
